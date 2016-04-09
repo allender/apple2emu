@@ -9,7 +9,10 @@
 
 #include <stdio.h>
 #include <tchar.h>
+#include <stdint.h>
 
+#include "memory.h"
+#include "6502.h"
 
 
 // TODO: reference additional headers your program requires here

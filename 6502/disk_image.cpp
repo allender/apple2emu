@@ -22,7 +22,7 @@ void disk_image::initialize_image()
 	// check the size of the image to see if we have dsk image
 	if (m_buffer_size == 143360) {
 		m_image_type = image_type::DSK_IMAGE;
-		m_num_tracks = m_buffer_size / (m_total_sectors * m_sector_bytes);
+		m_num_tracks = (uint8_t)(m_buffer_size / (m_total_sectors * m_sector_bytes));
 	}
  }
 

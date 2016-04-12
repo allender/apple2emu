@@ -10,8 +10,9 @@ public:
 	uint8_t     m_phase_status;
 	uint8_t     m_half_track_count;
 	uint8_t     m_current_track;
+	uint8_t     m_current_sector;
 	disk_image* m_disk_image;
-	uint8_t*    m_track_data;
+	uint8_t*    m_sector_data;
 
 	disk_drive::disk_drive() {} 
 	void init();

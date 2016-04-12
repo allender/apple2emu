@@ -25,23 +25,24 @@ disk_drive drive_1;
 void disk_drive::init()
 {
 	m_current_track = 0;
+	m_current_sector = 0;
 	m_half_track_count = 0;
 	m_phase_status = 0;
 	m_motor_on = false;
-	m_track_data = nullptr;
+	m_sector_data = nullptr;
 }
 
 void disk_drive::read()
 {
-	if (m_track_data == nullptr) {
-		m_track_data = new uint8_t[NIBBLES_PER_TRACK];
-		if (m_track_data == nullptr) {
+	if (m_sector_data == nullptr) {
+		m_sector_data = new uint8_t[disk_image::m_nibbilized_size];
+		if (m_sector_data == nullptr) {
 			return;
 		}
 	}
 
 	// read the data out of the disk image into the track image
-	bool data_read = m_disk_image->read_track(drive_1.m_current_track, m_track_data);
+	bool data_read = m_disk_image->read_sector(drive_1.m_current_track, drive_1.m_current_sector, m_sector_data);
 }
 
 // inserts a disk image into the given slot
@@ -99,6 +100,7 @@ uint8_t& read_handler(uint16_t addr)
 					auto new_track = std::min(drive_1.m_disk_image->m_num_tracks - 1, drive_1.m_half_track_count >> 1);
 					if (new_track != drive_1.m_current_track) {
 						drive_1.m_current_track = new_track;
+						drive_1.m_current_sector = 0;
 					}
 				}
 

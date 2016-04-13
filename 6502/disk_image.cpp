@@ -73,7 +73,7 @@ bool disk_image::load_image(const char *filename)
 	return true; 
 }
 
-void disk_image::nibbilize_sector(const int track, const int sector, uint8_t *buffer)
+uint32_t disk_image::nibbilize_sector(const int track, const int sector, uint8_t *buffer)
 {
 	// get a pointer to the beginning of the track information
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
@@ -161,17 +161,18 @@ void disk_image::nibbilize_sector(const int track, const int sector, uint8_t *bu
 	for (auto i = 0; i < m_gap3_num_bytes; i++) {
 		*work_ptr++ = 0xff;
 	}
+
+	return work_ptr - buffer;  // number of bytes "read"
 }
 
 // read the track data into the supplied buffer
-bool disk_image::read_sector(const int track, const int sector, uint8_t *buffer)
-{
+uint32_t disk_image::read_sector(const int track, const int sector, uint8_t *buffer) {
 	if (m_work_buffer == nullptr) {
 		return false;
 	}
 
 	// with the data in the work buffer, we need to nibbilize the data
-	nibbilize_sector(track, sector, buffer);
+	uint32_t num_bytes = nibbilize_sector(track, sector, buffer);
 
-	return true;
+	return num_bytes;
 }

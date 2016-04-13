@@ -22,7 +22,7 @@ private:
 	static uint8_t*  m_work_buffer;
 
 	void initialize_image();
-	void nibbilize_sector(const int track, const int sector, uint8_t *buffer);
+	uint32_t nibbilize_sector(const int track, const int sector, uint8_t *buffer);
 	void decode_data(uint8_t sector, uint8_t *work_ptr);
 
 public:
@@ -37,13 +37,13 @@ public:
 	static const uint32_t m_nibbilize_num_bytes = 344;
 
 
-	static const uint32_t m_nibbilized_size = m_nibbilize_num_bytes + m_gap1_num_bytes + m_gap2_num_bytes + m_gap3_num_bytes + 12;
+	static const uint32_t m_nibbilized_size = 512;
 
 	disk_image::disk_image() {}
 	disk_image::~disk_image();
 	void init();
 	bool load_image(const char *filename);
-	bool read_sector(const int track, const int sector, uint8_t* buffer);
+	uint32_t read_sector(const int track, const int sector, uint8_t* buffer);
 
 	image_type   m_image_type;
 	uint8_t      m_num_tracks;

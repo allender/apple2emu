@@ -134,6 +134,10 @@ uint8_t &memory::operator[](const uint16_t addr)
 // faciliate memory mapped I/O and other similar things
 void memory::write(const uint16_t addr, uint8_t val)
 {
+	if (addr == 0x3703) {
+		int i = 5;
+	}
+
 	m_memory[addr] = val;
 
 	// see if memory address is headed to video screen.  Text page 1

@@ -30,9 +30,11 @@ void disk_drive::init()
 	m_phase_status = 0;
 	m_motor_on = false;
 	m_sector_data = nullptr;
+	m_current_byte = 0;
+	m_data_buffer = 0;
 }
 
-void disk_drive::read()
+void disk_drive::readwrite()
 {
 	if (m_sector_data == nullptr) {
 		m_sector_data = new uint8_t[disk_image::m_nibbilized_size];
@@ -42,7 +44,48 @@ void disk_drive::read()
 	}
 
 	// read the data out of the disk image into the track image
-	bool data_read = m_disk_image->read_sector(drive_1.m_current_track, drive_1.m_current_sector, m_sector_data);
+	if (m_sector_size == 0) {
+		m_sector_size = m_disk_image->read_sector(drive_1.m_current_track, drive_1.m_current_sector, m_sector_data);
+		m_current_byte = 0;
+	}
+
+	if (m_write_mode == false) {
+		// this is read mode
+		m_data_buffer = m_sector_data[m_current_byte];
+	}
+	else {
+		// this is write mode
+	}
+	m_current_byte++;
+	if (m_current_byte == m_sector_size) {
+		increment_sector();
+	}
+}
+
+void disk_drive::set_new_track(const uint8_t track)
+{
+	m_current_track = track;
+	m_current_sector = 0;
+
+	// get rid of the old sector data.  Need to do this a better way to avoid
+	// all the new/delete calls
+	delete[] m_sector_data;
+	m_sector_data = nullptr;
+	m_sector_size = 0;
+}
+
+void disk_drive::increment_sector()
+{
+	m_current_sector++;
+	if (m_current_sector >= disk_image::m_total_sectors ) {
+		m_current_sector = 0;
+	}
+
+	// get rid of the old sector data.  Need to do this a better way to avoid
+	// all the new/delete calls
+	delete[] m_sector_data;
+	m_sector_data = nullptr;
+	m_sector_size = 0;
 }
 
 // inserts a disk image into the given slot
@@ -99,8 +142,7 @@ uint8_t& read_handler(uint16_t addr)
 					drive_1.m_half_track_count = std::max(0, std::min(79, drive_1.m_half_track_count + dir));
 					auto new_track = std::min(drive_1.m_disk_image->m_num_tracks - 1, drive_1.m_half_track_count >> 1);
 					if (new_track != drive_1.m_current_track) {
-						drive_1.m_current_track = new_track;
-						drive_1.m_current_sector = 0;
+						drive_1.set_new_track(new_track);
 					}
 				}
 
@@ -129,8 +171,10 @@ uint8_t& read_handler(uint16_t addr)
 		break;
 
 	case 0xc:
-		LOG(INFO) << "read";
-		drive_1.read();
+		//LOG(INFO) << "read";
+		drive_1.readwrite();
+		LOG(INFO) << "Read: " << std::setw(4) << std::setbase(16) << drive_1.m_current_byte << " " <<
+			std::setw(2) << std::setbase(16) << (uint32_t)drive_1.m_data_buffer;
 		break;
 		
 	case 0xd:
@@ -139,16 +183,20 @@ uint8_t& read_handler(uint16_t addr)
 
 	case 0xe:
 		drive_1.m_write_mode = false;
-		LOG(INFO) << "set read mode";
+		//LOG(INFO) << "set read mode";
 		break;
 
 	case 0xf:
 		drive_1.m_write_mode = true;
-		LOG(INFO) << "set write mode";
+		//LOG(INFO) << "set write mode";
 		break;
 	}
 
-	return ret;
+	if (!(addr & 0x1)) {
+		return drive_1.m_data_buffer;
+	} else {
+		return ret;
+	}
 
 }
 

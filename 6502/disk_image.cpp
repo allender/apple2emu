@@ -8,7 +8,7 @@
 
 uint8_t* disk_image::m_work_buffer = nullptr;
 
-#define CODE44(buf, val) { *buf++ = (((val>>1) & 0x55) | 0xaa); *buf++ = ((val & 0x55) | 0xaa); }
+#define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
 
 const uint8_t disk_image::m_diskbyte_lookup[0x40] =
 {
@@ -20,6 +20,11 @@ const uint8_t disk_image::m_diskbyte_lookup[0x40] =
 	0xDF,0xE5,0xE6,0xE7,0xE9,0xEA,0xEB,0xEC,
 	0xED,0xEE,0xEF,0xF2,0xF3,0xF4,0xF5,0xF6,
 	0xF7,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF
+};
+
+const uint8_t disk_image::m_sector_map[16] =
+{
+	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04, 0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,
 };
 
 disk_image::~disk_image()
@@ -73,7 +78,7 @@ bool disk_image::load_image(const char *filename)
 	return true; 
 }
 
-uint32_t disk_image::nibbilize_sector(const int track, const int sector, uint8_t *buffer)
+uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 {
 	// get a pointer to the beginning of the track information
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
@@ -85,94 +90,105 @@ uint32_t disk_image::nibbilize_sector(const int track, const int sector, uint8_t
 		*work_ptr++ = 0xff;
 	}
 
-	// read in the sector, which consists of 
-	// Address Field
-	//    Prologue    D5 AA 96
-	//    Volume      4 and 4 Volume 
-	//    Track       4 and 4 of track number
-	//    Sector      4 and 4 of secgtor
-	//    Checksum    volume ^ track ^ sector
-	//    Eplilogue   DE AA EB
-	// Gap 2
-	// Data Field
-	//    Prologue     D4 AA AD
-	//    343 bytes of data
-	//    checksum
-	//    Epilogue     DE AA EB
+	for (auto sector = 0; sector < m_total_sectors; sector++) {
+		// read in the sector, which consists of 
+		// Address Field
+		//    Prologue    D5 AA 96
+		//    Volume      4 and 4 Volume 
+		//    Track       4 and 4 of track number
+		//    Sector      4 and 4 of secgtor
+		//    Checksum    volume ^ track ^ sector
+		//    Eplilogue   DE AA EB
+		// Gap 2
+		// Data Field
+		//    Prologue     D4 AA AD
+		//    343 bytes of data
+		//    checksum
+		//    Epilogue     DE AA EB
+		// Gap 3
 
-	// Address
-	*work_ptr++ = 0xd5;
-	*work_ptr++ = 0xaa;
-	*work_ptr++ = 0x96;
-	CODE44(work_ptr, m_volume_num);
-	CODE44(work_ptr, track);
-	CODE44(work_ptr, sector);
-	CODE44(work_ptr, (uint8_t)m_volume_num ^ (uint8_t)track ^ (uint8_t)sector);
-	*work_ptr++ = 0xde;
-	*work_ptr++ = 0xaa;
-	*work_ptr++ = 0xeb;
+		// Address
+		*work_ptr++ = 0xd5;
+		*work_ptr++ = 0xaa;
+		*work_ptr++ = 0x96;
+		CODE44(work_ptr, m_volume_num);
+		CODE44(work_ptr, track);
+		CODE44(work_ptr, sector);
+		CODE44(work_ptr, (uint8_t)m_volume_num ^ (uint8_t)track ^ (uint8_t)sector);
+		*work_ptr++ = 0xde;
+		*work_ptr++ = 0xaa;
+		*work_ptr++ = 0xeb;
 
-	// gap 2
-	for (auto i = 0 ; i < m_gap2_num_bytes; i++ ) {
-		*work_ptr++ = 0xff;
-	}
-
-	// data field
-	*work_ptr++ = 0xd5;
-	*work_ptr++ = 0xaa;
-	*work_ptr++ = 0xad;
-	
-	// convert 256 bytes into 342 bytes + checksum
-	{
-		uint8_t *nib_data = (uint8_t *)alloca(344);
-
-		memcpy(&nib_data[86], track_ptr, 256);   // copy the track data into the allocated buffer
-		nib_data[342] = 0;                       // this is the last byte and needs to be 0 because of the checksumming process that creates additional byte
-
-		// nibbilize the data
-		// do 6/2 encoding
-		uint8_t offset = 0x0;
-		while (offset < 0x56) {
-			uint8_t val = (((track_ptr[(uint8_t)(offset + 0xac)] & 0x1) << 1) | ((track_ptr[(uint8_t)(offset + 0xac)] & 0x2) >> 1)) << 6;
-			val = val | ((((track_ptr[(uint8_t)(offset + 0x56)] & 0x1) << 1) | ((track_ptr[(uint8_t)(offset + 0x56)] & 0x2) >> 1)) << 4);
-			val = val | (((track_ptr[offset] & 0x1) << 1) | ((track_ptr[offset] & 0x2) >> 1)) << 2;
-			nib_data[offset++] = val;
+		// gap 2
+		for (auto i = 0; i < m_gap2_num_bytes; i++) {
+			*work_ptr++ = 0xff;
 		}
 
-		// checksum the entire buffer
-		auto xor_value = 0;
-		for (auto i = 0; i <= 343; i++) {
-			auto prev_val = nib_data[i];
-			nib_data[i] = nib_data[i] ^ xor_value;
-			xor_value = prev_val;
+		// data field
+		*work_ptr++ = 0xd5;
+		*work_ptr++ = 0xaa;
+		*work_ptr++ = 0xad;
+
+		// convert 256 bytes into 342 bytes + checksum
+		{
+			uint8_t *nib_data = (uint8_t *)alloca(344);
+
+			// map the sector (0-16) to the logical sector using the sector map.  Done for interleaving
+			uint8_t mapped_sector = m_sector_map[sector];
+			uint8_t *sector_ptr = &track_ptr[mapped_sector * m_sector_bytes];
+
+			memcpy(&nib_data[86], sector_ptr, 256);   // copy the track data into the allocated buffer
+			nib_data[342] = 0;                       // this is the last byte and needs to be 0 because of the checksumming process that creates additional byte
+
+			// nibbilize the data
+			// do 6/2 encoding
+			uint8_t offset = 0x0;
+			while (offset < 0x56) {
+				uint8_t val = (((sector_ptr[(uint8_t)(offset + 0xac)] & 0x1) << 1) | ((sector_ptr[(uint8_t)(offset + 0xac)] & 0x2) >> 1)) << 6;
+				val = val | ((((sector_ptr[(uint8_t)(offset + 0x56)] & 0x1) << 1) | ((sector_ptr[(uint8_t)(offset + 0x56)] & 0x2) >> 1)) << 4);
+				val = val | (((sector_ptr[offset] & 0x1) << 1) | ((sector_ptr[offset] & 0x2) >> 1)) << 2;
+				nib_data[offset++] = val;
+			}
+			
+			// not sure why we have to do this
+			nib_data[offset - 1] &= 0x3f;
+			nib_data[offset - 2] &= 0x3f;
+
+			// checksum the entire buffer
+			auto xor_value = 0;
+			for (auto i = 0; i <= 343; i++) {
+				auto prev_val = nib_data[i];
+				nib_data[i] = nib_data[i] ^ xor_value;
+				xor_value = prev_val;
+			}
+
+			// translate the 6-bit bytes into disk bytes directly to the work buffer  
+			for (auto i = 0; i <= 342; i++) {
+				*work_ptr++ = m_diskbyte_lookup[nib_data[i] >> 2];
+			}
 		}
 
-		// translate the 6-bit bytes into disk bytes directly to the work buffer  
-		for (auto i = 0; i <= 342; i++) {
-			*work_ptr++ = m_diskbyte_lookup[nib_data[i] >> 2];
+		*work_ptr++ = 0xde;
+		*work_ptr++ = 0xaa;
+		*work_ptr++ = 0xeb;
+
+		// gap 3
+		for (auto i = 0; i < m_gap3_num_bytes; i++) {
+			*work_ptr++ = 0xff;
 		}
-	}
-
-	*work_ptr++ = 0xde;
-	*work_ptr++ = 0xaa;
-	*work_ptr++ = 0xeb;
-
-	// gap 3
-	for (auto i = 0; i < m_gap3_num_bytes; i++) {
-		*work_ptr++ = 0xff;
 	}
 
 	return work_ptr - buffer;  // number of bytes "read"
 }
 
 // read the track data into the supplied buffer
-uint32_t disk_image::read_sector(const int track, const int sector, uint8_t *buffer) {
+uint32_t disk_image::read_track(const int track, uint8_t *buffer) {
 	if (m_work_buffer == nullptr) {
 		return false;
 	}
 
 	// with the data in the work buffer, we need to nibbilize the data
-	uint32_t num_bytes = nibbilize_sector(track, sector, buffer);
+	uint32_t num_bytes = nibbilize_track(track, buffer);
 
 	return num_bytes;
 }

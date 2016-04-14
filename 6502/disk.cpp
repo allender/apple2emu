@@ -25,67 +25,54 @@ disk_drive drive_1;
 void disk_drive::init()
 {
 	m_current_track = 0;
-	m_current_sector = 0;
 	m_half_track_count = 0;
 	m_phase_status = 0;
 	m_motor_on = false;
-	m_sector_data = nullptr;
+	m_track_data = nullptr;
 	m_current_byte = 0;
 	m_data_buffer = 0;
 }
 
 void disk_drive::readwrite()
 {
-	if (m_sector_data == nullptr) {
-		m_sector_data = new uint8_t[disk_image::m_nibbilized_size];
-		if (m_sector_data == nullptr) {
+	if (m_track_data == nullptr) {
+		m_track_data = new uint8_t[disk_image::m_nibbilized_size];
+		if (m_track_data == nullptr) {
 			return;
 		}
 	}
 
 	// read the data out of the disk image into the track image
-	if (m_sector_size == 0) {
-		m_sector_size = m_disk_image->read_sector(drive_1.m_current_track, drive_1.m_current_sector, m_sector_data);
+	if (m_track_size == 0) {
+		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)drive_1.m_current_track << "  read";
+	 	m_track_size = m_disk_image->read_track(drive_1.m_current_track, m_track_data);
 		m_current_byte = 0;
 	}
 
 	if (m_write_mode == false) {
 		// this is read mode
-		m_data_buffer = m_sector_data[m_current_byte];
+		m_data_buffer = m_track_data[m_current_byte];
+		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
+			std::setw(2) << std::setbase(16) << (uint32_t)m_data_buffer;
 	}
 	else {
 		// this is write mode
 	}
 	m_current_byte++;
-	if (m_current_byte == m_sector_size) {
-		increment_sector();
+	if (m_current_byte == m_track_size) {
+		m_current_byte = 0;
 	}
 }
 
 void disk_drive::set_new_track(const uint8_t track)
 {
 	m_current_track = track;
-	m_current_sector = 0;
 
 	// get rid of the old sector data.  Need to do this a better way to avoid
 	// all the new/delete calls
-	delete[] m_sector_data;
-	m_sector_data = nullptr;
-	m_sector_size = 0;
-}
-
-void disk_drive::increment_sector()
-{
-	m_current_sector++;
-	if (m_current_sector >= disk_image::m_total_sectors ) {
-		m_current_sector = 0;
-	}
-
-	// get rid of the old sector data.  Need to do this a better way to avoid
-	// all the new/delete calls
-	delete[] m_sector_data;
-	m_sector_data = nullptr;
-	m_sector_size = 0;
+	delete[] m_track_data;
+	m_track_data = nullptr;
+	m_track_size = 0;
 }
 
 // inserts a disk image into the given slot
@@ -151,6 +138,7 @@ uint8_t& read_handler(uint16_t addr)
 												<< std::setw(1) << ((drive_1.m_phase_status >> 1) & 0x1) 
 												<< std::setw(1) << (drive_1.m_phase_status & 0x1)
 							 << " track: " << std::setw(2) << (int)drive_1.m_half_track_count
+							 << " dir: " << std::setw(1) << dir
 							 << " addr: " << std::setbase(16) << (addr & 0xff);
 				
 				}
@@ -161,20 +149,17 @@ uint8_t& read_handler(uint16_t addr)
 	case 0x9:
 		// turn the motor on or off
 		drive_1.m_motor_on = (addr & 1);
-		LOG(INFO) << "Motor on: " << (addr & 1);
+		//LOG(INFO) << "Motor on: " << (addr & 1);
 		break;
 
 	case 0xa:
 	case 0xb:
 		// pick a specific drive
-		LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
+		//LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
 		break;
 
 	case 0xc:
-		//LOG(INFO) << "read";
 		drive_1.readwrite();
-		LOG(INFO) << "Read: " << std::setw(4) << std::setbase(16) << drive_1.m_current_byte << " " <<
-			std::setw(2) << std::setbase(16) << (uint32_t)drive_1.m_data_buffer;
 		break;
 		
 	case 0xd:
@@ -208,5 +193,5 @@ void write_handler(uint16_t addr, uint8_t val)
 void disk_init(memory &mem)
 {
 	mem.register_slot_handler(6, read_handler, write_handler);
-
+	drive_1.init();
 }

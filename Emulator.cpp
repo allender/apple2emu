@@ -28,7 +28,7 @@ static void configure_logging()
 	conf.set(el::Level::Global, el::ConfigurationType::Filename, "emulator.log");
 	conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
 	conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
-	conf.set(el::Level::Global, el::ConfigurationType::Format, "%datetime{%H:%m:%s} %msg");
+	conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
 	el::Loggers::reconfigureLogger("default", conf);
 
 	// set some options on the logger

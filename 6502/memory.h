@@ -6,7 +6,7 @@
 
 #define MAX_SLOTS 7
 
-typedef std::function<uint8_t&(uint16_t)> slot_io_read_function;
+typedef std::function<uint8_t(uint16_t)> slot_io_read_function;
 typedef std::function<void(uint16_t, uint8_t)> slot_io_write_function;
 
 //
@@ -29,7 +29,7 @@ public:
 	bool register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function);
 
 public:
-	uint8_t& operator[] (const uint16_t index);
+	uint8_t	 operator[] (const uint16_t index);
 	void     write(const uint16_t addr, uint8_t val);
 
 private:

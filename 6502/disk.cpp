@@ -84,9 +84,7 @@ bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 	return true;
 }
 
-static uint8_t ret = 0;
-
-uint8_t& read_handler(uint16_t addr)
+uint8_t read_handler(uint16_t addr)
 {
 	uint8_t action = (addr & 0x000f);
 
@@ -180,7 +178,7 @@ uint8_t& read_handler(uint16_t addr)
 	if (!(addr & 0x1)) {
 		return drive_1.m_data_buffer;
 	} else {
-		return ret;
+		return 0;
 	}
 
 }

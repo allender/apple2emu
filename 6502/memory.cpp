@@ -52,7 +52,7 @@ static char character_conv[] = {
 static bool key_clear = true;
 static uint8_t last_key = 0;
 
-uint8_t& keyboard_read_handler(uint16_t addr)
+uint8_t keyboard_read_handler(uint16_t addr)
 {
 	if (key_clear) {
 		char c = getch();
@@ -69,7 +69,7 @@ uint8_t& keyboard_read_handler(uint16_t addr)
 	return(last_key);
 }
 
-uint8_t& keyboard_clear_handler(uint16_t addr)
+uint8_t keyboard_clear_handler(uint16_t addr)
 {
 	key_clear = true;
 	last_key &= 0x7F;
@@ -116,7 +116,7 @@ bool memory::register_slot_handler(const uint8_t slot, slot_io_read_function rea
 	return true;
 }
 
-uint8_t &memory::operator[](const uint16_t addr)
+uint8_t memory::operator[](const uint16_t addr)
 {
 	static uint8_t last_key = 0;
 
@@ -134,10 +134,6 @@ uint8_t &memory::operator[](const uint16_t addr)
 // faciliate memory mapped I/O and other similar things
 void memory::write(const uint16_t addr, uint8_t val)
 {
-	if (addr == 0x3703) {
-		int i = 5;
-	}
-
 	m_memory[addr] = val;
 
 	// see if memory address is headed to video screen.  Text page 1

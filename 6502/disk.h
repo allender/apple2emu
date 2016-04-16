@@ -22,7 +22,6 @@ public:
 	void init();
 	void readwrite();
 	void set_new_track(uint8_t new_track);
-	void decrement_sector();
 };
 
 void disk_init(memory &mem);

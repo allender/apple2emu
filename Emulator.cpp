@@ -8,6 +8,7 @@
 #include "6502/assemble.h"
 #include "6502/video.h"
 #include "6502/disk.h"
+#include "debugger/debugger.h"
 #include "utils/path_utils.h"
 
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
@@ -77,6 +78,8 @@ int main(int argc, char* argv[])
 	cpu_6502 cpu(mem);
 	cpu.init();
 
+	init_text_screen();
+	debugger_init();
 	disk_init(mem);
 
 	//// get command line options
@@ -157,12 +160,14 @@ int main(int argc, char* argv[])
 			disk_insert(disk_image_filename, 1);
 		}
 	}
-	init_text_screen();
 	clear_screen();
 	set_raw(true);
 
 	//cpu.load_program(0x600, buffer, buffer_size);
-	cpu.process();
+	while (1) {
+		debugger_process();
+		cpu.process_opcode();
+	}
 
 	return 0;
 }

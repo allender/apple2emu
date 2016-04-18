@@ -230,530 +230,528 @@ void cpu_6502::branch_relative()
 //
 // main loop for opcode processing
 //
-void cpu_6502::process()
+void cpu_6502::process_opcode()
 {
-	while (1) {
-		// get the opcode at the program counter and the just figure out what
-		// to do
-		if (m_pc >= 0x3700 && m_pc <= 0x3703) {
-			int x = 5;
-		}
-		uint8_t opcode = m_memory[m_pc++];
-		addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
-		_ASSERT( mode != addressing_mode::NO_MODE );
-		uint16_t src = (this->*m_addressing_functions[static_cast<uint8_t>(mode)])();
-		switch(m_opcodes[opcode].m_mnemonic) {
-		case 'ADC ':
-			{
-				uint8_t val = m_memory[src];
-				uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
-				uint32_t sum = (uint32_t)m_acc + (uint32_t)val + carry_bit;
-				set_flag(register_bit::CARRY_BIT, sum > 0xff);
-				set_flag(register_bit::OVERFLOW_BIT, ~(m_acc ^ val) & (m_acc ^ sum) & 0x80);
-				if (get_flag(register_bit::DECIMAL_BIT)) {
-					int32_t l = (m_acc & 0x0f) + (val & 0x0f) + carry_bit;
-					int32_t h = (m_acc & 0xf0) + (val & 0xf0);
-					if (l >= 0xa) {
-						l = (l + 0x06) & 0xf;
-						h += 0x10;
-					}
+	// get the opcode at the program counter and the just figure out what
+	// to do
+	if (m_pc >= 0x3700 && m_pc <= 0x3703) {
+		int x = 5;
+	}
+	uint8_t opcode = m_memory[m_pc++];
+	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
+	_ASSERT( mode != addressing_mode::NO_MODE );
+	uint16_t src = (this->*m_addressing_functions[static_cast<uint8_t>(mode)])();
+	switch(m_opcodes[opcode].m_mnemonic) {
+	case 'ADC ':
+		{
+			uint8_t val = m_memory[src];
+			uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
+			uint32_t sum = (uint32_t)m_acc + (uint32_t)val + carry_bit;
+			set_flag(register_bit::CARRY_BIT, sum > 0xff);
+			set_flag(register_bit::OVERFLOW_BIT, ~(m_acc ^ val) & (m_acc ^ sum) & 0x80);
+			if (get_flag(register_bit::DECIMAL_BIT)) {
+				int32_t l = (m_acc & 0x0f) + (val & 0x0f) + carry_bit;
+				int32_t h = (m_acc & 0xf0) + (val & 0xf0);
+				if (l >= 0xa) {
+					l = (l + 0x06) & 0xf;
+					h += 0x10;
+				}
 
-					set_flag(register_bit::CARRY_BIT, 0);
-					if (h >= 0xa0) {
-						h += 0x60;
-						set_flag(register_bit::CARRY_BIT, 1);
-					}
-					sum = h | l;
-					//printf ("adc: %x + %x + %x = %x\n", m_acc, val, carry_bit, sum);
-				}
-				m_acc = sum & 0xff;
-				set_flag(register_bit::ZERO_BIT, (m_acc == 0));
-				set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
-				break;
-			}
-
-		case 'AND ':
-			{
-				m_acc &= m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (m_acc>>7));
-				set_flag(register_bit::ZERO_BIT, (m_acc==0));
-				break;
-			}
-
-		case 'ASL ':
-			{
-				uint8_t val, old_val;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					old_val = m_acc;
-				} else {
-					old_val = m_memory[src];
-				}
-				val = old_val << 1;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					m_acc = val;
-				} else {
-					m_memory.write(src, val);
-				}
-				set_flag(register_bit::SIGN_BIT, val>>7);
-				set_flag(register_bit::ZERO_BIT, val==0);
-				set_flag(register_bit::CARRY_BIT, old_val>>7);
-				break;
-			}
-
-		case 'BCC ':
-			{
-				if (get_flag(register_bit::CARRY_BIT) == 0) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BCS ':
-			{
-				if (get_flag(register_bit::CARRY_BIT) == 1) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BEQ ':
-			{
-				if (get_flag(register_bit::ZERO_BIT) == 1) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BIT ':
-			{
-				int8_t val = m_memory[src];
-				set_flag(register_bit::SIGN_BIT, ((val>>7)&0x1));
-				set_flag(register_bit::OVERFLOW_BIT, ((val>>6)&0x1));
-				set_flag(register_bit::ZERO_BIT, ((val & m_acc) == 0));
-				break;
-			}
-		case 'BMI ':
-			{
-				if (get_flag(register_bit::SIGN_BIT) == 1) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BNE ':
-			{
-				if (get_flag(register_bit::ZERO_BIT) == 0) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BPL ':
-			{
-				if (get_flag(register_bit::SIGN_BIT) == 0) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BRK ':
-			{
-				m_pc++;
-				m_memory.write(0x100 + m_sp--, (m_pc >> 8));
-				m_memory.write(0x100 + m_sp--, (m_pc & 0xff));
-				uint8_t register_value = m_status_register;
-				register_value |= (1<<static_cast<uint8_t>(register_bit::NOT_USED_BIT));
-				register_value |= (1<<static_cast<uint8_t>(register_bit::BREAK_BIT));
-				m_memory.write(0x100 + m_sp--, register_value);
-				set_flag(register_bit::INTERRUPT_BIT, 1);
-				m_pc = (m_memory[0xfffe] & 0xff) | (m_memory[0xffff] << 8);
-				break;
-			}
-		case 'BVC ':
-			{
-				if (get_flag(register_bit::OVERFLOW_BIT) == 0) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'BVS ':
-			{
-				if (get_flag(register_bit::OVERFLOW_BIT) == 1) {
-					branch_relative();
-				}
-				break;
-			}
-		case 'CLC ':
-			{
 				set_flag(register_bit::CARRY_BIT, 0);
-				break;
-			}
-		case 'CLD ':
-			{
-				set_flag(register_bit::DECIMAL_BIT, 0);
-				break;
-			}
-		case 'CLI ':
-			{
-				set_flag(register_bit::INTERRUPT_BIT, 0);
-				break;
-			}
-		case 'CLV ':
-			{
-				set_flag(register_bit::OVERFLOW_BIT, 0);
-				break;
-			}
-		case 'CMP ':
-			{
-				if (m_acc >= m_memory[src]) {
+				if (h >= 0xa0) {
+					h += 0x60;
 					set_flag(register_bit::CARRY_BIT, 1);
-				} else {
-					set_flag(register_bit::CARRY_BIT, 0);
 				}
-				int8_t val = m_acc - m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
+				sum = h | l;
+				//printf ("adc: %x + %x + %x = %x\n", m_acc, val, carry_bit, sum);
 			}
-		case 'CPX ':
-			{
-				if (m_xindex >= m_memory[src]) {
-					set_flag(register_bit::CARRY_BIT, 1);
-				} else {
-					set_flag(register_bit::CARRY_BIT, 0);
-				}
-				int8_t val = m_xindex - m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
+			m_acc = sum & 0xff;
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+			set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
+			break;
+		}
+
+	case 'AND ':
+		{
+			m_acc &= m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (m_acc>>7));
+			set_flag(register_bit::ZERO_BIT, (m_acc==0));
+			break;
+		}
+
+	case 'ASL ':
+		{
+			uint8_t val, old_val;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				old_val = m_acc;
+			} else {
+				old_val = m_memory[src];
 			}
-		case 'CPY ':
-			{
-				if (m_yindex >= m_memory[src]) {
-					set_flag(register_bit::CARRY_BIT, 1);
-				} else {
-					set_flag(register_bit::CARRY_BIT, 0);
-				}
-				int8_t val = m_yindex - m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
-			}
-		case 'DEC ':
-			{
-				uint8_t val = m_memory[src] - 1;
+			val = old_val << 1;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				m_acc = val;
+			} else {
 				m_memory.write(src, val);
-				set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
 			}
-		case 'DEX ':
-			{
-				m_xindex--;
-				set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
-				break;
-			}
-		case 'DEY ':
-			{
-				m_yindex--;
-				set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
-				break;
-			}
-		case 'EOR ':
-			{
-				uint8_t val = m_memory[src];
-				m_acc ^= val;
-				set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
-				break;
-			}
-		case 'INC ':
-			{
-				uint8_t val = m_memory[src] + 1;
-				m_memory.write(src, val);
-				set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
+			set_flag(register_bit::SIGN_BIT, val>>7);
+			set_flag(register_bit::ZERO_BIT, val==0);
+			set_flag(register_bit::CARRY_BIT, old_val>>7);
+			break;
+		}
+
+	case 'BCC ':
+		{
+			if (get_flag(register_bit::CARRY_BIT) == 0) {
+				branch_relative();
 			}
 			break;
-		case 'INX ':
-			{
-				m_xindex++;
-				set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
-				break;
-			}
-		case 'INY ':
-			{
-				m_yindex++;
-				set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
-				break;
-			}
-		case 'JMP ':
-			{
-				m_pc = src;
-				break;
-			}
-		case 'JSR ':
-			{
-#if defined(FUNCTIONAL_TESTS)
-				if (src == 0xf001) {
-					printf("%c", m_acc);
-				} else if (src == 0xf004) {
-					m_acc = _getch();
-				} else {
-					m_memory[0x100 + m_sp--] = ((m_pc - 1)>> 8);
-					m_memory[0x100 + m_sp--] = (m_pc - 1) & 0xff;
-					m_pc = src;
-				}
-#else
-				m_memory.write(0x100 + m_sp--, ((m_pc - 1)>> 8));
-				m_memory.write(0x100 + m_sp--, (m_pc - 1) & 0xff);
-				m_pc = src;
-#endif
-				break;
-			}
-		case 'LDA ':
-			{
-				m_acc = m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
-				break;
-			}
-		case 'LDX ':
-			{
-				m_xindex = m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
-				break;
-			}
-		case 'LDY ':
-			{
-				m_yindex = m_memory[src];
-				set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
-				break;
-			}
-		case 'LSR ':
-			{
-            uint8_t val;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					val = m_acc;
-				} else {
-					val = m_memory[src];
-				}
-				set_flag(register_bit::CARRY_BIT, val & 1);
-				val >>= 1;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					m_acc = val;
-				} else {
-					m_memory.write(src, val);
-				}
-				set_flag(register_bit::SIGN_BIT, 0);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				break;
-			}
-		case 'NOP ':
-			{
-				break;
-			}
-		case 'ORA ':
-			{
-				uint8_t val = m_memory[src];
-				m_acc |= val;
-				set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, m_acc == 0);
-				break;
-			}
-		case 'PHA ':
-			{
-				m_memory.write(0x100 + m_sp--, m_acc);
-				break;
-			}
-		case 'PLA ':
-			{
-				m_acc = m_memory[0x100 + ++m_sp];
-				set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, m_acc == 0);
-				break;
-			}
-		case 'PHP ':
-			{
-				uint8_t register_value = m_status_register;
-				register_value |= 1 << (static_cast<uint8_t>(register_bit::BREAK_BIT));
-				register_value |= 1 << (static_cast<uint8_t>(register_bit::NOT_USED_BIT));
-				m_memory.write(0x100 + m_sp--, register_value);
-				break;
-			}
-		case 'PLP ':
-			{
-				m_status_register = m_memory[0x100 + ++m_sp];
-				break;
-			}
-		case 'ROL ':
-			{
-				uint8_t val;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					val = m_acc;
-				} else {
-					val = m_memory[src];
-				}
-				uint8_t carry_bit = (val >> 7) & 0x1;
-				val <<= 1;
-				val |= get_flag(register_bit::CARRY_BIT);
-				set_flag(register_bit::CARRY_BIT, carry_bit);
-				set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					m_acc = val;
-				} else {
-					m_memory.write(src, val);
-				}
-				break;
-			}
-		case 'ROR ':
-			{
-				uint8_t val;
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					val = m_acc;
-				} else {
-					val = m_memory[src];
-				}
-				uint8_t carry_bit = val & 0x1;
-				val >>= 1;
-				val |= (get_flag(register_bit::CARRY_BIT) & 0x1) << 7;
-				set_flag(register_bit::CARRY_BIT, carry_bit);
-				set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
-				set_flag(register_bit::ZERO_BIT, val == 0);
-				if (mode == addressing_mode::ACCUMULATOR_MODE) {
-					m_acc = val;
-				} else {
-					m_memory.write(src, val);
-				}
-				break;
-			}
-		case 'RTI ':
-			{
-				m_status_register = m_memory[0x100 + ++m_sp];
-				m_pc = m_memory[0x100 + ++m_sp];
-				m_pc = (m_memory[0x100 + ++m_sp] << 8) | m_pc;
-				break;
-			}
-		case 'RTS ':
-			{
-				uint16_t addr = m_memory[0x100 + ++m_sp] & 0x00ff;
-				addr |= (m_memory[0x100 + ++m_sp] << 8);
-				m_pc = addr;
-				m_pc++;
-				break;
-			}
-		case 'SBC ':
-			{
-				uint8_t val = m_memory[src];
-				uint32_t sum;
-				uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
-				sum = m_acc + (~val & 0xff) + carry_bit;
-				set_flag(register_bit::CARRY_BIT, sum > 0xff);
-				set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
-				if (get_flag(register_bit::DECIMAL_BIT)) {
-					// decimal mode.
-					int32_t l = (m_acc & 0x0f) + (~val & 0x0f) + carry_bit;
-					int32_t h = (m_acc & 0xf0) + (~val & 0xf0);
-					if (l < 0x10) {
-						l -= 0x06;
-					} else {
-						h += 0x10;
-						l -= 0x10;
-					}
-
-					if (h < 0x100) {
-						h -= 0x60;
-						set_flag(register_bit::CARRY_BIT, 0);
-					} else {
-						set_flag(register_bit::CARRY_BIT, 1);
-					}
-					sum = h | l;
-					//printf ("sbc: %x - %x + %x = %x\n", m_acc, val, carry_bit, sum);
-				}
-				m_acc = sum & 0xff;
-				set_flag(register_bit::ZERO_BIT, (m_acc == 0));
-				set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
-				break;
-			}
-		case 'SEC ':
-			{
-				set_flag(register_bit::CARRY_BIT, 1);
-				break;
-			}
-		case 'SED ':
-			{
-				set_flag(register_bit::DECIMAL_BIT, 1);
-				break;
-			}
-		case 'SEI ':
-			{
-				set_flag(register_bit::INTERRUPT_BIT,1);
-				break;
-			}
-		case 'STA ':
-			{
-				m_memory.write(src, m_acc);
-				break;
-			}
-		case 'STX ':
-			{
-				m_memory.write(src, m_xindex);
-				break;
-			}
-		case 'STY ':
-			{
-				m_memory.write(src, m_yindex);
-				break;
-			}
-		case 'TAX ':
-			{
-				m_xindex = m_acc;
-				set_flag(register_bit::ZERO_BIT, m_xindex == 0);
-				set_flag(register_bit::SIGN_BIT, m_xindex & 0x80);
-				break;
-			}
-		case 'TXA ':
-			{
-				m_acc = m_xindex;
-				set_flag(register_bit::ZERO_BIT, m_acc == 0);
-				set_flag(register_bit::SIGN_BIT, m_acc & 0x80);
-				break;
-			}
-		case 'TAY ':
-			{
-				m_yindex = m_acc;
-				set_flag(register_bit::ZERO_BIT, m_yindex == 0);
-				set_flag(register_bit::SIGN_BIT, m_yindex & 0x80);
-				break;
-			}
-		case 'TYA ':
-			{
-				m_acc = m_yindex;
-				set_flag(register_bit::ZERO_BIT, m_acc == 0);
-				set_flag(register_bit::SIGN_BIT, m_acc & 0x80);
-				break;
-			}
-		case 'TXS ':
-			{
-				m_sp = m_xindex;
-				break;
-			}
-		case 'TSX ':
-			{
-				m_xindex = (int8_t)m_sp;
-				set_flag(register_bit::ZERO_BIT, m_xindex == 0);
-				set_flag(register_bit::SIGN_BIT, m_xindex & 0x80);
-				break;
-			}
-
-		default:
-			{
-				_ASSERT(0);
-			}
-			
-
 		}
+	case 'BCS ':
+		{
+			if (get_flag(register_bit::CARRY_BIT) == 1) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BEQ ':
+		{
+			if (get_flag(register_bit::ZERO_BIT) == 1) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BIT ':
+		{
+			int8_t val = m_memory[src];
+			set_flag(register_bit::SIGN_BIT, ((val>>7)&0x1));
+			set_flag(register_bit::OVERFLOW_BIT, ((val>>6)&0x1));
+			set_flag(register_bit::ZERO_BIT, ((val & m_acc) == 0));
+			break;
+		}
+	case 'BMI ':
+		{
+			if (get_flag(register_bit::SIGN_BIT) == 1) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BNE ':
+		{
+			if (get_flag(register_bit::ZERO_BIT) == 0) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BPL ':
+		{
+			if (get_flag(register_bit::SIGN_BIT) == 0) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BRK ':
+		{
+			m_pc++;
+			m_memory.write(0x100 + m_sp--, (m_pc >> 8));
+			m_memory.write(0x100 + m_sp--, (m_pc & 0xff));
+			uint8_t register_value = m_status_register;
+			register_value |= (1<<static_cast<uint8_t>(register_bit::NOT_USED_BIT));
+			register_value |= (1<<static_cast<uint8_t>(register_bit::BREAK_BIT));
+			m_memory.write(0x100 + m_sp--, register_value);
+			set_flag(register_bit::INTERRUPT_BIT, 1);
+			m_pc = (m_memory[0xfffe] & 0xff) | (m_memory[0xffff] << 8);
+			break;
+		}
+	case 'BVC ':
+		{
+			if (get_flag(register_bit::OVERFLOW_BIT) == 0) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'BVS ':
+		{
+			if (get_flag(register_bit::OVERFLOW_BIT) == 1) {
+				branch_relative();
+			}
+			break;
+		}
+	case 'CLC ':
+		{
+			set_flag(register_bit::CARRY_BIT, 0);
+			break;
+		}
+	case 'CLD ':
+		{
+			set_flag(register_bit::DECIMAL_BIT, 0);
+			break;
+		}
+	case 'CLI ':
+		{
+			set_flag(register_bit::INTERRUPT_BIT, 0);
+			break;
+		}
+	case 'CLV ':
+		{
+			set_flag(register_bit::OVERFLOW_BIT, 0);
+			break;
+		}
+	case 'CMP ':
+		{
+			if (m_acc >= m_memory[src]) {
+				set_flag(register_bit::CARRY_BIT, 1);
+			} else {
+				set_flag(register_bit::CARRY_BIT, 0);
+			}
+			int8_t val = m_acc - m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+	case 'CPX ':
+		{
+			if (m_xindex >= m_memory[src]) {
+				set_flag(register_bit::CARRY_BIT, 1);
+			} else {
+				set_flag(register_bit::CARRY_BIT, 0);
+			}
+			int8_t val = m_xindex - m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+	case 'CPY ':
+		{
+			if (m_yindex >= m_memory[src]) {
+				set_flag(register_bit::CARRY_BIT, 1);
+			} else {
+				set_flag(register_bit::CARRY_BIT, 0);
+			}
+			int8_t val = m_yindex - m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+	case 'DEC ':
+		{
+			uint8_t val = m_memory[src] - 1;
+			m_memory.write(src, val);
+			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+	case 'DEX ':
+		{
+			m_xindex--;
+			set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
+			break;
+		}
+	case 'DEY ':
+		{
+			m_yindex--;
+			set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
+			break;
+		}
+	case 'EOR ':
+		{
+			uint8_t val = m_memory[src];
+			m_acc ^= val;
+			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
+			break;
+		}
+	case 'INC ':
+		{
+			uint8_t val = m_memory[src] + 1;
+			m_memory.write(src, val);
+			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+		break;
+	case 'INX ':
+		{
+			m_xindex++;
+			set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
+			break;
+		}
+	case 'INY ':
+		{
+			m_yindex++;
+			set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
+			break;
+		}
+	case 'JMP ':
+		{
+			m_pc = src;
+			break;
+		}
+	case 'JSR ':
+		{
+#if defined(FUNCTIONAL_TESTS)
+			if (src == 0xf001) {
+				printf("%c", m_acc);
+			} else if (src == 0xf004) {
+				m_acc = _getch();
+			} else {
+				m_memory[0x100 + m_sp--] = ((m_pc - 1)>> 8);
+				m_memory[0x100 + m_sp--] = (m_pc - 1) & 0xff;
+				m_pc = src;
+			}
+#else
+			m_memory.write(0x100 + m_sp--, ((m_pc - 1)>> 8));
+			m_memory.write(0x100 + m_sp--, (m_pc - 1) & 0xff);
+			m_pc = src;
+#endif
+			break;
+		}
+	case 'LDA ':
+		{
+			m_acc = m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
+			break;
+		}
+	case 'LDX ':
+		{
+			m_xindex = m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
+			break;
+		}
+	case 'LDY ':
+		{
+			m_yindex = m_memory[src];
+			set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
+			break;
+		}
+	case 'LSR ':
+		{
+		uint8_t val;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				val = m_acc;
+			} else {
+				val = m_memory[src];
+			}
+			set_flag(register_bit::CARRY_BIT, val & 1);
+			val >>= 1;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				m_acc = val;
+			} else {
+				m_memory.write(src, val);
+			}
+			set_flag(register_bit::SIGN_BIT, 0);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			break;
+		}
+	case 'NOP ':
+		{
+			break;
+		}
+	case 'ORA ':
+		{
+			uint8_t val = m_memory[src];
+			m_acc |= val;
+			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, m_acc == 0);
+			break;
+		}
+	case 'PHA ':
+		{
+			m_memory.write(0x100 + m_sp--, m_acc);
+			break;
+		}
+	case 'PLA ':
+		{
+			m_acc = m_memory[0x100 + ++m_sp];
+			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, m_acc == 0);
+			break;
+		}
+	case 'PHP ':
+		{
+			uint8_t register_value = m_status_register;
+			register_value |= 1 << (static_cast<uint8_t>(register_bit::BREAK_BIT));
+			register_value |= 1 << (static_cast<uint8_t>(register_bit::NOT_USED_BIT));
+			m_memory.write(0x100 + m_sp--, register_value);
+			break;
+		}
+	case 'PLP ':
+		{
+			m_status_register = m_memory[0x100 + ++m_sp];
+			break;
+		}
+	case 'ROL ':
+		{
+			uint8_t val;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				val = m_acc;
+			} else {
+				val = m_memory[src];
+			}
+			uint8_t carry_bit = (val >> 7) & 0x1;
+			val <<= 1;
+			val |= get_flag(register_bit::CARRY_BIT);
+			set_flag(register_bit::CARRY_BIT, carry_bit);
+			set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				m_acc = val;
+			} else {
+				m_memory.write(src, val);
+			}
+			break;
+		}
+	case 'ROR ':
+		{
+			uint8_t val;
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				val = m_acc;
+			} else {
+				val = m_memory[src];
+			}
+			uint8_t carry_bit = val & 0x1;
+			val >>= 1;
+			val |= (get_flag(register_bit::CARRY_BIT) & 0x1) << 7;
+			set_flag(register_bit::CARRY_BIT, carry_bit);
+			set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
+			set_flag(register_bit::ZERO_BIT, val == 0);
+			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+				m_acc = val;
+			} else {
+				m_memory.write(src, val);
+			}
+			break;
+		}
+	case 'RTI ':
+		{
+			m_status_register = m_memory[0x100 + ++m_sp];
+			m_pc = m_memory[0x100 + ++m_sp];
+			m_pc = (m_memory[0x100 + ++m_sp] << 8) | m_pc;
+			break;
+		}
+	case 'RTS ':
+		{
+			uint16_t addr = m_memory[0x100 + ++m_sp] & 0x00ff;
+			addr |= (m_memory[0x100 + ++m_sp] << 8);
+			m_pc = addr;
+			m_pc++;
+			break;
+		}
+	case 'SBC ':
+		{
+			uint8_t val = m_memory[src];
+			uint32_t sum;
+			uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
+			sum = m_acc + (~val & 0xff) + carry_bit;
+			set_flag(register_bit::CARRY_BIT, sum > 0xff);
+			set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
+			if (get_flag(register_bit::DECIMAL_BIT)) {
+				// decimal mode.
+				int32_t l = (m_acc & 0x0f) + (~val & 0x0f) + carry_bit;
+				int32_t h = (m_acc & 0xf0) + (~val & 0xf0);
+				if (l < 0x10) {
+					l -= 0x06;
+				} else {
+					h += 0x10;
+					l -= 0x10;
+				}
+
+				if (h < 0x100) {
+					h -= 0x60;
+					set_flag(register_bit::CARRY_BIT, 0);
+				} else {
+					set_flag(register_bit::CARRY_BIT, 1);
+				}
+				sum = h | l;
+				//printf ("sbc: %x - %x + %x = %x\n", m_acc, val, carry_bit, sum);
+			}
+			m_acc = sum & 0xff;
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+			set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
+			break;
+		}
+	case 'SEC ':
+		{
+			set_flag(register_bit::CARRY_BIT, 1);
+			break;
+		}
+	case 'SED ':
+		{
+			set_flag(register_bit::DECIMAL_BIT, 1);
+			break;
+		}
+	case 'SEI ':
+		{
+			set_flag(register_bit::INTERRUPT_BIT,1);
+			break;
+		}
+	case 'STA ':
+		{
+			m_memory.write(src, m_acc);
+			break;
+		}
+	case 'STX ':
+		{
+			m_memory.write(src, m_xindex);
+			break;
+		}
+	case 'STY ':
+		{
+			m_memory.write(src, m_yindex);
+			break;
+		}
+	case 'TAX ':
+		{
+			m_xindex = m_acc;
+			set_flag(register_bit::ZERO_BIT, m_xindex == 0);
+			set_flag(register_bit::SIGN_BIT, m_xindex & 0x80);
+			break;
+		}
+	case 'TXA ':
+		{
+			m_acc = m_xindex;
+			set_flag(register_bit::ZERO_BIT, m_acc == 0);
+			set_flag(register_bit::SIGN_BIT, m_acc & 0x80);
+			break;
+		}
+	case 'TAY ':
+		{
+			m_yindex = m_acc;
+			set_flag(register_bit::ZERO_BIT, m_yindex == 0);
+			set_flag(register_bit::SIGN_BIT, m_yindex & 0x80);
+			break;
+		}
+	case 'TYA ':
+		{
+			m_acc = m_yindex;
+			set_flag(register_bit::ZERO_BIT, m_acc == 0);
+			set_flag(register_bit::SIGN_BIT, m_acc & 0x80);
+			break;
+		}
+	case 'TXS ':
+		{
+			m_sp = m_xindex;
+			break;
+		}
+	case 'TSX ':
+		{
+			m_xindex = (int8_t)m_sp;
+			set_flag(register_bit::ZERO_BIT, m_xindex == 0);
+			set_flag(register_bit::SIGN_BIT, m_xindex & 0x80);
+			break;
+		}
+
+	default:
+		{
+			_ASSERT(0);
+		}
+		
+
 	}
 }

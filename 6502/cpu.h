@@ -54,7 +54,7 @@ public:
 public:
 	cpu_6502(memory &mem): m_memory(mem) { }
 	void init();
-	void process();
+	void process_opcode();
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
 private:

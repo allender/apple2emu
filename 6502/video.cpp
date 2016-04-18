@@ -3,14 +3,20 @@
 // use PDCurses for development
 //
 
-#include "curses.h"
+#include "6502/curses.h"
+#include "panel.h"
 #include "video.h"
 
 chtype flag = 0;
 
+PANEL *Main_panel;
+
 void init_text_screen()
 {
 	initscr();
+	Main_panel = new_panel(stdscr);
+	show_panel(Main_panel);
+	top_panel(Main_panel);
 }
 
 void clear_screen()

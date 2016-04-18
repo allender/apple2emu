@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "video.h"
 #include "curses.h"
+#include "debugger/debugger.h"
 
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
 
@@ -58,11 +59,21 @@ uint8_t keyboard_read_handler(uint16_t addr)
 		char c = getch();
 		if ( c != ERR ) {
 			uint8_t temp_key = c;
+			
+			// check to see if we hit the debugger key.  If so, don't
+			// report this as key to the system
+			if (temp_key == 26) {
+				debugger_enter();
+				return 0;
+			}
 			key_clear = false;
 			if (temp_key == '\n')
 				temp_key = '\r';
 			else if (temp_key == 127)
 				temp_key = 8;
+			if ( temp_key == '~') {
+				int x = 5;
+			}
 			last_key = temp_key | 0x80;
 		}
 	}

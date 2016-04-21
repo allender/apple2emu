@@ -234,9 +234,6 @@ void cpu_6502::process_opcode()
 {
 	// get the opcode at the program counter and the just figure out what
 	// to do
-	if (m_pc >= 0x3700 && m_pc <= 0x3703) {
-		int x = 5;
-	}
 	uint8_t opcode = m_memory[m_pc++];
 	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
 	_ASSERT( mode != addressing_mode::NO_MODE );

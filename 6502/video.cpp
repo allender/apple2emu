@@ -10,6 +10,7 @@
 chtype flag = 0;
 
 PANEL *Main_panel;
+bool is_raw = false;
 
 void init_text_screen()
 {
@@ -26,7 +27,9 @@ void clear_screen()
 
 void move_cursor(int row, int col)
 {
-	move(row, col);
+	if (is_raw == true) {
+		move(row, col);
+	}
 }
 
 void set_raw(bool state)
@@ -36,10 +39,12 @@ void set_raw(bool state)
 		noecho();
 		scrollok(stdscr, 1);
 		timeout(0);
+		is_raw = true;
 	} else {
 		noraw();
 		echo();
 		timeout(-1);
+		is_raw = false;
 	}
 }
 

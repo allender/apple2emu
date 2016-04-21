@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
 	//cpu.load_program(0x600, buffer, buffer_size);
 	while (1) {
-		debugger_process();
+		debugger_process(cpu, mem);
 		cpu.process_opcode();
 	}
 

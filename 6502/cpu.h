@@ -57,6 +57,14 @@ public:
 	void process_opcode();
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
+	// needed for debugger
+	uint16_t get_pc()     { return m_pc; }
+	uint8_t  get_acc()    { return m_acc;  }
+	uint8_t  get_x()      { return m_xindex;  }
+	uint8_t  get_y()      { return m_yindex;  }
+	uint8_t  get_sp()     { return m_sp;  }
+	uint8_t  get_status() { return m_status_register;  }
+
 private:
 	uint16_t         m_pc;
 	uint8_t          m_sp;

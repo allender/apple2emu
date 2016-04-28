@@ -22,6 +22,7 @@ bld/
 [Bb]in/
 [Oo]bj/
 
+
 # Visual Studio 2015 cache/options directory
 .vs/
 
@@ -211,6 +212,13 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
-/Emulator.VC.opendb
-/Emulator.VC.VC.opendb
-/Emulator.VC.db
+/apple2emu.VC.opendb
+/apple2emu.VC.VC.opendb
+/apple2emu.VC.db
+
+# don't upload any disk images.  User must do that
+disks/*
+
+# ignore SDL libs
+/SDL2*.*
+/*.exe

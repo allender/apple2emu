@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="apple2emu.cpp" />
+    <ClCompile Include="6502\cpu.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\disk.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\disk_image.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\font.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\keyboard.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\memory.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\video.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="debugger\debugger.cpp">
+      <Filter>debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\assemble.cpp">
+      <Filter>assembler</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\path_utils.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="precompiled.h" />
+    <ClInclude Include="6502\cpu.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\disk.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\disk_image.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\font.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\keyboard.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\memory.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\video.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="debugger\debugger.h">
+      <Filter>debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\assemble.h">
+      <Filter>assembler</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\path_utils.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\easylogging++.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="system">
+      <UniqueIdentifier>{8659b05d-9001-48dd-b5d2-211d71ecfc1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="debugger">
+      <UniqueIdentifier>{c24d0e89-31c3-4f17-80a3-51bee733a9a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assembler">
+      <UniqueIdentifier>{2cdb4ee0-7fb7-491f-98c2-5377fafee898}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{de9a8362-f5b3-4b3b-a523-26155a316923}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

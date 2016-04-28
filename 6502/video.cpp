@@ -3,6 +3,150 @@
 // use PDCurses for development
 //
 
+#if defined(USE_SDL)
+
+#include "SDL.h"
+#include "SDL_image.h"
+#include "6502/font.h"
+
+//#define SCREEN_W   560
+//#define SCREEN_H   384
+#define SCREEN_W  1024 
+#define SCREEN_H  768 
+
+SDL_Window *Video_window;
+SDL_Renderer *Video_renderer;
+font Video_font;
+
+static char character_conv[] = {
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $00	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $08	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $10	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $18	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $20	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $28	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $30	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $38	*/
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $40	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $48	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $50	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $58	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $60	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $68	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $70	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $78	*/
+
+	'@', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $80	*/
+	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $88	*/
+	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $90	*/
+	'x', 'y', 'z', '[', '\\',']', '^', '_',		/* $98	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $A0	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $A8	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $B0	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $B8	*/
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $C0	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $C8	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $D0	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $D8	*/
+	' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
+	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $E8	*/
+	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $F0	*/
+	'x', 'y', 'z', ';', '<', '=', '>', '?',		/* $F8	*/
+};
+
+// intialize the SDL system
+bool video_init()
+{
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return false;
+	}
+		
+	// create SDL window
+	Video_window = SDL_CreateWindow("Apple2Emu", 100, 100, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN);
+	if (Video_window == nullptr) {
+		printf("Unable to create SDL window: %s\n", SDL_GetError());
+		SDL_Quit();
+		return false;
+	}
+
+	// create SDL renderer
+	Video_renderer = SDL_CreateRenderer(Video_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+	if (Video_renderer == nullptr) {
+		printf("Unable to create SDL renderer: %s\n", SDL_GetError());
+		SDL_Quit();
+		return false;
+	}
+
+	// set and clear to black
+	SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 255);
+	SDL_RenderClear(Video_renderer);
+
+	// load up the font that we need
+	 if (Video_font.load("apple2.bff") == false) {
+		return false;
+	}
+
+	return true;
+}
+
+void video_shutdown()
+{
+	SDL_DestroyRenderer(Video_renderer);
+	SDL_DestroyWindow(Video_window);
+	SDL_Quit();
+}
+
+void video_render_frame(memory &mem)
+{
+	SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 0);
+	SDL_RenderClear(Video_renderer);
+	SDL_SetRenderDrawColor(Video_renderer, 0xff, 0xff, 0xff, 0xff);
+
+	// fow now, just run through the text memory and put out whatever is there
+	uint32_t x_pixel, y_pixel;
+
+	y_pixel = 0;
+	for (auto y = 0; y < 24; y++) {
+		x_pixel = 0;
+		for (auto x = 0; x < 40; x++) {
+			// get character in memory, and then convert to ASCII.  We get character
+			// value from memory and then subtract out the first character in our
+			// font (as we need to be 0-based from that point).  Then we can get
+			// the row/col in the bitmap sheet where the character is
+			uint8_t c = character_conv[mem.get_screen_char_at(y, x)] - Video_font.m_header.m_char_offset;
+			uint32_t character_row = c / Video_font.m_chars_per_row;
+			uint32_t character_col = c - character_row * Video_font.m_chars_per_row;
+		
+			// calculate the rectangle of the character
+			SDL_Rect font_rect;
+			font_rect.x = character_col * Video_font.m_header.m_cell_width;
+			font_rect.y = character_row * Video_font.m_header.m_cell_height;
+			font_rect.w = Video_font.m_header.m_cell_width;
+			font_rect.h = Video_font.m_header.m_cell_height;
+
+			SDL_Rect screen_rect;
+			screen_rect.x = x_pixel;
+			screen_rect.y = y_pixel;
+			screen_rect.w = Video_font.m_header.m_cell_width;
+			screen_rect.h = Video_font.m_header.m_cell_height;
+
+			// copy to screen
+			SDL_RenderCopy(Video_renderer, Video_font.m_texture, &font_rect, &screen_rect);
+
+			x_pixel += Video_font.m_header.m_cell_width;
+		}
+		y_pixel += Video_font.m_header.m_cell_height;
+	}
+
+	SDL_RenderPresent(Video_renderer);
+}
+
+#else  // USE_SDL
+
 #include "6502/curses.h"
 #include "panel.h"
 #include "video.h"
@@ -56,7 +200,7 @@ void output_char(char c)
 
 void screen_bottom()
 {
-	move_cursor(MAX_LINES,0);
+	move_cursor(LINES,0);
 }
 
 void scroll_screen()
@@ -78,3 +222,6 @@ void set_flashing()
 {
 	flag = A_BLINK;
 }
+
+#endif
+

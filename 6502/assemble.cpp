@@ -26,8 +26,6 @@ enum class record_type : uint8_t {
 	RECORD_TYPE_ERROR
 };
 
-#pragma warning(disable:4996)   // disable the deprecated warnings for fopen and friends
-
 struct symbol_table_entry {
 	uint16_t m_location;        // location of the symbol
 };

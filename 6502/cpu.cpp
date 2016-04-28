@@ -132,40 +132,40 @@ void cpu_6502::init()
 	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDIRECT_INDEXED_MODE)] = &cpu_6502::indirect_indexed_mode;
 }
 
-int16_t cpu_6502::accumulator_mode()
+inline int16_t cpu_6502::accumulator_mode()
 {
 	return m_acc;
 }
 
-int16_t cpu_6502::immediate_mode()
+inline int16_t cpu_6502::immediate_mode()
 {
 	return m_pc++;
 }
 
-int16_t cpu_6502::implied_mode()
+inline int16_t cpu_6502::implied_mode()
 {
 	return 0;  // this value won't get used
 }
 
-int16_t cpu_6502::relative_mode()
+inline int16_t cpu_6502::relative_mode()
 {
 	return m_pc++;
 }
 
-int16_t cpu_6502::absolute_mode()
+inline int16_t cpu_6502::absolute_mode()
 {
 	uint8_t lo = m_memory[m_pc++];
 	uint8_t hi = m_memory[m_pc++];
 	return (hi << 8) | lo;
 }
 
-int16_t cpu_6502::zero_page_mode()
+inline int16_t cpu_6502::zero_page_mode()
 {
 	uint8_t lo = m_memory[m_pc++];
 	return lo;
 }
 
-int16_t cpu_6502::indirect_mode()
+inline int16_t cpu_6502::indirect_mode()
 {
 	uint8_t addr_lo = m_memory[m_pc++];
 	uint8_t addr_hi = m_memory[m_pc++];
@@ -175,33 +175,33 @@ int16_t cpu_6502::indirect_mode()
 	return return_addr;
 }
 
-int16_t cpu_6502::absolute_x_mode()
+inline int16_t cpu_6502::absolute_x_mode()
 {
 	uint8_t lo = m_memory[m_pc++];
 	uint8_t hi = m_memory[m_pc++];
 	return ((hi << 8) | lo) + m_xindex;
 }
 
-int16_t cpu_6502::absolute_y_mode()
+inline int16_t cpu_6502::absolute_y_mode()
 {
 	uint8_t lo = m_memory[m_pc++];
 	uint8_t hi = m_memory[m_pc++];
 	return ((hi << 8) | lo) + m_yindex;
 }
 
-int16_t cpu_6502::zero_page_indexed_mode()
+inline int16_t cpu_6502::zero_page_indexed_mode()
 {
 	uint8_t lo = m_memory[m_pc++];
 	return (lo + m_xindex) & 0xff;
 }
 
-int16_t cpu_6502::zero_page_indexed_mode_y()
+inline int16_t cpu_6502::zero_page_indexed_mode_y()
 {
 	uint8_t lo = m_memory[m_pc++];
 	return (lo + m_yindex) & 0xff;
 }
 
-int16_t cpu_6502::indexed_indirect_mode()
+inline int16_t cpu_6502::indexed_indirect_mode()
 {
 	uint16_t addr_start = (m_memory[m_pc++] + m_xindex) & 0xff;
 	uint8_t lo = m_memory[addr_start];
@@ -209,7 +209,7 @@ int16_t cpu_6502::indexed_indirect_mode()
 	return (hi << 8) | lo;
 }
 
-int16_t cpu_6502::indirect_indexed_mode()
+inline int16_t cpu_6502::indirect_indexed_mode()
 {
 	uint16_t addr_start = m_memory[m_pc++];
 	uint8_t lo = m_memory[addr_start];
@@ -218,7 +218,7 @@ int16_t cpu_6502::indirect_indexed_mode()
 	return addr;
 }
 
-void cpu_6502::branch_relative()
+inline void cpu_6502::branch_relative()
 {
 	uint8_t val = m_memory[m_pc-1];
 	m_pc += val;
@@ -230,14 +230,20 @@ void cpu_6502::branch_relative()
 //
 // main loop for opcode processing
 //
-void cpu_6502::process_opcode()
+uint32_t cpu_6502::process_opcode()
 {
 	// get the opcode at the program counter and the just figure out what
 	// to do
 	uint8_t opcode = m_memory[m_pc++];
+
+	// get addressing mode and then do appropriate work based on the mode
 	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
 	_ASSERT( mode != addressing_mode::NO_MODE );
 	uint16_t src = (this->*m_addressing_functions[static_cast<uint8_t>(mode)])();
+
+	uint32_t cycles = m_opcodes[opcode].m_cycle_count;
+
+	// execute the actual opcode
 	switch(m_opcodes[opcode].m_mnemonic) {
 	case 'ADC ':
 		{
@@ -751,4 +757,7 @@ void cpu_6502::process_opcode()
 		
 
 	}
+
+	// return the number of cycles that we executed
+	return cycles;
 }

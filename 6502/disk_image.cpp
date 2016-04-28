@@ -4,8 +4,6 @@
 
 #include "disk_image.h"
 
-#pragma warning(disable:4996)   // disable the deprecated warnings for fopen
-
 uint8_t* disk_image::m_work_buffer = nullptr;
 
 #define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }

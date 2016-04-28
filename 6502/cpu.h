@@ -54,7 +54,7 @@ public:
 public:
 	cpu_6502(memory &mem): m_memory(mem) { }
 	void init();
-	void process_opcode();
+	uint32_t process_opcode();
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
 	// needed for debugger

@@ -3,8 +3,10 @@
 
 #pragma once
 
-#define MAX_LINES   24
-#define MAX_COLUMNS 40
+#include "SDL.h"
+#include "memory.h"
+
+#if !defined(USE_SDL)
 
 void init_text_screen();
 void set_screen_size(int *lines, int *columns);
@@ -17,3 +19,14 @@ void scroll_screen();
 void set_inverse();
 void set_flashing();
 void set_normal();
+
+#else
+
+extern SDL_Window *Video_window;
+extern SDL_Renderer *Video_renderer;
+
+bool video_init();
+void video_shutdown();
+void video_render_frame(memory &mem);
+
+#endif // USE_SDL

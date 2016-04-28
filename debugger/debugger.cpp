@@ -5,8 +5,6 @@
 #include "6502/curses.h"
 #include "panel.h"
 
-#pragma warning(disable:4996)   // disable the deprecated warnings for fopen and friends
-
 enum class breakpoint_type {
 	INVALID,
 	BREAKPOINT,
@@ -315,13 +313,17 @@ void debugger_enter()
 {
 	Debugger_active = true;
 	Debugger_stopped = true;
+#if !defined(USE_SDL)
 	set_raw(false);
 	printw("\n");
+#endif
 }
 
 void debugger_exit()
 {
+#if !defined(USE_SDL)
 	set_raw(true);
+#endif
 }
 
 void debugger_init()

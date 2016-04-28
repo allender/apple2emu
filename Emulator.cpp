@@ -8,8 +8,11 @@
 #include "6502/assemble.h"
 #include "6502/video.h"
 #include "6502/disk.h"
+#include "6502/keyboard.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
+
+#include "SDL.h"
 
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
 
@@ -20,13 +23,9 @@ int8_t memory_buffer[MEMORY_SIZE];
 
 static void configure_logging()
 {
-	// hacky for now, but remove the old logfile
-	unlink("emulator.log");
-
 	el::Configurations conf;
 
 	conf.setToDefault();
-	conf.set(el::Level::Global, el::ConfigurationType::Filename, "emulator.log");
 	conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
 	conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
 	conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
@@ -78,7 +77,6 @@ int main(int argc, char* argv[])
 	cpu_6502 cpu(mem);
 	cpu.init();
 
-	init_text_screen();
 	debugger_init();
 	disk_init(mem);
 
@@ -160,14 +158,54 @@ int main(int argc, char* argv[])
 			disk_insert(disk_image_filename, 1);
 		}
 	}
+#if !defined(USE_SDL)
+	init_text_screen();
 	clear_screen();
 	set_raw(true);
+#else
+	video_init();
+	keyboard_init();
+#endif
 
 	//cpu.load_program(0x600, buffer, buffer_size);
-	while (1) {
+	bool quit = false;
+	uint32_t total_cycles = 0;
+
+	while (!quit) {
+		SDL_Event evt;
+
+		while (SDL_PollEvent(&evt)) {
+			switch (evt.type) {
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+				keyboard_handle_event(evt);
+				break;
+
+			}
+		}
+
+		// process debugger (before opcode processing so that we can break on
+		// specific addresses properly
 		debugger_process(cpu, mem);
-		cpu.process_opcode();
+
+		// process the next opcode
+		uint32_t cycles = cpu.process_opcode();
+		total_cycles += cycles;
+
+		if (total_cycles > 17030) {
+#if defined(USE_SDL)
+			video_render_frame(mem);
+#endif // if defined(USE_SDL)
+			total_cycles -= 17030;
+		}
+
+
 	}
+
+#if defined(USE_SDL)
+	video_shutdown();
+	keyboard_shutdown();
+#endif
 
 	return 0;
 }

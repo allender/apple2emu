@@ -1,8 +1,6 @@
 #include <string>
 #include "path_utils.h"
 
-#pragma warning(disable:4996)
-
 /* 
  *  function to change the extension of the given path
 */

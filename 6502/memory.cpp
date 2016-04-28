@@ -3,8 +3,7 @@
 #include "video.h"
 #include "curses.h"
 #include "debugger/debugger.h"
-
-#pragma warning(disable:4996)   // disable the deprecated warnings for fopen
+#include "6502/keyboard.h"
 
 /*
  *  Screen display mapping table
@@ -55,6 +54,7 @@ static uint8_t last_key = 0;
 
 uint8_t keyboard_read_handler(uint16_t addr)
 {
+#if !defined(USE_SDL)
 	if (key_clear) {
 		char c = getch();
 		if ( c != ERR ) {
@@ -71,12 +71,16 @@ uint8_t keyboard_read_handler(uint16_t addr)
 				temp_key = '\r';
 			else if (temp_key == 127)
 				temp_key = 8;
-			if ( temp_key == '~') {
-				int x = 5;
-			}
 			last_key = temp_key | 0x80;
 		}
 	}
+#else
+	uint8_t temp_key = keyboard_get_key();
+	if (temp_key > 0) {
+		last_key = temp_key | 0x80;
+	}
+#endif  // #if !defined(USE_SDL)
+
 	return(last_key);
 }
 
@@ -94,11 +98,12 @@ memory::memory(int size, void *memory)
 	m_memory = (uint8_t *)memory;
 
 	// load up ROM/PROM images
-	load_memory("apple2.rom", 0xd000);
-	load_memory("disk2.rom", 0xc600);
+	load_memory("roms/apple2.rom", 0xd000);
+	load_memory("roms/disk2.rom", 0xc600);
 
-	// set up screen map (temporary) for video output
-	for (int i = 0; i < MAX_LINES; i++) {
+	// set up screen map (temporary) for video output.  This per/row
+	// table gets starting memory address for that row of text
+	for (int i = 0; i < MAX_TEXT_LINES; i++) {
 		m_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
 	}
 
@@ -153,8 +158,11 @@ void memory::write(const uint16_t addr, uint8_t val)
 
 	// see if memory address is headed to video screen.  Text page 1
 	if (((addr & 0x0f00) >= 0x400) && ((addr & 0x0f00) < 0x800)) {
-		for ( int i = 0; i < MAX_LINES; i++ ) {
-			if ((addr >= m_screen_map[i]) && (addr < (m_screen_map[i] + MAX_COLUMNS))) {
+		int x = 3;
+
+#if !defined(USE_SDL)
+		for ( int i = 0; i < MAX_TEXT_LINES; i++ ) {
+			if ((addr >= m_screen_map[i]) && (addr < (m_screen_map[i] + MAX_TEXT_COLUMNS))) {
 				move_cursor(i, addr - m_screen_map[i]);
 				if (val <= 0x3f) {
 					set_inverse();
@@ -167,7 +175,18 @@ void memory::write(const uint16_t addr, uint8_t val)
 				break;
 			}
 		}
+#endif
 	}
+}
+
+// gets the character at the given row/column
+uint8_t memory::get_screen_char_at(uint32_t row, uint32_t col)
+{
+	_ASSERT((row < 24) && (col < 40));
+
+
+	uint16_t addr = m_screen_map[row] + col;
+	return m_memory[addr];
 }
 
 bool memory::load_memory(const char *filename, uint16_t location)

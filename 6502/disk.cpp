@@ -6,8 +6,6 @@
 #include "disk.h"
 #include "memory.h"
 
-#pragma warning(disable:4996)   // disable the deprecated warnings for fopen
-
 #if defined(max)
 #undef max
 #endif

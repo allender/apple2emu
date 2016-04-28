@@ -5,14 +5,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="6502">
-      <UniqueIdentifier>{30ced7d0-4757-40af-adf8-2e65a1cebc93}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utils">
       <UniqueIdentifier>{1dff9c22-5046-448f-8cda-da98723e41cf}</UniqueIdentifier>
     </Filter>
     <Filter Include="Debugger">
       <UniqueIdentifier>{1ee2dded-e14b-437a-98f0-42a1a50196d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Apple">
+      <UniqueIdentifier>{30ced7d0-4757-40af-adf8-2e65a1cebc93}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -20,60 +20,71 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="6502\cpu.cpp">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClCompile>
     <ClCompile Include="6502\memory.cpp">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClCompile>
     <ClCompile Include="Emulator.cpp" />
     <ClCompile Include="utils\path_utils.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="6502\assemble.cpp">
-      <Filter>6502</Filter>
-    </ClCompile>
     <ClCompile Include="6502\video.cpp">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClCompile>
     <ClCompile Include="6502\disk.cpp">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClCompile>
-    <ClCompile Include="precompiled.cpp" />
     <ClCompile Include="6502\disk_image.cpp">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClCompile>
     <ClCompile Include="debugger\debugger.cpp">
       <Filter>Debugger</Filter>
     </ClCompile>
+    <ClCompile Include="6502\assemble.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\font.cpp">
+      <Filter>Apple</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\keyboard.cpp">
+      <Filter>Apple</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="6502\cpu.h">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClInclude>
     <ClInclude Include="6502\memory.h">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClInclude>
     <ClInclude Include="utils\path_utils.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="6502\assemble.h">
-      <Filter>6502</Filter>
-    </ClInclude>
     <ClInclude Include="6502\video.h">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClInclude>
     <ClInclude Include="6502\disk.h">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClInclude>
     <ClInclude Include="utils\easylogging++.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="precompiled.h" />
     <ClInclude Include="6502\disk_image.h">
-      <Filter>6502</Filter>
+      <Filter>Apple</Filter>
     </ClInclude>
     <ClInclude Include="debugger\debugger.h">
       <Filter>Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\assemble.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\font.h">
+      <Filter>Apple</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\keyboard.h">
+      <Filter>Apple</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

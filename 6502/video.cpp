@@ -16,7 +16,7 @@
 
 SDL_Window *Video_window;
 SDL_Renderer *Video_renderer;
-font Video_font;
+font Video_font, Video_inverse_font;
 
 static char character_conv[] = {
 
@@ -85,8 +85,11 @@ bool video_init()
 	SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 255);
 	SDL_RenderClear(Video_renderer);
 
-	// load up the font that we need
-	 if (Video_font.load("apple2.bff") == false) {
+	// load up the fonts that we need
+	if (Video_font.load("apple2.bff") == false) {
+		return false;
+	}
+	if (Video_inverse_font.load("apple2_inverted.bff") == false) {
 		return false;
 	}
 
@@ -112,34 +115,41 @@ void video_render_frame(memory &mem)
 	y_pixel = 0;
 	for (auto y = 0; y < 24; y++) {
 		x_pixel = 0;
+		font *cur_font = &Video_font;
 		for (auto x = 0; x < 40; x++) {
+			// get normal or inverse font
+			uint8_t c = mem.get_screen_char_at(y, x);
+			if (c <= 0x3f) {
+				cur_font = &Video_inverse_font;
+			}
+
 			// get character in memory, and then convert to ASCII.  We get character
 			// value from memory and then subtract out the first character in our
 			// font (as we need to be 0-based from that point).  Then we can get
 			// the row/col in the bitmap sheet where the character is
-			uint8_t c = character_conv[mem.get_screen_char_at(y, x)] - Video_font.m_header.m_char_offset;
-			uint32_t character_row = c / Video_font.m_chars_per_row;
-			uint32_t character_col = c - character_row * Video_font.m_chars_per_row;
+			c = character_conv[c] - cur_font->m_header.m_char_offset;
+			uint32_t character_row = c / cur_font->m_chars_per_row;
+			uint32_t character_col = c - character_row * cur_font->m_chars_per_row;
 		
 			// calculate the rectangle of the character
 			SDL_Rect font_rect;
-			font_rect.x = character_col * Video_font.m_header.m_cell_width;
-			font_rect.y = character_row * Video_font.m_header.m_cell_height;
-			font_rect.w = Video_font.m_header.m_cell_width;
-			font_rect.h = Video_font.m_header.m_cell_height;
+			font_rect.x = character_col * cur_font->m_header.m_cell_width;
+			font_rect.y = character_row * cur_font->m_header.m_cell_height;
+			font_rect.w = cur_font->m_header.m_cell_width;
+			font_rect.h = cur_font->m_header.m_cell_height;
 
 			SDL_Rect screen_rect;
 			screen_rect.x = x_pixel;
 			screen_rect.y = y_pixel;
-			screen_rect.w = Video_font.m_header.m_cell_width;
-			screen_rect.h = Video_font.m_header.m_cell_height;
+			screen_rect.w = cur_font->m_header.m_cell_width;
+			screen_rect.h = cur_font->m_header.m_cell_height;
 
 			// copy to screen
-			SDL_RenderCopy(Video_renderer, Video_font.m_texture, &font_rect, &screen_rect);
+			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &font_rect, &screen_rect);
 
-			x_pixel += Video_font.m_header.m_cell_width;
+			x_pixel += cur_font->m_header.m_cell_width;
 		}
-		y_pixel += Video_font.m_header.m_cell_height;
+		y_pixel += cur_font->m_header.m_cell_height;
 	}
 
 	SDL_RenderPresent(Video_renderer);

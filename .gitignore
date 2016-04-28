@@ -215,6 +215,8 @@ ModelManifest.xml
 /apple2emu.VC.opendb
 /apple2emu.VC.VC.opendb
 /apple2emu.VC.db
+/apple2emu.ipdb
+/apple2emu.iobj
 
 # don't upload any disk images.  User must do that
 disks/*

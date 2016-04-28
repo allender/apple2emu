@@ -16,6 +16,8 @@
 
 SDL_Window *Video_window;
 SDL_Renderer *Video_renderer;
+SDL_TimerID Video_flash_timer;
+bool Video_flash = false;
 font Video_font, Video_inverse_font;
 
 static char character_conv[] = {
@@ -57,6 +59,13 @@ static char character_conv[] = {
 	'x', 'y', 'z', ';', '<', '=', '>', '?',		/* $F8	*/
 };
 
+// callback for flashing characters
+static uint32_t timer_flash_callback(uint32_t interval, void *param)
+{
+	Video_flash = !Video_flash;
+	return interval;
+}
+
 // intialize the SDL system
 bool video_init()
 {
@@ -93,6 +102,10 @@ bool video_init()
 		return false;
 	}
 
+	// set up a timer for flashing cursor
+	Video_flash = false;
+	Video_flash_timer = SDL_AddTimer(500, timer_flash_callback, nullptr);
+
 	return true;
 }
 
@@ -115,12 +128,17 @@ void video_render_frame(memory &mem)
 	y_pixel = 0;
 	for (auto y = 0; y < 24; y++) {
 		x_pixel = 0;
-		font *cur_font = &Video_font;
+		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
 			uint8_t c = mem.get_screen_char_at(y, x);
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
+			} else if ((c <= 0x7f) && (Video_flash == true)) {
+				// set inverse if flashing is true
+				cur_font = &Video_inverse_font;
+			} else {
+				cur_font = &Video_font;
 			}
 
 			// get character in memory, and then convert to ASCII.  We get character

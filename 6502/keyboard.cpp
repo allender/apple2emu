@@ -80,6 +80,7 @@ uint32_t keyboard_get_key()
 	} while (key_buffer[key_buffer_front] == 0 && key_buffer_front != key_buffer_end);
 
 	if (key & KEY_SHIFT) {
+		key &= 0xff;
 		key = key_shifted_ascii_table[key];
 	} else if (key & KEY_CTRL) {
 		// send ctrl-A through ctrl-Z

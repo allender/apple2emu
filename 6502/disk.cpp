@@ -14,6 +14,8 @@
 #undef min
 #endif
 
+//#define LOG_DISK
+
 
 // I NEED TO FIGURE OUT WHAT THIS DEFINE WORKS
 #define NIBBLES_PER_TRACK 0x1A00
@@ -42,7 +44,9 @@ void disk_drive::readwrite()
 
 	// read the data out of the disk image into the track image
 	if (m_track_size == 0) {
+#if defined(LOG_DISK)
 		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)drive_1.m_current_track << "  read";
+#endif
 	 	m_track_size = m_disk_image->read_track(drive_1.m_current_track, m_track_data);
 		m_current_byte = 0;
 	}
@@ -50,8 +54,10 @@ void disk_drive::readwrite()
 	if (m_write_mode == false) {
 		// this is read mode
 		m_data_buffer = m_track_data[m_current_byte];
+#if defined(LOG_DISK)
 		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
 			std::setw(2) << std::setbase(16) << (uint32_t)m_data_buffer;
+#endif
 	}
 	else {
 		// this is write mode
@@ -128,7 +134,7 @@ uint8_t read_handler(uint16_t addr)
 						drive_1.set_new_track(new_track);
 					}
 				}
-
+#if defined(LOG_DISK)
 				LOG(INFO) << "phases: " << std::setw(1) << ((drive_1.m_phase_status >> 3) & 0x1)
 												<< std::setw(1) << ((drive_1.m_phase_status >> 2) & 0x1)
 												<< std::setw(1) << ((drive_1.m_phase_status >> 1) & 0x1) 
@@ -136,7 +142,7 @@ uint8_t read_handler(uint16_t addr)
 							 << " track: " << std::setw(2) << (int)drive_1.m_half_track_count
 							 << " dir: " << std::setw(1) << dir
 							 << " addr: " << std::setbase(16) << (addr & 0xff);
-				
+#endif
 				}
 			}
 		break;
@@ -145,7 +151,6 @@ uint8_t read_handler(uint16_t addr)
 	case 0x9:
 		// turn the motor on or off
 		drive_1.m_motor_on = (addr & 1);
-		//LOG(INFO) << "Motor on: " << (addr & 1);
 		break;
 
 	case 0xa:
@@ -164,12 +169,10 @@ uint8_t read_handler(uint16_t addr)
 
 	case 0xe:
 		drive_1.m_write_mode = false;
-		//LOG(INFO) << "set read mode";
 		break;
 
 	case 0xf:
 		drive_1.m_write_mode = true;
-		//LOG(INFO) << "set write mode";
 		break;
 	}
 

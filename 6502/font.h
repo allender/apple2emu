@@ -15,15 +15,16 @@
 
 #pragma once
 
-#define USE_BFF
+//#define USE_BFF
 
 // holds the font definition
 class font {
 public:
 	struct header {
 		uint8_t    m_id[2];
-		uint32_t   m_font_width;
-		uint32_t   m_font_height;
+		uint32_t   m_format;
+		int32_t    m_font_width;
+		int32_t    m_font_height;
 		uint32_t   m_cell_width;
 		uint32_t   m_cell_height;
 		uint8_t    m_bpp;
@@ -37,6 +38,7 @@ public:
 	int32_t       m_chars_per_row;
 	float         m_column_factor;
 	float         m_row_factor;
+	SDL_Rect      m_char_rects[256];
 
 	font() { }
 	bool load(const char *filename);

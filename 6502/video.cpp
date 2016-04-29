@@ -95,16 +95,25 @@ bool video_init()
 	SDL_RenderClear(Video_renderer);
 
 	// load up the fonts that we need
+#if defined(USE_BFF)
 	if (Video_font.load("apple2.bff") == false) {
 		return false;
 	}
 	if (Video_inverse_font.load("apple2_inverted.bff") == false) {
 		return false;
 	}
+#else
+	if (Video_font.load("apple2.tga") == false) {
+		return false;
+	}
+	if (Video_inverse_font.load("apple2_inverted.tga") == false) {
+		return false;
+	}
+#endif
 
 	// set up a timer for flashing cursor
 	Video_flash = false;
-	Video_flash_timer = SDL_AddTimer(500, timer_flash_callback, nullptr);
+	Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
 
 	return true;
 }
@@ -146,15 +155,6 @@ void video_render_frame(memory &mem)
 			// font (as we need to be 0-based from that point).  Then we can get
 			// the row/col in the bitmap sheet where the character is
 			c = character_conv[c] - cur_font->m_header.m_char_offset;
-			uint32_t character_row = c / cur_font->m_chars_per_row;
-			uint32_t character_col = c - character_row * cur_font->m_chars_per_row;
-		
-			// calculate the rectangle of the character
-			SDL_Rect font_rect;
-			font_rect.x = character_col * cur_font->m_header.m_cell_width;
-			font_rect.y = character_row * cur_font->m_header.m_cell_height;
-			font_rect.w = cur_font->m_header.m_cell_width;
-			font_rect.h = cur_font->m_header.m_cell_height;
 
 			SDL_Rect screen_rect;
 			screen_rect.x = x_pixel;
@@ -163,7 +163,7 @@ void video_render_frame(memory &mem)
 			screen_rect.h = cur_font->m_header.m_cell_height;
 
 			// copy to screen
-			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &font_rect, &screen_rect);
+			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
 
 			x_pixel += cur_font->m_header.m_cell_width;
 		}

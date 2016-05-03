@@ -104,7 +104,8 @@ memory::memory(int size, void *memory)
 	// set up screen map (temporary) for video output.  This per/row
 	// table gets starting memory address for that row of text
 	for (int i = 0; i < MAX_TEXT_LINES; i++) {
-		m_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+		m_primary_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+		m_secondary_screen_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
 	}
 
 	for (auto i = 0; i < 256; i++) {
@@ -113,12 +114,18 @@ memory::memory(int size, void *memory)
 	}
 
 	// register handlers for keyboard -- temporary I think
-	m_c000_handlers[0x00].m_read_handler = keyboard_read_handler;
-	m_c000_handlers[0x10].m_read_handler = keyboard_clear_handler;
+	register_c000_handler(0x00, keyboard_read_handler, nullptr);
+	register_c000_handler(0x10, keyboard_clear_handler, nullptr);
+}
+
+void memory::register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function)
+{
+	m_c000_handlers[addr].m_read_handler = read_function;
+	m_c000_handlers[addr].m_write_handler = write_function;
 }
 
 // register handlers for the I/O slots
-bool memory::register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function )
+void memory::register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function )
 {
 	_ASSERT((slot >= 1) && (slot <= MAX_SLOTS));
 	uint8_t addr = 0x80 + (slot << 4);
@@ -129,7 +136,6 @@ bool memory::register_slot_handler(const uint8_t slot, slot_io_read_function rea
 		m_c000_handlers[addr+i].m_read_handler = read_function;
 		m_c000_handlers[addr+i].m_write_handler = write_function;
 	}
-	return true;
 }
 
 uint8_t memory::operator[](const uint16_t addr)
@@ -179,11 +185,20 @@ void memory::write(const uint16_t addr, uint8_t val)
 	}
 }
 
+// sets whether or not we are working on a primary page or not
+void memory::set_page(bool primary)
+{
+	if (primary == true) {
+		m_screen_map = m_primary_screen_map;
+	} else {
+		m_screen_map = m_secondary_screen_map;
+	}
+}
+
 // gets the character at the given row/column
 uint8_t memory::get_screen_char_at(uint32_t row, uint32_t col)
 {
 	_ASSERT((row < 24) && (col < 40));
-
 
 	uint16_t addr = m_screen_map[row] + col;
 	return m_memory[addr];

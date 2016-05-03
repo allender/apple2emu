@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
 	clear_screen();
 	set_raw(true);
 #else
-	video_init();
+	video_init(mem);
 	keyboard_init();
 #endif
 

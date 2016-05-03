@@ -25,7 +25,7 @@ void set_normal();
 extern SDL_Window *Video_window;
 extern SDL_Renderer *Video_renderer;
 
-bool video_init();
+bool video_init(memory &mem);
 void video_shutdown();
 void video_render_frame(memory &mem);
 

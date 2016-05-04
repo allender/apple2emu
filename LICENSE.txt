@@ -1,5 +1,3 @@
-/*
-
 MIT License
 
 Copyright (c) 2016 Mark Allender
@@ -23,13 +21,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-*/
-
-#pragma once
-
-#include "6502/cpu.h"
-#include "6502/memory.h"
-
-void debugger_enter();
-void debugger_init();
-void debugger_process(cpu_6502& cpu, memory& mem);

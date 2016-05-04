@@ -70,9 +70,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="system">
       <UniqueIdentifier>{8659b05d-9001-48dd-b5d2-211d71ecfc1c}</UniqueIdentifier>
     </Filter>

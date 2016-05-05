@@ -102,8 +102,8 @@ bool font::load(const char *filename)
 	// first character in the font.  The cell widths are hard coded because this is how
 	// the texture was exported from CBFG
 	m_header.m_char_offset = 32;
-	m_header.m_cell_height = 20;
-	m_header.m_cell_width = 20;
+	m_header.m_cell_height = 16;
+	m_header.m_cell_width = 14;
 #endif
 
 	m_chars_per_row = m_header.m_font_width / m_header.m_cell_width;

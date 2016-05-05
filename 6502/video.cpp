@@ -36,10 +36,9 @@ SOFTWARE.
 #include "SDL_image.h"
 #include "6502/font.h"
 
-//#define SCREEN_W   560
-//#define SCREEN_H   384
-#define SCREEN_W  1024 
-#define SCREEN_H  768 
+// this is hires * 2 (280 * 192)
+#define SCREEN_W   560
+#define SCREEN_H   384
 
 // video modes
 #define VIDEO_MODE_TEXT    (1 << 0)
@@ -230,14 +229,14 @@ static void video_render_lores_mode(memory &mem)
 			SDL_Rect source_rect;
 			source_rect.x = (color * Lores_texture_size);
 			source_rect.y = 0;
-			source_rect.w = 20;
-			source_rect.h = 10;
+			source_rect.w = 16;
+			source_rect.h = 14;
 			
 			SDL_Rect screen_rect;
 			screen_rect.x = x_pixel;
 			screen_rect.y = y_pixel;
-			screen_rect.w = 20;
-			screen_rect.h = 10;
+			screen_rect.w = 16;
+			screen_rect.h = 14;
 			
 			SDL_RenderCopy(Video_renderer, Video_lores_texture, &source_rect, &screen_rect);
 
@@ -246,19 +245,19 @@ static void video_render_lores_mode(memory &mem)
 			
 			source_rect.x = (color * Lores_texture_size);
 			source_rect.y = 0;
-			source_rect.w = 20;
-			source_rect.h = 10;
+			source_rect.w = 16;
+			source_rect.h = 7;
 			
 			screen_rect.x = x_pixel;
-			screen_rect.y = y_pixel+10;
-			screen_rect.w = 20;
-			screen_rect.h = 10;
+			screen_rect.y = y_pixel+8;
+			screen_rect.w = 16;
+			screen_rect.h = 7;
 			
 			SDL_RenderCopy(Video_renderer, Video_lores_texture, &source_rect, &screen_rect);
 
-			x_pixel += 20;
+			x_pixel += 14;
 		}
-		y_pixel += 20;
+		y_pixel += 16;
 	}
 
 	// deal with the rest of the display

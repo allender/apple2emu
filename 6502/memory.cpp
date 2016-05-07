@@ -125,7 +125,7 @@ memory::memory(int size, void *memory)
 	m_memory = (uint8_t *)memory;
 
 	// load up ROM/PROM images
-	load_memory("roms/apple2.rom", 0xd000);
+	load_memory("roms/apple2_plus.rom", 0xd000);
 	load_memory("roms/disk2.rom", 0xc600);
 
 	// set up screen map (temporary) for video output.  This per/row

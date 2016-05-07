@@ -102,10 +102,10 @@ static char character_conv[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7',		/* $70	*/
 	'8', '9', ':', ';', '<', '=', '>', '?',		/* $78	*/
 
-	'@', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $80	*/
-	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $88	*/
-	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $90	*/
-	'x', 'y', 'z', '[', '\\',']', '^', '_',		/* $98	*/
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $80	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $88	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $90	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $98	*/
 	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $A0	*/
 	'(', ')', '*', '+', ',', '-', '.', '/',		/* $A8	*/
 	'0', '1', '2', '3', '4', '5', '6', '7',		/* $B0	*/
@@ -176,6 +176,7 @@ static void video_render_text_page(memory &mem)
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
 			uint8_t c = mem.get_screen_char_at(y, x);
+
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
 			} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -295,7 +296,67 @@ static void video_render_lores_mode(memory &mem)
 		}
 		y_pixel += cur_font->m_header.m_cell_height;
 	}
-	
+}
+
+static void video_render_hires_mode(memory &mem)
+{
+	int offset = 0x2000;
+
+	// do the stupid easy thing first.  Just plow through
+	// the memory and put the pixels on the screen
+	int x_pixel = 0;
+	int y_pixel = 0;
+	for (int y = 0; y < 20; y++) {
+		for (int x = 0; x < 40; x++) {
+			for (int b = 0; b < 8; b++) {
+				uint8_t byte = mem[offset + (1024 * b) + x];
+				for (int j = 0; j < 7; j++) {
+					if ((byte>>j)&1) {
+						SDL_RenderDrawPoint(Video_renderer, x_pixel, y_pixel);
+					}
+					x_pixel++;
+				}
+			}
+		}
+		offset += 0x80;
+	}
+
+	// deal with the rest of the display
+	y_pixel = 320;  // 320 is magic number -- need to get rid of this.
+	for (auto y = 20; y < 24; y++) {
+		font *cur_font;
+		x_pixel = 0;
+		for (auto x = 0; x < 40; x++) {
+			// get normal or inverse font
+			uint8_t c = mem.get_screen_char_at(y, x);
+			if (c <= 0x3f) {
+				cur_font = &Video_inverse_font;
+			} else if ((c <= 0x7f) && (Video_flash == true)) {
+				// set inverse if flashing is true
+				cur_font = &Video_inverse_font;
+			} else {
+				cur_font = &Video_font;
+			}
+
+			// get character in memory, and then convert to ASCII.  We get character
+			// value from memory and then subtract out the first character in our
+			// font (as we need to be 0-based from that point).  Then we can get
+			// the row/col in the bitmap sheet where the character is
+			c = character_conv[c] - cur_font->m_header.m_char_offset;
+
+			SDL_Rect screen_rect;
+			screen_rect.x = x_pixel;
+			screen_rect.y = y_pixel;
+			screen_rect.w = cur_font->m_header.m_cell_width;
+			screen_rect.h = cur_font->m_header.m_cell_height;
+
+			// copy to screen
+			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
+
+			x_pixel += cur_font->m_header.m_cell_width;
+		}
+		y_pixel += cur_font->m_header.m_cell_height;
+	}
 }
 
 static uint8_t video_read_handler(uint16_t addr)
@@ -411,6 +472,8 @@ void video_render_frame(memory &mem)
 		video_render_text_page(mem);
 	} else if (!(Video_mode & VIDEO_MODE_HIRES)) {
 		video_render_lores_mode(mem);
+	} else if (Video_mode & VIDEO_MODE_HIRES) {
+		video_render_hires_mode(mem);
 	}
 
 	//SDL_Rect rect;

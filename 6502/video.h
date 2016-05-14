@@ -32,6 +32,9 @@ SOFTWARE.
 #include "SDL.h"
 #include "memory.h"
 
+#define MAX_TEXT_LINES   24
+#define MAX_TEXT_COLUMNS 40
+
 #if !defined(USE_SDL)
 
 void init_text_screen();

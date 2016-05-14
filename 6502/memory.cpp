@@ -36,46 +36,6 @@ SOFTWARE.
  *  Screen display mapping table
  */
 
-static char character_conv[] = {
-
-	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $00	*/
-	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $08	*/
-	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $10	*/
-	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $18	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $20	*/
-	'(', ')', '*', '+', ',', '-', '.', '/',		/* $28	*/
-	'0', '1', '2', '3', '4', '5', '6', '7',		/* $30	*/
-	'8', '9', ':', ';', '<', '=', '>', '?',		/* $38	*/
-
-	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $40	*/
-	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $48	*/
-	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $50	*/
-	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $58	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $60	*/
-	'(', ')', '*', '+', ',', '-', '.', '/',		/* $68	*/
-	'0', '1', '2', '3', '4', '5', '6', '7',		/* $70	*/
-	'8', '9', ':', ';', '<', '=', '>', '?',		/* $78	*/
-
-	'@', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $80	*/
-	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $88	*/
-	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $90	*/
-	'x', 'y', 'z', '[', '\\',']', '^', '_',		/* $98	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $A0	*/
-	'(', ')', '*', '+', ',', '-', '.', '/',		/* $A8	*/
-	'0', '1', '2', '3', '4', '5', '6', '7',		/* $B0	*/
-	'8', '9', ':', ';', '<', '=', '>', '?',		/* $B8	*/
-
-	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $C0	*/
-	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $C8	*/
-	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $D0	*/
-	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $D8	*/
-	' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
-	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $E8	*/
-	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $F0	*/
-	'x', 'y', 'z', ';', '<', '=', '>', '?',		/* $F8	*/
-
-};
-
 static bool key_clear = true;
 static uint8_t last_key = 0;
 
@@ -127,13 +87,6 @@ memory::memory(int size, void *memory)
 	// load up ROM/PROM images
 	load_memory("roms/apple2_plus.rom", 0xd000);
 	load_memory("roms/disk2.rom", 0xc600);
-
-	// set up screen map (temporary) for video output.  This per/row
-	// table gets starting memory address for that row of text
-	for (int i = 0; i < MAX_TEXT_LINES; i++) {
-		m_primary_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
-		m_secondary_screen_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
-	}
 
 	for (auto i = 0; i < 256; i++) {
 		m_c000_handlers[i].m_read_handler = nullptr;
@@ -210,25 +163,6 @@ void memory::write(const uint16_t addr, uint8_t val)
 		}
 #endif
 	}
-}
-
-// sets whether or not we are working on a primary page or not
-void memory::set_page(bool primary)
-{
-	if (primary == true) {
-		m_screen_map = m_primary_screen_map;
-	} else {
-		m_screen_map = m_secondary_screen_map;
-	}
-}
-
-// gets the character at the given row/column
-uint8_t memory::get_screen_char_at(uint32_t row, uint32_t col)
-{
-	_ASSERT((row < 24) && (col < 40));
-
-	uint16_t addr = m_screen_map[row] + col;
-	return m_memory[addr];
 }
 
 bool memory::load_memory(const char *filename, uint16_t location)

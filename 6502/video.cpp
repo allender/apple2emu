@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include "SDL.h"
 #include "SDL_image.h"
+#include "6502/video.h"
 #include "6502/font.h"
 
 // this is hires * 2 (280 * 192)
@@ -58,6 +59,9 @@ bool Video_flash = false;
 font Video_font, Video_inverse_font;
 
 uint8_t Video_mode = 0;
+
+uint16_t       Video_primary_screen_map[MAX_TEXT_LINES];
+uint16_t       Video_secondary_screen_map[MAX_TEXT_LINES];
 
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
@@ -167,16 +171,16 @@ static void video_render_text_page(memory &mem)
 	uint32_t x_pixel, y_pixel;
 
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
-	mem.set_page(primary);
 
 	y_pixel = 0;
 	for (auto y = 0; y < 24; y++) {
 		x_pixel = 0;
 		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
-			// get normal or inverse font
-			uint8_t c = mem.get_screen_char_at(y, x);
+			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint8_t c = mem[addr];
 
+			// get normal or inverse font
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
 			} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -214,7 +218,6 @@ static void video_render_lores_mode(memory &mem)
 	uint32_t x_pixel, y_pixel;
 
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
-	mem.set_page(primary);
 
 	y_pixel = 0;
 	for (auto y = 0; y < 20; y++) {
@@ -222,7 +225,8 @@ static void video_render_lores_mode(memory &mem)
 		for (auto x = 0; x < 40; x++) {
 			// get the 2 nibble value of the color.  Blit the corresponding colors
 			// to the screen
-			uint8_t c = mem.get_screen_char_at(y, x);
+			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint8_t c = mem[addr];
 
 			// render top cell
 			uint8_t color = c & 0x0f;
@@ -267,7 +271,8 @@ static void video_render_lores_mode(memory &mem)
 		x_pixel = 0;
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
-			uint8_t c = mem.get_screen_char_at(y, x);
+			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint8_t c = mem[addr];
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
 			} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -300,6 +305,7 @@ static void video_render_lores_mode(memory &mem)
 
 static void video_render_hires_mode(memory &mem)
 {
+	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
 	int offset = 0x2000;
 
 	// do the stupid easy thing first.  Just plow through
@@ -328,7 +334,8 @@ static void video_render_hires_mode(memory &mem)
 		x_pixel = 0;
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
-			uint8_t c = mem.get_screen_char_at(y, x);
+			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint8_t c = mem[addr];
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
 			} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -451,6 +458,13 @@ bool video_init(memory &mem)
 	// set up a timer for flashing cursor
 	Video_flash = false;
 	Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
+
+	// set up screen map (temporary) for video output.  This per/row
+	// table gets starting memory address for that row of text
+	for (int i = 0; i < MAX_TEXT_LINES; i++) {
+		Video_primary_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+		Video_secondary_screen_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+	}
 
 	return true;
 }

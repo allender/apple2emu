@@ -461,6 +461,8 @@ bool video_init(memory &mem)
 
 	// set up screen map (temporary) for video output.  This per/row
 	// table gets starting memory address for that row of text
+	//
+	// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
 	for (int i = 0; i < MAX_TEXT_LINES; i++) {
 		Video_primary_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
 		Video_secondary_screen_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);

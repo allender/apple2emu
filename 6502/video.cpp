@@ -60,8 +60,9 @@ font Video_font, Video_inverse_font;
 
 uint8_t Video_mode = 0;
 
-uint16_t       Video_primary_screen_map[MAX_TEXT_LINES];
-uint16_t       Video_secondary_screen_map[MAX_TEXT_LINES];
+uint16_t       Video_primary_text_map[MAX_TEXT_LINES];
+uint16_t       Video_secondary_text_map[MAX_TEXT_LINES];
+uint16_t       Video_hires_map[MAX_TEXT_LINES];
 
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
@@ -177,7 +178,7 @@ static void video_render_text_page(memory &mem)
 		x_pixel = 0;
 		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
-			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 			uint8_t c = mem[addr];
 
 			// get normal or inverse font
@@ -225,7 +226,7 @@ static void video_render_lores_mode(memory &mem)
 		for (auto x = 0; x < 40; x++) {
 			// get the 2 nibble value of the color.  Blit the corresponding colors
 			// to the screen
-			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 			uint8_t c = mem[addr];
 
 			// render top cell
@@ -271,7 +272,7 @@ static void video_render_lores_mode(memory &mem)
 		x_pixel = 0;
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
-			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 			uint8_t c = mem[addr];
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
@@ -306,25 +307,34 @@ static void video_render_lores_mode(memory &mem)
 static void video_render_hires_mode(memory &mem)
 {
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
-	int offset = 0x2000;
+	uint16_t offset;
 
 	// do the stupid easy thing first.  Just plow through
 	// the memory and put the pixels on the screen
-	int x_pixel = 0;
-	int y_pixel = 0;
+	int x_pixel;
+	int y_pixel;
 	for (int y = 0; y < 20; y++) {
+		offset = Video_hires_map[y];
 		for (int x = 0; x < 40; x++) {
+			y_pixel = y * 8 * 2;
 			for (int b = 0; b < 8; b++) {
+				x_pixel = x * 8 * 2;
 				uint8_t byte = mem[offset + (1024 * b) + x];
 				for (int j = 0; j < 7; j++) {
 					if ((byte>>j)&1) {
-						SDL_RenderDrawPoint(Video_renderer, x_pixel, y_pixel);
+						SDL_Rect rect;
+
+						rect.x = x_pixel;
+						rect.y = y_pixel;
+						rect.w = 2;
+						rect.h = 2;
+						SDL_RenderDrawRect(Video_renderer, &rect);
 					}
-					x_pixel++;
+					x_pixel += 2;
 				}
+				y_pixel += 2;
 			}
 		}
-		offset += 0x80;
 	}
 
 	// deal with the rest of the display
@@ -334,7 +344,7 @@ static void video_render_hires_mode(memory &mem)
 		x_pixel = 0;
 		for (auto x = 0; x < 40; x++) {
 			// get normal or inverse font
-			uint16_t addr = primary ? Video_primary_screen_map[y] + x : Video_secondary_screen_map[y] + x;  // m_screen_map[row] + col;
+			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 			uint8_t c = mem[addr];
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
@@ -459,13 +469,16 @@ bool video_init(memory &mem)
 	Video_flash = false;
 	Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
 
-	// set up screen map (temporary) for video output.  This per/row
+	// set up screen map for video output.  This per/row
 	// table gets starting memory address for that row of text
 	//
 	// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
 	for (int i = 0; i < MAX_TEXT_LINES; i++) {
-		Video_primary_screen_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
-		Video_secondary_screen_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+		Video_primary_text_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+		Video_secondary_text_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+
+		// set up the hires map at the same time -- same number of lines just offset by fixed amount
+		Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
 	}
 
 	return true;

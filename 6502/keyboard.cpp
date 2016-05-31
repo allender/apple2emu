@@ -123,6 +123,9 @@ uint32_t keyboard_get_key()
 		key = '\b';
 	} else {
 		key = key_ascii_table[key];
+		if (key >= 'a' && key <= 'z') {
+			key -= 32;
+		}
 	}
 	return key;
 }

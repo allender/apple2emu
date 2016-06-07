@@ -58,11 +58,12 @@ SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
 font Video_font, Video_inverse_font;
 
-uint8_t Video_mode = 0;
+uint8_t Video_mode = VIDEO_MODE_TEXT;
 
 uint16_t       Video_primary_text_map[MAX_TEXT_LINES];
 uint16_t       Video_secondary_text_map[MAX_TEXT_LINES];
 uint16_t       Video_hires_map[MAX_TEXT_LINES];
+uint16_t       Video_hires_secondary_map[MAX_TEXT_LINES];
 
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
@@ -322,7 +323,7 @@ static void video_render_hires_mode(memory &mem)
 	int x_pixel;
 	int y_pixel;
 	for (int y = 0; y < y_end; y++) {
-		offset = Video_hires_map[y];
+		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
 		for (int x = 0; x < 40; x++) {
 			y_pixel = y * 8 * 2;
 			for (int b = 0; b < 8; b++) {
@@ -421,6 +422,39 @@ static uint8_t video_read_handler(uint16_t addr)
 	return 0;
 }
 
+static void video_write_handler(uint16_t addr, uint8_t value) 
+{
+	uint8_t a = addr & 0xff;
+
+	// switch based on the address to set the video modes
+	switch (a) {
+	case 0x50:
+		Video_mode &= ~VIDEO_MODE_TEXT;
+		break;
+	case 0x51:
+		Video_mode |= VIDEO_MODE_TEXT;
+		break;
+	case 0x52:
+		Video_mode &= ~VIDEO_MODE_MIXED;
+		break;
+	case 0x53:
+		Video_mode |= VIDEO_MODE_MIXED;
+		break;
+	case 0x54:
+		Video_mode |= VIDEO_MODE_PRIMARY;
+		break;
+	case 0x55:
+		Video_mode &= ~VIDEO_MODE_PRIMARY;
+		break;
+	case 0x56:
+		Video_mode &= ~VIDEO_MODE_HIRES;
+		break;
+	case 0x57:
+		Video_mode |= VIDEO_MODE_HIRES;
+		break;
+	}
+}
+
 // intialize the SDL system
 bool video_init(memory &mem)
 {
@@ -446,7 +480,7 @@ bool video_init(memory &mem)
 	}
 
 	for (auto i = 0x50; i <= 0x57 ; i++) {
-		mem.register_c000_handler(i, video_read_handler, nullptr);
+		mem.register_c000_handler(i, video_read_handler, video_write_handler);
 	}
 
 	// set and clear to black
@@ -489,6 +523,7 @@ bool video_init(memory &mem)
 
 		// set up the hires map at the same time -- same number of lines just offset by fixed amount
 		Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
+		Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 	}
 
 	return true;

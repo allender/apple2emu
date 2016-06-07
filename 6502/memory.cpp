@@ -139,30 +139,15 @@ void memory::write(const uint16_t addr, uint8_t val)
 	if (addr >= 0xd000) {
 		return;
 	}
+	if ((addr & 0xff00) == 0xc000) {
+		uint8_t mapped_addr = addr & 0xff;
+		if (m_c000_handlers[mapped_addr].m_write_handler != nullptr ) {
+			m_c000_handlers[mapped_addr].m_write_handler(addr, val);
+			return;
+		}
+	}
 
 	m_memory[addr] = val;
-
-	// see if memory address is headed to video screen.  Text page 1
-	if (((addr & 0x0f00) >= 0x400) && ((addr & 0x0f00) < 0x800)) {
-		int x = 3;
-
-#if !defined(USE_SDL)
-		for ( int i = 0; i < MAX_TEXT_LINES; i++ ) {
-			if ((addr >= m_screen_map[i]) && (addr < (m_screen_map[i] + MAX_TEXT_COLUMNS))) {
-				move_cursor(i, addr - m_screen_map[i]);
-				if (val <= 0x3f) {
-					set_inverse();
-				} else if (val <= 0x7f) {
-					set_flashing();
-				} else {
-					set_normal();
-				}
-				output_char(character_conv[val]);
-				break;
-			}
-		}
-#endif
-	}
 }
 
 bool memory::load_memory(const char *filename, uint16_t location)

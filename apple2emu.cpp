@@ -54,6 +54,7 @@ static void configure_logging()
 
 	conf.setToDefault();
 	conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
+	conf.set(el::Level::Global, el::ConfigurationType::LogFileTruncate, "true");
 	conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
 	conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
 	el::Loggers::reconfigureLogger("default", conf);
@@ -206,6 +207,12 @@ int main(int argc, char* argv[])
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 				keyboard_handle_event(evt);
+				break;
+
+			case SDL_WINDOWEVENT:
+				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
+					quit = true;
+				}
 				break;
 
 			}

@@ -34,7 +34,7 @@ SOFTWARE.
 #define ELPP_THREAD_SAFE
 #define ELPP_DEFAULT_LOG_FILE "logs\\apple2emu.log"
 //#define ELPP_STACKTRACE_ON_CRASH
-#include "utils/easylogging++.h"
+#include "easylogging++.h"
 
 #define USE_SDL
 

@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "SDL.h"
 #include "keyboard.h"
+#include "debugger/debugger.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
@@ -149,6 +150,11 @@ void keyboard_handle_event(SDL_Event &evt)
 {
 	if (evt.key.type == SDL_KEYDOWN) {
 		uint32_t scancode = evt.key.keysym.scancode;
+
+		// check for debugger
+		if (scancode == SDL_SCANCODE_F11) {
+			debugger_enter();
+		}
 
 		// we should only be putting keys into the keyboard buffer that are printable
 		// (i.e. in the apple ][ character set), or control keys.

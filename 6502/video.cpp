@@ -41,12 +41,6 @@ SOFTWARE.
 #define SCREEN_W   560
 #define SCREEN_H   384
 
-// video modes
-#define VIDEO_MODE_TEXT    (1 << 0)
-#define VIDEO_MODE_MIXED   (1 << 1)
-#define VIDEO_MODE_PRIMARY (1 << 2)
-#define VIDEO_MODE_HIRES   (1 << 3)
-
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
 const uint8_t Lores_texture_size = 32;

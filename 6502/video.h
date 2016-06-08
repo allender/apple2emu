@@ -35,6 +35,12 @@ SOFTWARE.
 #define MAX_TEXT_LINES   24
 #define MAX_TEXT_COLUMNS 40
 
+// video modes
+#define VIDEO_MODE_TEXT    (1 << 0)
+#define VIDEO_MODE_MIXED   (1 << 1)
+#define VIDEO_MODE_PRIMARY (1 << 2)
+#define VIDEO_MODE_HIRES   (1 << 3)
+
 #if !defined(USE_SDL)
 
 void init_text_screen();
@@ -53,6 +59,7 @@ void set_normal();
 
 extern SDL_Window *Video_window;
 extern SDL_Renderer *Video_renderer;
+extern uint8_t Video_mode;
 
 bool video_init(memory &mem);
 void video_shutdown();

@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #include <stdio.h>
+#include <iomanip>
 #include "memory.h"
 #include "video.h"
 #include "curses.h"
@@ -36,46 +37,27 @@ SOFTWARE.
  *  Screen display mapping table
  */
 
-static bool key_clear = true;
 static uint8_t last_key = 0;
 
 uint8_t keyboard_read_handler(uint16_t addr)
 {
-#if !defined(USE_SDL)
-	if (key_clear) {
-		char c = getch();
-		if ( c != ERR ) {
-			uint8_t temp_key = c;
-			
-			// check to see if we hit the debugger key.  If so, don't
-			// report this as key to the system
-			if (temp_key == 26) {
-				debugger_enter();
-				return 0;
-			}
-			key_clear = false;
-			if (temp_key == '\n')
-				temp_key = '\r';
-			else if (temp_key == 127)
-				temp_key = 8;
-			last_key = temp_key | 0x80;
-		}
-	}
-#else
 	uint8_t temp_key = keyboard_get_key();
 	if (temp_key > 0) {
 		last_key = temp_key | 0x80;
 	}
-#endif  // #if !defined(USE_SDL)
 
 	return(last_key);
 }
 
-uint8_t keyboard_clear_handler(uint16_t addr)
+uint8_t keyboard_clear_read_handler(uint16_t addr)
 {
-	key_clear = true;
 	last_key &= 0x7F;
 	return last_key;
+}
+
+void keyboard_clear_write_handler(uint16_t addr, uint8_t val)
+{
+	keyboard_clear_read_handler(addr);
 }
 
 // memory constructor
@@ -93,9 +75,14 @@ memory::memory(int size, void *memory)
 		m_c000_handlers[i].m_write_handler = nullptr;
 	}
 
-	// register handlers for keyboard -- temporary I think
-	register_c000_handler(0x00, keyboard_read_handler, nullptr);
-	register_c000_handler(0x10, keyboard_clear_handler, nullptr);
+	// register handlers for keyboard.   There is only a read handler here
+	// since we need to read memory to get a key back from the system
+	for (auto i = 0; i < 0xf; i++ ) {
+		register_c000_handler(0x00, keyboard_read_handler, nullptr);
+	}
+
+	// clear keyboard strobe -- this can be a read or write handler
+	register_c000_handler(0x10, keyboard_clear_read_handler, keyboard_clear_write_handler);
 }
 
 void memory::register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function)
@@ -127,6 +114,8 @@ uint8_t memory::operator[](const uint16_t addr)
 		uint8_t mapped_addr = addr & 0xff;
 		if (m_c000_handlers[mapped_addr].m_read_handler != nullptr ) {
 			return m_c000_handlers[mapped_addr].m_read_handler(addr);
+		} else {
+			LOG(INFO) << "Reading from $" << std::setbase(16) << addr << " and there is no read handler.";
 		}
 	}
 	return m_memory[addr];
@@ -144,6 +133,8 @@ void memory::write(const uint16_t addr, uint8_t val)
 		if (m_c000_handlers[mapped_addr].m_write_handler != nullptr ) {
 			m_c000_handlers[mapped_addr].m_write_handler(addr, val);
 			return;
+		} else {
+			LOG(INFO) << "Writing $" << std::setbase(16) << std::setw(2) << val << " to $" << std::setbase(16) << addr << " and there is no write handler";
 		}
 	}
 

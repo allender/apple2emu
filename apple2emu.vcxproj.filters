@@ -32,6 +32,9 @@
     <ClCompile Include="utils\path_utils.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="6502\speaker.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompiled.h" />
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="..\easyloggingpp\src\easylogging++.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\speaker.h">
+      <Filter>system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

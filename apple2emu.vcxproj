@@ -120,6 +120,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="6502\speaker.cpp" />
     <ClCompile Include="6502\video.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -150,6 +151,7 @@
     <ClInclude Include="6502\font.h" />
     <ClInclude Include="6502\keyboard.h" />
     <ClInclude Include="6502\memory.h" />
+    <ClInclude Include="6502\speaker.h" />
     <ClInclude Include="6502\video.h" />
     <ClInclude Include="debugger\debugger.h" />
     <ClInclude Include="precompiled.h" />

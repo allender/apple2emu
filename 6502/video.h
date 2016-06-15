@@ -25,8 +25,6 @@ SOFTWARE.
 
 */
 
-// temporary header file for basic text I/O using pdcurses for windows
-
 #pragma once
 
 #include "SDL.h"

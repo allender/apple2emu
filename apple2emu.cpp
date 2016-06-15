@@ -36,6 +36,7 @@ SOFTWARE.
 #include "6502/video.h"
 #include "6502/disk.h"
 #include "6502/keyboard.h"
+#include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
 
@@ -192,6 +193,7 @@ int main(int argc, char* argv[])
 	set_raw(true);
 #else
 	video_init(mem);
+	speaker_init(mem);
 	keyboard_init();
 #endif
 

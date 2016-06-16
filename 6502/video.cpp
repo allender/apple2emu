@@ -24,13 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
-
-//
-// Kind of a temporary file to deal with basic text I/O for now.  Will
-// use PDCurses for development
-//
-
-#if defined(USE_SDL)
+#include <conio.h>
 
 #include "SDL.h"
 #include "SDL_image.h"
@@ -44,10 +38,13 @@ SOFTWARE.
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
 const uint8_t Lores_texture_size = 32;
+const uint8_t Num_hires_patterns = 127;
+const uint8_t Hires_texture_width = 7;
 
 SDL_Window *Video_window;
 SDL_Renderer *Video_renderer;
 SDL_Texture *Video_lores_texture;
+SDL_Texture *Video_hires_texture;
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
 font Video_font, Video_inverse_font;
@@ -142,7 +139,7 @@ static bool video_create_lores_texture()
 	void *pixels;
 	int pitch;
 	if (SDL_LockTexture(Video_lores_texture, nullptr, &pixels, &pitch) != 0) {
-		printf("Unable to lock lores texture:%s\n", SDL_GetError());
+		printf("Unable to lock lores texture: %s\n", SDL_GetError());
 		return false;
 	}
 
@@ -156,6 +153,45 @@ static bool video_create_lores_texture()
 
 	// unlock the texture
 	SDL_UnlockTexture(Video_lores_texture);
+
+	return true;
+}
+
+// create internal texture which will be used for blitting hires pixel
+// patterns in high res mode
+static bool video_create_hires_textures()
+{
+	Video_hires_texture = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Hires_texture_width, Num_hires_patterns);
+	if (Video_hires_texture == nullptr) {
+		printf("Unable to create internal lores texture: %s\n", SDL_GetError());
+		return false;
+	}
+
+	// blit the 16 colors into the texture
+	void *pixels;
+	int pitch;
+	if (SDL_LockTexture(Video_hires_texture, nullptr, &pixels, &pitch) != 0) {
+		printf("Unable to lock hires texture: %s\n", SDL_GetError());
+		return false;
+	}
+
+	// create texture that contains pixel patterns for black/white display.  Note that there are only
+	// 127 patterns because the high bit is used to determine color of pixels (when running in color mode).
+	// in monochrome mode, these are all just white pixels
+	for (auto y = 0; y < Num_hires_patterns; y++) {
+		uint32_t *src = &((uint32_t *)(pixels))[y * Hires_texture_width];
+		for (auto x = 0; x <= Hires_texture_width; x++) {
+			if (true || (y>>x)&1) {
+				*src++ = 0xffffffff;
+			} else {
+				*src++ = 0;
+			}
+			//((uint32_t *)(pixels))[(y * pitch) + 7 - x] = ((y >> x)&1)?0xffffffff:0;
+		}
+	}
+
+	// unlock the texture
+	SDL_UnlockTexture(Video_hires_texture);
 
 	return true;
 }
@@ -318,26 +354,48 @@ static void video_render_hires_mode(memory &mem)
 	int y_pixel;
 	for (int y = 0; y < y_end; y++) {
 		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
+		y_pixel = y * 8 * 2;
 		for (int x = 0; x < 40; x++) {
-			y_pixel = y * 8 * 2;
+			x_pixel = x * 7 * 2;
 			for (int b = 0; b < 8; b++) {
-				x_pixel = x * 7 * 2;
+				// lookup the hires texture pixels for this value
 				uint8_t byte = mem[offset + (1024 * b) + x];
-				for (int j = 0; j < 7; j++) {
-					if ((byte>>j)&1) {
-						SDL_Rect rect;
+				SDL_Rect source_rect, screen_rect;
 
-						rect.x = x_pixel;
-						rect.y = y_pixel;
-						rect.w = 2;
-						rect.h = 2;
-						SDL_RenderDrawRect(Video_renderer, &rect);
-					}
-					x_pixel += 2;
-				}
-				y_pixel += 2;
+				screen_rect.x = x_pixel;
+				screen_rect.y = y_pixel+b;
+				screen_rect.w = 14;
+				screen_rect.h = 2;
+
+				source_rect.x = 0;
+				source_rect.y = byte & 0x7f;
+				source_rect.w = 7;
+				source_rect.h = 1;
+				SDL_RenderCopy(Video_renderer, Video_hires_texture, &source_rect, &screen_rect);
 			}
 		}
+			
+
+		//for (int x = 0; x < 40; x++) {
+		//	y_pixel = y * 8 * 2;
+		//	for (int b = 0; b < 8; b++) {
+		//		x_pixel = x * 7 * 2;
+		//		uint8_t byte = mem[offset + (1024 * b) + x];
+		//		for (int j = 0; j < 7; j++) {
+		//			if ((byte>>j)&1) {
+		//				SDL_Rect rect;
+
+		//				rect.x = x_pixel;
+		//				rect.y = y_pixel;
+		//				rect.w = 2;
+		//				rect.h = 2;
+		//				SDL_RenderDrawRect(Video_renderer, &rect);
+		//			}
+		//			x_pixel += 2;
+		//		}
+		//		y_pixel += 2;
+		//	}
+		//}
 	}
 
 	// deal with the rest of the display
@@ -502,6 +560,44 @@ bool video_init(memory &mem)
 	if (video_create_lores_texture() == false) {
 		return false;
 	}
+	if (video_create_hires_textures() == false) {
+		return false;
+	}
+
+#if 0
+	int y = 0;
+	while (1) {
+		SDL_Rect source_rect, screen_rect;
+		source_rect.x = 0;
+		source_rect.y = 0;
+		source_rect.w = Hires_texture_width;
+		source_rect.h = Num_hires_patterns;
+
+		screen_rect.x = 0;
+		screen_rect.y = 0;
+		screen_rect.w = source_rect.w * 2;
+		screen_rect.h = source_rect.h * 2;
+		SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 0);
+		SDL_RenderClear(Video_renderer);
+		SDL_SetRenderDrawColor(Video_renderer, 0xff, 0xff, 0xff, 0xff);
+		SDL_RenderCopy(Video_renderer, Video_hires_texture, &source_rect, &screen_rect);
+		SDL_RenderPresent(Video_renderer);
+		bool quit = false;
+		while (!quit) {
+			SDL_Event evt;
+
+			while (SDL_PollEvent(&evt)) {
+				switch (evt.type) {
+				case SDL_KEYDOWN:
+				case SDL_KEYUP:
+					quit = true;
+					break;
+				}
+			}
+		}
+		y++;
+	}
+#endif
 
 	// set up a timer for flashing cursor
 	Video_flash = false;
@@ -553,84 +649,4 @@ void video_render_frame(memory &mem)
 
 	SDL_RenderPresent(Video_renderer);
 }
-
-#else  // USE_SDL
-
-#include "6502/curses.h"
-#include "panel.h"
-#include "video.h"
-
-chtype flag = 0;
-
-PANEL *Main_panel;
-bool is_raw = false;
-
-void init_text_screen()
-{
-	initscr();
-	Main_panel = new_panel(stdscr);
-	show_panel(Main_panel);
-	top_panel(Main_panel);
-}
-
-void clear_screen()
-{
-	clear();
-}
-
-void move_cursor(int row, int col)
-{
-	if (is_raw == true) {
-		move(row, col);
-	}
-}
-
-void set_raw(bool state)
-{
-	if (state == true) {
-		raw();
-		noecho();
-		scrollok(stdscr, 1);
-		timeout(0);
-		is_raw = true;
-	} else {
-		noraw();
-		echo();
-		timeout(-1);
-		is_raw = false;
-	}
-}
-
-void output_char(char c)
-{
-	echochar(flag | c);
-}
-
-
-void screen_bottom()
-{
-	move_cursor(LINES,0);
-}
-
-void scroll_screen()
-{
-	scrl(1);
-}
-
-void set_normal()
-{
-	flag = A_NORMAL;
-}
-
-void set_inverse()
-{
-	flag = A_REVERSE;
-}
-
-void set_flashing()
-{
-	flag = A_BLINK;
-}
-
-#endif
 

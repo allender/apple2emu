@@ -181,7 +181,7 @@ static bool video_create_hires_textures()
 	for (auto y = 0; y < Num_hires_patterns; y++) {
 		uint32_t *src = &((uint32_t *)(pixels))[y * Hires_texture_width];
 		for (auto x = 0; x <= Hires_texture_width; x++) {
-			if (true || (y>>x)&1) {
+			if ((y>>x)&1) {
 				*src++ = 0xffffffff;
 			} else {
 				*src++ = 0;
@@ -363,7 +363,7 @@ static void video_render_hires_mode(memory &mem)
 				SDL_Rect source_rect, screen_rect;
 
 				screen_rect.x = x_pixel;
-				screen_rect.y = y_pixel+b;
+				screen_rect.y = y_pixel+(b*2);
 				screen_rect.w = 14;
 				screen_rect.h = 2;
 
@@ -563,41 +563,6 @@ bool video_init(memory &mem)
 	if (video_create_hires_textures() == false) {
 		return false;
 	}
-
-#if 0
-	int y = 0;
-	while (1) {
-		SDL_Rect source_rect, screen_rect;
-		source_rect.x = 0;
-		source_rect.y = 0;
-		source_rect.w = Hires_texture_width;
-		source_rect.h = Num_hires_patterns;
-
-		screen_rect.x = 0;
-		screen_rect.y = 0;
-		screen_rect.w = source_rect.w * 2;
-		screen_rect.h = source_rect.h * 2;
-		SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 0);
-		SDL_RenderClear(Video_renderer);
-		SDL_SetRenderDrawColor(Video_renderer, 0xff, 0xff, 0xff, 0xff);
-		SDL_RenderCopy(Video_renderer, Video_hires_texture, &source_rect, &screen_rect);
-		SDL_RenderPresent(Video_renderer);
-		bool quit = false;
-		while (!quit) {
-			SDL_Event evt;
-
-			while (SDL_PollEvent(&evt)) {
-				switch (evt.type) {
-				case SDL_KEYDOWN:
-				case SDL_KEYUP:
-					quit = true;
-					break;
-				}
-			}
-		}
-		y++;
-	}
-#endif
 
 	// set up a timer for flashing cursor
 	Video_flash = false;

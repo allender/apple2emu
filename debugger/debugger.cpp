@@ -26,6 +26,8 @@ SOFTWARE.
 */
 
 #include <array>
+#include <cstring>
+#include <cassert>
 
 #include "debugger/debugger.h"
 #include "6502/video.h"
@@ -519,7 +521,7 @@ static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
 			} else if (token[0] == 'w') {
 				bp_type = breakpoint_type::WWATCHPOINT;
 			}
-			_ASSERT(bp_type != breakpoint_type::INVALID);
+			assert(bp_type != breakpoint_type::INVALID);
 
 			if (Debugger_num_breakpoints < Max_breakpoints) {
 				token = strtok(nullptr, " ");

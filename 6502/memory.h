@@ -46,7 +46,7 @@ class memory {
 	};
 
 public:
-	memory() : m_size(0), m_memory(nullptr) { }
+	memory() : m_memory(nullptr), m_size(0) { }
 	memory(int size, void *memory);
 
 	bool load_memory(const char *filename, uint16_t location);

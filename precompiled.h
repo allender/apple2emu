@@ -32,16 +32,33 @@ SOFTWARE.
 // includes for easylogging.  Defines need to be set up
 // before header is included
 #define ELPP_THREAD_SAFE
+#if defined(_WIN32) || defined(_WIN64)
 #define ELPP_DEFAULT_LOG_FILE "logs\\apple2emu.log"
+#else
+#define ELPP_DEFAULT_LOG_FILE "logs/apple2emu.log"
+#endif
+
 //#define ELPP_STACKTRACE_ON_CRASH
 #include "easylogging++.h"
 
 #define USE_SDL
 
+#if defined(LITTLE_ENDIAN)
+#undef LITTLE_ENDIAN
+#endif
+
 #define LITTLE_ENDIAN
 
+// get past stricmp problems
+#if !defined(_WIN32) && !defined(_WIN64)
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+#endif
+
 // turn off deprecated warnings
+#if defined(_WIN32) || defined(_WIN64)
 #pragma warning(disable:4996)
+#endif
 
 #define _CRT_SECURE_NO_WARNINGS
 

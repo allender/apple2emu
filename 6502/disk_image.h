@@ -64,8 +64,8 @@ public:
 
 	static const uint32_t m_nibbilized_size = 10000;
 
-	disk_image::disk_image() {}
-	disk_image::~disk_image();
+	disk_image() {}
+	~disk_image();
 	void init();
 	bool load_image(const char *filename);
 	uint32_t read_track(const int track, uint8_t* buffer);

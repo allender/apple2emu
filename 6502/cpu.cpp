@@ -28,7 +28,8 @@ SOFTWARE.
 /*
 *  Source file for 6502 emulation layer
 */
-#include <conio.h>
+//#include <conio.h>
+#include <cassert>
 #include "cpu.h"
 #include "string.h"
 
@@ -265,7 +266,7 @@ uint32_t cpu_6502::process_opcode()
 
 	// get addressing mode and then do appropriate work based on the mode
 	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
-	_ASSERT( mode != addressing_mode::NO_MODE );
+	assert( mode != addressing_mode::NO_MODE );
 	uint16_t src = (this->*m_addressing_functions[static_cast<uint8_t>(mode)])();
 
 	uint32_t cycles = m_opcodes[opcode].m_cycle_count;
@@ -779,7 +780,7 @@ uint32_t cpu_6502::process_opcode()
 
 	default:
 		{
-			_ASSERT(0);
+			assert(0);
 		}
 		
 

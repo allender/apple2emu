@@ -45,7 +45,7 @@ public:
 	uint8_t     m_data_buffer;
 	uint32_t    m_current_byte;
 
-	disk_drive::disk_drive() {} 
+	disk_drive() {} 
 	void init();
 	void readwrite();
 	void set_new_track(uint8_t new_track);

@@ -103,7 +103,7 @@ private:
 
 	addressing_function m_addressing_functions[static_cast<uint8_t>(addressing_mode::NUM_ADDRESSING_MODES)];
 
-	void set_flag(register_bit bit, uint8_t val) { m_status_register = m_status_register & ~(1<<static_cast<uint8_t>(bit)) | (!!val<<static_cast<uint8_t>(bit)); }
+	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1<<static_cast<uint8_t>(bit))) | (!!val<<static_cast<uint8_t>(bit)); }
 	uint8_t get_flag(register_bit bit) { return (m_status_register >> static_cast<uint8_t>(bit)) & 0x1; }
 
 	// addressing functions

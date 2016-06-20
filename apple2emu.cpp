@@ -42,7 +42,9 @@ SOFTWARE.
 
 #include "SDL.h"
 
+#if defined(_MSC_VER)
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
+#endif
 
 INITIALIZE_EASYLOGGINGPP
 

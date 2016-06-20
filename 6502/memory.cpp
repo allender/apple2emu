@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <iomanip>
+#include <cassert>
 #include "memory.h"
 #include "video.h"
 #include "curses.h"
@@ -94,7 +95,7 @@ void memory::register_c000_handler(uint8_t addr, slot_io_read_function read_func
 // register handlers for the I/O slots
 void memory::register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function )
 {
-	_ASSERT((slot >= 1) && (slot <= MAX_SLOTS));
+	assert((slot >= 1) && (slot <= MAX_SLOTS));
 	uint8_t addr = 0x80 + (slot << 4);
 	
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same 

@@ -30,9 +30,13 @@ SOFTWARE.
 #include "6502/video.h"
 #include "6502/font.h"
 
-// this is hires * 2 (280 * 192)
-#define SCREEN_W   560
-#define SCREEN_H   384
+// always render to default size - SDL can scale it up
+const static int Video_native_width = 280;
+const static int Video_native_height = 192;
+static float Video_scale_factor = 2.0;
+static SDL_Rect Video_native_size;
+static SDL_Rect Video_window_size;
+bool Video_resize = true;
 
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
@@ -42,6 +46,7 @@ const uint8_t Hires_texture_width = 7;
 
 SDL_Window *Video_window;
 SDL_Renderer *Video_renderer;
+SDL_Texture *Video_backbuffer;
 SDL_Texture *Video_lores_texture;
 SDL_Texture *Video_hires_texture;
 SDL_TimerID Video_flash_timer;
@@ -128,6 +133,9 @@ static uint32_t timer_flash_callback(uint32_t interval, void *param)
 // colors to screen in lores mode
 static bool video_create_lores_texture()
 {
+	if (Video_lores_texture != nullptr) {
+		SDL_DestroyTexture(Video_lores_texture);
+	}
 	Video_lores_texture = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Lores_texture_size * Num_lores_colors, Lores_texture_size);
 	if (Video_lores_texture == nullptr) {
 		printf("Unable to create internal lores texture: %s\n", SDL_GetError());
@@ -160,6 +168,9 @@ static bool video_create_lores_texture()
 // patterns in high res mode
 static bool video_create_hires_textures()
 {
+	if (Video_hires_texture != nullptr) {
+		SDL_DestroyTexture(Video_hires_texture);
+	}
 	Video_hires_texture = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Hires_texture_width, Num_hires_patterns);
 	if (Video_hires_texture == nullptr) {
 		printf("Unable to create internal lores texture: %s\n", SDL_GetError());
@@ -230,15 +241,15 @@ static void video_render_text_page(memory &mem)
 			SDL_Rect screen_rect;
 			screen_rect.x = x_pixel;
 			screen_rect.y = y_pixel;
-			screen_rect.w = cur_font->m_header.m_cell_width;
-			screen_rect.h = cur_font->m_header.m_cell_height;
+			screen_rect.w = cur_font->m_header.m_cell_width/2;
+			screen_rect.h = cur_font->m_header.m_cell_height/2;
 
 			// copy to screen
 			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
 
-			x_pixel += cur_font->m_header.m_cell_width;
+			x_pixel += cur_font->m_header.m_cell_width / 2;
 		}
-		y_pixel += cur_font->m_header.m_cell_height;
+		y_pixel += cur_font->m_header.m_cell_height / 2;
 	}
 }
 
@@ -322,15 +333,15 @@ static void video_render_lores_mode(memory &mem)
 			SDL_Rect screen_rect;
 			screen_rect.x = x_pixel;
 			screen_rect.y = y_pixel;
-			screen_rect.w = cur_font->m_header.m_cell_width;
-			screen_rect.h = cur_font->m_header.m_cell_height;
+			screen_rect.w = cur_font->m_header.m_cell_width/2;
+			screen_rect.h = cur_font->m_header.m_cell_height/2;
 
 			// copy to screen
 			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
 
-			x_pixel += cur_font->m_header.m_cell_width;
+			x_pixel += (cur_font->m_header.m_cell_width/2);
 		}
-		y_pixel += cur_font->m_header.m_cell_height;
+		y_pixel += (cur_font->m_header.m_cell_height/2);
 	}
 }
 
@@ -353,18 +364,18 @@ static void video_render_hires_mode(memory &mem)
 	int y_pixel;
 	for (int y = 0; y < y_end; y++) {
 		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
-		y_pixel = y * 8 * 2;
+		y_pixel = y * 8;
 		for (int x = 0; x < 40; x++) {
-			x_pixel = x * 7 * 2;
+			x_pixel = x * 7;
 			for (int b = 0; b < 8; b++) {
 				// lookup the hires texture pixels for this value
 				uint8_t byte = mem[offset + (1024 * b) + x];
 				SDL_Rect source_rect, screen_rect;
 
 				screen_rect.x = x_pixel;
-				screen_rect.y = y_pixel+(b*2);
-				screen_rect.w = 14;
-				screen_rect.h = 2;
+				screen_rect.y = y_pixel+b;
+				screen_rect.w = 7;
+				screen_rect.h = 1;
 
 				source_rect.x = 0;
 				source_rect.y = byte & 0x7f;
@@ -506,61 +517,75 @@ static void video_write_handler(uint16_t addr, uint8_t value)
 	}
 }
 
-// intialize the SDL system
-bool video_init(memory &mem)
+bool video_create()
 {
-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
-		printf("Error initializing SDL: %s\n", SDL_GetError());
-		return false;
-	}
-		
+	// set the rect for the window itself
+	Video_window_size.x = 0;
+	Video_window_size.y = 0;
+	Video_window_size.w = (int)(Video_scale_factor * Video_native_size.w);
+	Video_window_size.h = (int)(Video_scale_factor * Video_native_size.h);
+
 	// create SDL window
-	Video_window = SDL_CreateWindow("Apple2Emu", 100, 100, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN);
+	if (Video_window != nullptr) {
+		SDL_DestroyWindow(Video_window);
+	}
+	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)(Video_native_size.w * Video_scale_factor), (int)(Video_native_size.h * Video_scale_factor), SDL_WINDOW_SHOWN);
 	if (Video_window == nullptr) {
 		printf("Unable to create SDL window: %s\n", SDL_GetError());
-		SDL_Quit();
 		return false;
 	}
 
 	// create SDL renderer
+	if (Video_renderer != nullptr) {
+		SDL_DestroyRenderer(Video_renderer);
+	}
 	Video_renderer = SDL_CreateRenderer(Video_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
 	if (Video_renderer == nullptr) {
 		printf("Unable to create SDL renderer: %s\n", SDL_GetError());
-		SDL_Quit();
 		return false;
 	}
 
-	for (auto i = 0x50; i <= 0x57 ; i++) {
-		mem.register_c000_handler(i, video_read_handler, video_write_handler);
+	// create  backbuffer texture.  We render to this texture then scale to the window
+	if (Video_backbuffer != nullptr) {
+		SDL_DestroyTexture(Video_backbuffer);
 	}
+	SDL_SetRenderTarget(Video_renderer, nullptr);
+	Video_backbuffer = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, Video_native_size.w, Video_native_size.h);
 
-	// set and clear to black
-	SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 255);
-	SDL_RenderClear(Video_renderer);
-
-	// load up the fonts that we need
-#if defined(USE_BFF)
-	if (Video_font.load("apple2.bff") == false) {
-		return false;
-	}
-	if (Video_inverse_font.load("apple2_inverted.bff") == false) {
-		return false;
-	}
-#else
 	if (Video_font.load("apple2.tga") == false) {
 		return false;
 	}
 	if (Video_inverse_font.load("apple2_inverted.tga") == false) {
 		return false;
 	}
-#endif
-
-	// create texture that contains source for lores colors
 	if (video_create_lores_texture() == false) {
 		return false;
 	}
 	if (video_create_hires_textures() == false) {
 		return false;
+	}
+
+	return true;
+}
+
+// intialize the SDL system
+bool video_init(memory &mem)
+{
+	Video_native_size.x = 0;
+	Video_native_size.y = 0;
+	Video_native_size.w = Video_native_width;
+	Video_native_size.h = Video_native_height;
+
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return false;
+	}
+	if (video_create() == false) {
+		return false;
+	}
+		
+	for (auto i = 0x50; i <= 0x57 ; i++) {
+		mem.register_c000_handler(i, video_read_handler, video_write_handler);
 	}
 
 	// set up a timer for flashing cursor
@@ -592,9 +617,8 @@ void video_shutdown()
 
 void video_render_frame(memory &mem)
 {
-	SDL_SetRenderDrawColor(Video_renderer, 0, 0, 0, 0);
+	SDL_SetRenderTarget(Video_renderer, Video_backbuffer);
 	SDL_RenderClear(Video_renderer);
-	SDL_SetRenderDrawColor(Video_renderer, 0xff, 0xff, 0xff, 0xff);
 
 	if (Video_mode & VIDEO_MODE_TEXT) {
 		video_render_text_page(mem);
@@ -604,13 +628,24 @@ void video_render_frame(memory &mem)
 		video_render_hires_mode(mem);
 	}
 
-	//SDL_Rect rect;
-	//rect.x = 0;
-	//rect.y = 0;
-	//rect.w = Lores_texture_size * Num_lores_colors;
-	//rect.h = Lores_texture_size;
-	//SDL_RenderCopy(Video_renderer, Video_lores_texture, nullptr, &rect);
-
+	// for rendering, show the buffer that we've been rendering to, which will
+	// scale to the current windows size
+	SDL_SetRenderTarget(Video_renderer, nullptr);
+	SDL_RenderCopy(Video_renderer, Video_backbuffer, &Video_native_size, &Video_window_size);
 	SDL_RenderPresent(Video_renderer);
+}
+
+// called when window changes size - adjust scaling parameters
+// so that we still render properly
+void video_resize(bool scale_up)
+{
+	if (scale_up == true) {
+		Video_scale_factor += 0.5f;
+	} else {
+		Video_scale_factor -= 0.5f;
+	}
+
+	// create window and textures
+	video_create();
 }
 

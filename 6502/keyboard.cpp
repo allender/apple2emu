@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "SDL.h"
 #include "keyboard.h"
+#include "video.h"
 #include "debugger/debugger.h"
 
 #define KEY_SHIFT   (1<<8)
@@ -150,10 +151,20 @@ void keyboard_handle_event(SDL_Event &evt)
 {
 	if (evt.key.type == SDL_KEYDOWN) {
 		uint32_t scancode = evt.key.keysym.scancode;
+		SDL_Keymod mods = SDL_GetModState();
 
 		// check for debugger
 		if (scancode == SDL_SCANCODE_F11) {
 			debugger_enter();
+		}
+
+		// check for window resize
+		if ((scancode == SDL_SCANCODE_PERIOD) && (mods & KMOD_CTRL)) {
+			video_resize(true);
+			return;
+		} else if ((scancode == SDL_SCANCODE_COMMA) && (mods & KMOD_CTRL)) {
+			video_resize(false);
+			return;
 		}
 
 		// we should only be putting keys into the keyboard buffer that are printable
@@ -162,7 +173,6 @@ void keyboard_handle_event(SDL_Event &evt)
 			if (scancode == SDL_SCANCODE_LCTRL || scancode == SDL_SCANCODE_RCTRL || scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
 				return;
 			}
-			SDL_Keymod mods = SDL_GetModState();
 			if (mods & KMOD_SHIFT) {
 				scancode |= KEY_SHIFT;
 			} else if (mods & KMOD_CTRL) {

@@ -51,6 +51,8 @@ INITIALIZE_EASYLOGGINGPP
 #define MEMORY_SIZE (64 * 1024 * 1024)
 int8_t memory_buffer[MEMORY_SIZE];
 
+static const double Render_time = 33;   // roughly 30 fps
+
 static void configure_logging()
 {
 	el::Configurations conf;
@@ -189,19 +191,14 @@ int main(int argc, char* argv[])
 			disk_insert(disk_image_filename, 1);
 		}
 	}
-#if !defined(USE_SDL)
-	init_text_screen();
-	clear_screen();
-	set_raw(true);
-#else
 	video_init(mem);
 	speaker_init(mem);
 	keyboard_init();
-#endif
 
-	//cpu.load_program(0x600, buffer, buffer_size);
 	bool quit = false;
 	uint32_t total_cycles = 0;
+	double last_time = SDL_GetTicks();
+	double processed_time = 0;
 
 	while (!quit) {
 		SDL_Event evt;
@@ -218,7 +215,6 @@ int main(int argc, char* argv[])
 					quit = true;
 				}
 				break;
-
 			}
 		}
 
@@ -231,12 +227,26 @@ int main(int argc, char* argv[])
 		total_cycles += cycles;
 
 		if (total_cycles > 17030) {
-#if defined(USE_SDL)
-			video_render_frame(mem);
-#endif // if defined(USE_SDL)
+			//video_render_frame(mem);
 			total_cycles -= 17030;
 		}
 
+		// determine whether to render or not.  Calculate diff
+		// between last frame.
+		double cur_time = SDL_GetTicks();
+		double diff_time = cur_time - last_time;
+		last_time = cur_time;
+
+		bool should_render = false;
+		processed_time += diff_time;
+		while (processed_time > Render_time) {
+			should_render = true;
+			processed_time -= Render_time;
+		}
+
+		if (should_render == true) {
+			video_render_frame(mem);
+		}
 
 	}
 

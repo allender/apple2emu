@@ -49,6 +49,7 @@ artifacts/
 *.ilk
 *.meta
 *.obj
+*.o
 *.pch
 *.pdb
 *.pdf
@@ -224,3 +225,11 @@ disks/*
 # ignore SDL libs
 /SDL2*.*
 /*.exe
+
+# ignore top level app name
+apple2emu
+
+# ignore apple specific stuff
+.DS_Store
+
+

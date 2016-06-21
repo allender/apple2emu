@@ -51,7 +51,7 @@ INITIALIZE_EASYLOGGINGPP
 #define MEMORY_SIZE (64 * 1024 * 1024)
 int8_t memory_buffer[MEMORY_SIZE];
 
-static const double Render_time = 500;   // roughly 30 fps
+static const double Render_time = 33;   // roughly 30 fps
 
 static void configure_logging()
 {
@@ -201,22 +201,6 @@ int main(int argc, char* argv[])
 	double processed_time = 0;
 
 	while (!quit) {
-		SDL_Event evt;
-
-		while (SDL_PollEvent(&evt)) {
-			switch (evt.type) {
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-				keyboard_handle_event(evt);
-				break;
-
-			case SDL_WINDOWEVENT:
-				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
-					quit = true;
-				}
-				break;
-			}
-		}
 
 		// process debugger (before opcode processing so that we can break on
 		// specific addresses properly
@@ -245,6 +229,21 @@ int main(int argc, char* argv[])
 		}
 
 		if (should_render == true) {
+         SDL_Event evt;
+
+         SDL_PollEvent(&evt);
+         switch (evt.type) {
+         case SDL_KEYDOWN:
+         case SDL_KEYUP:
+            keyboard_handle_event(evt);
+            break;
+
+         case SDL_WINDOWEVENT:
+            if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
+               quit = true;
+            }
+            break;
+         }
 			video_render_frame(mem);
 		}
 

@@ -534,7 +534,9 @@ static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
 						printw("Address %x must be in range 0-0xffff\n", address);
 					} else {
 						Debugger_breakpoints[Debugger_num_breakpoints].m_type = bp_type;
-						Debugger_breakpoints[Debugger_num_breakpoints].m_addr = address; Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true; Debugger_num_breakpoints++;
+						Debugger_breakpoints[Debugger_num_breakpoints].m_addr = address;
+                  Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true;
+                  Debugger_num_breakpoints++;
 					}
 				}
 			}
@@ -601,7 +603,7 @@ static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
 
       // quit
       else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
-         debugger_shutdown();  // clears out curses changes to consol
+         debugger_shutdown();  // clears out curses changes to console
          exit(-1);
       }
 

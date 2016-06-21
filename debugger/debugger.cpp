@@ -57,7 +57,6 @@ static char Debugger_disassembly_line[Debugger_disassembly_line_length];
 
 static bool Debugger_active = false;
 static bool Debugger_stopped = false;
-static bool Debugger_next_statement = false;
 static bool Debugger_trace = false;
 static FILE *Debugger_trace_fp = nullptr;
 
@@ -184,6 +183,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 			case cpu_6502::addressing_mode::IMMEDIATE_MODE:
 			case cpu_6502::addressing_mode::IMPLIED_MODE:
 			case cpu_6502::addressing_mode::INDIRECT_MODE:
+         case cpu_6502::addressing_mode::NO_MODE:
+         case cpu_6502::addressing_mode::NUM_ADDRESSING_MODES:
 				break;
 
 			// relative mode is relative to current PC.  figure out if we need to
@@ -302,7 +303,6 @@ static void debugger_trace_line(memory& mem, cpu_6502& cpu)
 	}
 
 	// print out the info the trace file
-	uint16_t addr = cpu.get_pc();
 	debugger_get_short_status(cpu);
 	debugger_get_disassembly(cpu, mem, cpu.get_pc());
 	fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disassembly_line);
@@ -397,6 +397,9 @@ static void debugger_display_breakpoints()
 		case breakpoint_type::WWATCHPOINT:
 			wprintw(Debugger_breakpoint_window, "%-5s", "Wwp");
 			break;
+
+      case breakpoint_type::INVALID:
+         break;
 		}
 		
 		wprintw(Debugger_breakpoint_window, "$%-6x", Debugger_breakpoints[i].m_addr);
@@ -671,8 +674,8 @@ void debugger_process(cpu_6502 &cpu, memory &mem)
 					}
 					break;
 				case breakpoint_type::RWATCHPOINT:
-					break;
 				case breakpoint_type::WWATCHPOINT:
+            case breakpoint_type::INVALID:
 					break;
 				}
 			}

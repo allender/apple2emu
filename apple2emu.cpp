@@ -51,7 +51,7 @@ INITIALIZE_EASYLOGGINGPP
 #define MEMORY_SIZE (64 * 1024 * 1024)
 int8_t memory_buffer[MEMORY_SIZE];
 
-static const double Render_time = 33;   // roughly 30 fps
+static const double Render_time = 500;   // roughly 30 fps
 
 static void configure_logging()
 {
@@ -250,10 +250,9 @@ int main(int argc, char* argv[])
 
 	}
 
-#if defined(USE_SDL)
 	video_shutdown();
 	keyboard_shutdown();
-#endif
+   debugger_shutdown();
 
 	return 0;
 }

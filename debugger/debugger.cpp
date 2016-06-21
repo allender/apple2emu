@@ -625,9 +625,11 @@ void debugger_enter()
 
 void debugger_exit()
 {
-#if !defined(USE_SDL)
-	set_raw(true);
-#endif
+}
+
+void debugger_shutdown()
+{
+   endwin();
 }
 
 void debugger_init()

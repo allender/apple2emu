@@ -32,4 +32,5 @@ SOFTWARE.
 
 void debugger_enter();
 void debugger_init();
+void debugger_shutdown();
 void debugger_process(cpu_6502& cpu, memory& mem);

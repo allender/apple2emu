@@ -70,15 +70,15 @@ static WINDOW *Debugger_command_window;
 static WINDOW *Debugger_disasm_window;
 static WINDOW *Debugger_breakpoint_window;
 static WINDOW *Debugger_status_window;
-static const uint32_t Debugger_memory_display_bytes = 16;
-static const uint32_t Debugger_memory_num_lines = 12;
-static const uint32_t Debugger_register_num_lines = 9;
-static const uint32_t Debugger_command_num_lines = 10;
-static const uint32_t Debugger_disasm_num_lines = 30;
-static const uint32_t Debugger_breakpoint_num_lines = 20;
-static const uint32_t Debugger_status_num_lines = 20;
-static const uint32_t Debugger_column_one_width = 80;
-static const uint32_t Debugger_column_two_width = 30;
+static uint32_t Debugger_memory_display_bytes = 16;
+static uint32_t Debugger_memory_num_lines = 12;
+static uint32_t Debugger_register_num_lines = 9;
+static uint32_t Debugger_command_num_lines = 5;
+static uint32_t Debugger_disasm_num_lines = 0;
+static uint32_t Debugger_breakpoint_num_lines = 0;
+static uint32_t Debugger_status_num_lines = 0;
+static uint32_t Debugger_column_one_width = 80;
+static uint32_t Debugger_column_two_width = 30;
 static uint32_t Debugger_memory_display_address = 0;
 
 static const char *addressing_format_string[] = {
@@ -599,6 +599,12 @@ static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
 			}
 		}
 
+      // quit
+      else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
+         debugger_shutdown();  // clears out curses changes to consol
+         exit(-1);
+      }
+
 		// stop/start trace
 		else if (!stricmp(token, "trace")) {
 
@@ -645,6 +651,12 @@ void debugger_init()
 	initscr();
 	scrollok(stdscr, true);
 
+   // set the disassembly window size after initting the screen so we know
+   // how many lines and columns we have
+   Debugger_disasm_num_lines = LINES - Debugger_memory_num_lines - Debugger_command_num_lines;
+   Debugger_breakpoint_num_lines = (LINES - Debugger_register_num_lines) / 2;
+   Debugger_status_num_lines = Debugger_breakpoint_num_lines;
+
 	// create some windows for debugger use
 	int row = 0;
 	Debugger_memory_window = subwin(stdscr, Debugger_memory_num_lines, Debugger_column_one_width, row, 0);
@@ -652,6 +664,7 @@ void debugger_init()
 	Debugger_disasm_window = subwin(stdscr, Debugger_disasm_num_lines, Debugger_column_one_width, row, 0);
 	row += Debugger_disasm_num_lines;
 	Debugger_command_window = subwin(stdscr, Debugger_command_num_lines, Debugger_column_one_width, row, 0);
+   scrollok(Debugger_command_window, true);
 
 	row = 0;
 	Debugger_register_window = subwin(stdscr, Debugger_register_num_lines, Debugger_column_two_width, row, 81);

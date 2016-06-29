@@ -30,6 +30,7 @@ SOFTWARE.
 //
 
 #include "SDL.h"
+#include "SDL_opengl.h"
 #include "SDL_image.h"
 #include "6502/font.h"
 #include "6502/video.h"
@@ -37,20 +38,29 @@ SOFTWARE.
 // load up a font defintion
 bool font::load(const char *filename)
 {
-	if (m_texture != nullptr) {
-		SDL_DestroyTexture(m_texture);
+	if (m_surface != nullptr) {
+		SDL_FreeSurface(m_surface);
 	}
 
-	m_texture = IMG_LoadTexture(Video_renderer, filename);
-	if (m_texture == nullptr) {
+	m_surface = IMG_Load(filename);
+	if (m_surface == nullptr) {
 		printf("Unable to load image %s: %s\n", filename, IMG_GetError());
 		return false;
 	}
 
+	// load the pixels into a GL texture
+	glGenTextures(1, &m_texture_id);
+	glBindTexture(GL_TEXTURE_2D, m_texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_surface->w, m_surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, m_surface->pixels);
+
 	// set up font information on cells and locations for characters
-	if (SDL_QueryTexture(m_texture, &m_header.m_format, nullptr, &m_header.m_font_width, &m_header.m_font_height) != 0) {
-		printf("Unable to query texture: %s\n", SDL_GetError());
-	}
+	m_header.m_font_width = m_surface->w;
+	m_header.m_font_height = m_surface->h;
+	m_header.m_format = m_surface->format->format;
 
 	// Figure out the cell location for each character.  The offset is the ascii offset to the
 	// first character in the font.  The cell widths are hard coded because this is how
@@ -59,21 +69,21 @@ bool font::load(const char *filename)
 	m_header.m_cell_height = 16;
 	m_header.m_cell_width = 14;
 
-	m_chars_per_row = m_header.m_font_width / m_header.m_cell_width;
-	m_column_factor = (float)m_header.m_cell_width / (float)m_header.m_font_width;
-	m_row_factor = (float)m_header.m_cell_height / (float)m_header.m_font_height;
+	// uv widths and heights for the cells - they are all fixed so this
+	// is a fixed value
+	m_header.m_cell_u = (float)m_header.m_cell_width / (float)m_header.m_font_width;
+	m_header.m_cell_v = (float)m_header.m_cell_height / (float)m_header.m_font_height;
+
+	uint32_t chars_per_row = m_header.m_font_width / m_header.m_cell_width;
 
 	// calculate rects for characters in the font.  These things here will be 0
 	// based as we need to start with the first character in the bitmap sheet.
 	for (auto i = 0; i < 128; i++) {
-		uint32_t character_row = i / m_chars_per_row;
-		uint32_t character_col = i - character_row * m_chars_per_row;
+		uint32_t character_row = i / chars_per_row;
+		uint32_t character_col = i - character_row * chars_per_row;
 	
-		// calculate the rectangle of the character
-		m_char_rects[i].h = m_header.m_cell_height;
-		m_char_rects[i].w = m_header.m_cell_width;
-		m_char_rects[i].x = character_col * m_header.m_cell_width;
-		m_char_rects[i].y = character_row * m_header.m_cell_height;
+		m_char_u[i] = character_col * m_header.m_cell_u;
+		m_char_v[i] = character_row * m_header.m_cell_v;
 	}
 
 	return true;

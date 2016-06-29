@@ -41,30 +41,32 @@ SOFTWARE.
 
 #pragma once
 
-//#define USE_BFF
+#include <GL/GL.h>
 
 // holds the font definition
 class font {
+private:
+	SDL_Surface   *m_surface;
+	uint32_t       m_font_tyles;
+
 public:
 	struct header {
-		uint8_t    m_id[2];
 		uint32_t   m_format;
 		int32_t    m_font_width;
 		int32_t    m_font_height;
 		uint32_t   m_cell_width;
 		uint32_t   m_cell_height;
+		float      m_cell_u;
+		float      m_cell_v;
 		uint8_t    m_bpp;
 		uint8_t    m_char_offset;
-		uint8_t    m_char_widths[256];
 	};
 
 	header        m_header;
-	SDL_Texture*  m_texture;
+	GLuint        m_texture_id;
 
-	int32_t       m_chars_per_row;
-	float         m_column_factor;
-	float         m_row_factor;
-	SDL_Rect      m_char_rects[256];
+	float         m_char_u[256];
+	float         m_char_v[256];
 
 	font() { }
 	bool load(const char *filename);

@@ -25,30 +25,38 @@ SOFTWARE.
 
 */
 
+#define GLEW_STATIC
+
+#include <GL/glew.h>
 #include "SDL.h"
+#include "SDL_opengl.h"
 #include "SDL_image.h"
 #include "6502/video.h"
 #include "6502/font.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl.h"
 
 // always render to default size - SDL can scale it up
 const static int Video_native_width = 280;
 const static int Video_native_height = 192;
-static float Video_scale_factor = 2.0;
+const int Video_cell_width = Video_native_width / 40;
+const int Video_cell_height = Video_native_height / 24;
+
+static float Video_scale_factor = 4.0;
 static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
-bool Video_resize = true;
 
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
-const uint8_t Lores_texture_size = 32;
 const uint8_t Num_hires_patterns = 127;
 const uint8_t Hires_texture_width = 7;
 
+GLuint Video_framebuffer;
+GLuint Video_framebuffer_texture;
+
 SDL_Window *Video_window;
-SDL_Renderer *Video_renderer;
-SDL_Texture *Video_backbuffer;
-SDL_Texture *Video_lores_texture;
-SDL_Texture *Video_hires_texture;
+SDL_GLContext Video_context;
+GLuint Video_lores_texture = 0;
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
 font Video_font, Video_inverse_font;
@@ -63,24 +71,24 @@ uint16_t       Video_hires_secondary_map[MAX_TEXT_LINES];
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
 // for values.  Good enough for a start
-static uint32_t Lores_colors[Num_lores_colors] = 
+static GLubyte Lores_colors[Num_lores_colors][3] = 
 {
-	0x000000ff,                 // black
-	0xe31e60ff,                 // red
-	0x964ebdff,                 // dark blue
-	0xff44fdff,                 // purple
-   0x00a396ff,                 // dark green
-	0x9c9c9cff,                 // gray
-	0x14cffdff,                 // medium blue
-	0xd0ceffff,                 // light blue
-	0x607203ff,                 // brown
-	0xff6a32ff,                 // orange
-	0x9c9c9cff,                 // gray
-   0xffa0d0ff,                 // pink
-	0x14f53cff,                 // light green
-   0xd0dd8dff,                 // yellow
-	0x72ffd0ff,                 // aqua
-	0xffffffff,                 // white
+	0x00, 0x00, 0x00,                 // black
+	0xe3, 0x1e, 0x60,                 // red
+	0x96, 0x4e, 0xbd,                 // dark blue
+	0xff, 0x44, 0xfd,                 // purple
+   0x00, 0xa3, 0x96,                 // dark green
+	0x9c, 0x9c, 0x9c,                 // gray
+	0x14, 0xcf, 0xfd,                 // medium blue
+	0xd0, 0xce, 0xff,                 // light blue
+	0x60, 0x72, 0x03,                 // brown
+	0xff, 0x6a, 0x32,                 // orange
+	0x9c, 0x9c, 0x9c,                 // gray
+   0xff, 0xa0, 0xd0,                 // pink
+	0x14, 0xf5, 0x3c,                 // light green
+   0xd0, 0xdd, 0x8d,                 // yellow
+	0x72, 0xff, 0xd0,                 // aqua
+	0xff, 0xff, 0xff,                 // white
 };
 
 static char character_conv[] = {
@@ -129,89 +137,11 @@ static uint32_t timer_flash_callback(uint32_t interval, void *param)
 	return interval;
 }
 
-// creates internal texture that is used for blitting lores
-// colors to screen in lores mode
-static bool video_create_lores_texture()
-{
-	if (Video_lores_texture != nullptr) {
-		SDL_DestroyTexture(Video_lores_texture);
-	}
-	Video_lores_texture = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Lores_texture_size * Num_lores_colors, Lores_texture_size);
-	if (Video_lores_texture == nullptr) {
-		printf("Unable to create internal lores texture: %s\n", SDL_GetError());
-		return false;
-	}
-
-	// blit the 16 colors into the texture
-	void *pixels;
-	int pitch;
-	if (SDL_LockTexture(Video_lores_texture, nullptr, &pixels, &pitch) != 0) {
-		printf("Unable to lock lores texture: %s\n", SDL_GetError());
-		return false;
-	}
-
-	for (auto i = 0; i < Num_lores_colors; i++) {
-		for (auto y = 0; y < Lores_texture_size; y++) {
-			for (auto x = 0; x < Lores_texture_size; x++) {
-				((uint32_t *)(pixels))[(y * (Lores_texture_size * Num_lores_colors)) + (i * Lores_texture_size) + x] = Lores_colors[i];
-			}
-		}
-	}
-
-	// unlock the texture
-	SDL_UnlockTexture(Video_lores_texture);
-
-	return true;
-}
-
-// create internal texture which will be used for blitting hires pixel
-// patterns in high res mode
-static bool video_create_hires_textures()
-{
-	if (Video_hires_texture != nullptr) {
-		SDL_DestroyTexture(Video_hires_texture);
-	}
-	Video_hires_texture = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Hires_texture_width, Num_hires_patterns);
-	if (Video_hires_texture == nullptr) {
-		printf("Unable to create internal lores texture: %s\n", SDL_GetError());
-		return false;
-	}
-
-	// blit the 16 colors into the texture
-	void *pixels;
-	int pitch;
-	if (SDL_LockTexture(Video_hires_texture, nullptr, &pixels, &pitch) != 0) {
-		printf("Unable to lock hires texture: %s\n", SDL_GetError());
-		return false;
-	}
-
-	// create texture that contains pixel patterns for black/white display.  Note that there are only
-	// 127 patterns because the high bit is used to determine color of pixels (when running in color mode).
-	// in monochrome mode, these are all just white pixels
-	for (auto y = 0; y < Num_hires_patterns; y++) {
-		uint32_t *src = &((uint32_t *)(pixels))[y * Hires_texture_width];
-		for (auto x = 0; x <= Hires_texture_width; x++) {
-			if ((y>>x)&1) {
-				*src++ = 0xffffffff;
-			} else {
-				*src++ = 0;
-			}
-			//((uint32_t *)(pixels))[(y * pitch) + 7 - x] = ((y >> x)&1)?0xffffffff:0;
-		}
-	}
-
-	// unlock the texture
-	SDL_UnlockTexture(Video_hires_texture);
-
-	return true;
-}
-
 // renders a text page (primary or secondary)
 static void video_render_text_page(memory &mem)
 {
 	// fow now, just run through the text memory and put out whatever is there
-	uint32_t x_pixel, y_pixel;
-
+	int x_pixel, y_pixel;
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
 
 	y_pixel = 0;
@@ -237,19 +167,20 @@ static void video_render_text_page(memory &mem)
 			// font (as we need to be 0-based from that point).  Then we can get
 			// the row/col in the bitmap sheet where the character is
 			c = character_conv[c] - cur_font->m_header.m_char_offset;
+			
+			glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glBegin(GL_QUADS);
+				glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
+				glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);
+				glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
+				glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
+			glEnd();
+			glBindTexture(GL_TEXTURE_2D, 0);
 
-			SDL_Rect screen_rect;
-			screen_rect.x = x_pixel;
-			screen_rect.y = y_pixel;
-			screen_rect.w = cur_font->m_header.m_cell_width/2;
-			screen_rect.h = cur_font->m_header.m_cell_height/2;
-
-			// copy to screen
-			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
-
-			x_pixel += cur_font->m_header.m_cell_width / 2;
+			x_pixel += Video_cell_width;
 		}
-		y_pixel += cur_font->m_header.m_cell_height / 2;
+		y_pixel += Video_cell_height;
 	}
 }
 
@@ -257,8 +188,7 @@ static void video_render_text_page(memory &mem)
 static void video_render_lores_mode(memory &mem)
 {
 	// fow now, just run through the text memory and put out whatever is there
-	uint32_t x_pixel, y_pixel;
-
+	int x_pixel, y_pixel;
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
 
 	y_pixel = 0;
@@ -272,49 +202,38 @@ static void video_render_lores_mode(memory &mem)
 
 			// render top cell
 			uint8_t color = c & 0x0f;
+			glColor3ub(Lores_colors[color][0], Lores_colors[color][1], Lores_colors[color][2]);
+			glBegin(GL_QUADS);
+				glVertex2i(x_pixel, y_pixel);
+				glVertex2i(x_pixel + Video_cell_width, y_pixel);
+				glVertex2i(x_pixel + Video_cell_width, y_pixel + (Video_cell_height / 2));
+				glVertex2i(x_pixel, y_pixel + (Video_cell_height / 2));
+			glEnd();
 			
-			SDL_Rect source_rect;
-			source_rect.x = (color * Lores_texture_size);
-			source_rect.y = 0;
-			source_rect.w = 16;
-			source_rect.h = 14;
-			
-			SDL_Rect screen_rect;
-			screen_rect.x = x_pixel;
-			screen_rect.y = y_pixel;
-			screen_rect.w = 16;
-			screen_rect.h = 14;
-			
-			SDL_RenderCopy(Video_renderer, Video_lores_texture, &source_rect, &screen_rect);
-
 			// render bottom cell
 			color = (c & 0xf0) >> 4;
+			glColor3ub(Lores_colors[color][0], Lores_colors[color][1], Lores_colors[color][2]);
+			glBegin(GL_QUADS);
+				glVertex2i(x_pixel, y_pixel + (Video_cell_height / 2));
+				glVertex2i(x_pixel + Video_cell_width, y_pixel + (Video_cell_height / 2));
+				glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
+				glVertex2i(x_pixel, y_pixel + Video_cell_height);
+			glEnd();
 			
-			source_rect.x = (color * Lores_texture_size);
-			source_rect.y = 0;
-			source_rect.w = 16;
-			source_rect.h = 7;
-			
-			screen_rect.x = x_pixel;
-			screen_rect.y = y_pixel+8;
-			screen_rect.w = 16;
-			screen_rect.h = 7;
-			
-			SDL_RenderCopy(Video_renderer, Video_lores_texture, &source_rect, &screen_rect);
-
-			x_pixel += 14;
+			x_pixel += Video_cell_width;
 		}
-		y_pixel += 16;
+		y_pixel += Video_cell_height;
 	}
 
 	// deal with the rest of the display
 	for (auto y = 20; y < 24; y++) {
-		font *cur_font;
 		x_pixel = 0;
+		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
-			// get normal or inverse font
 			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 			uint8_t c = mem[addr];
+
+			// get normal or inverse font
 			if (c <= 0x3f) {
 				cur_font = &Video_inverse_font;
 			} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -329,19 +248,20 @@ static void video_render_lores_mode(memory &mem)
 			// font (as we need to be 0-based from that point).  Then we can get
 			// the row/col in the bitmap sheet where the character is
 			c = character_conv[c] - cur_font->m_header.m_char_offset;
+			
+			glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glBegin(GL_QUADS);
+				glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
+				glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);
+				glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
+				glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
+			glEnd();
+			glBindTexture(GL_TEXTURE_2D, 0);
 
-			SDL_Rect screen_rect;
-			screen_rect.x = x_pixel;
-			screen_rect.y = y_pixel;
-			screen_rect.w = cur_font->m_header.m_cell_width/2;
-			screen_rect.h = cur_font->m_header.m_cell_height/2;
-
-			// copy to screen
-			SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
-
-			x_pixel += (cur_font->m_header.m_cell_width/2);
+			x_pixel += Video_cell_width;
 		}
-		y_pixel += (cur_font->m_header.m_cell_height/2);
+		y_pixel += Video_cell_height;
 	}
 }
 
@@ -364,60 +284,36 @@ static void video_render_hires_mode(memory &mem)
 	int y_pixel;
 	for (int y = 0; y < y_end; y++) {
 		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
-		y_pixel = y * 8;
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_POINTS);
 		for (int x = 0; x < 40; x++) {
-			x_pixel = x * 7;
+			y_pixel = y * 8;
 			for (int b = 0; b < 8; b++) {
-				// lookup the hires texture pixels for this value
+				x_pixel = x * 7;
 				uint8_t byte = mem[offset + (1024 * b) + x];
-				SDL_Rect source_rect, screen_rect;
-
-				screen_rect.x = x_pixel;
-				screen_rect.y = y_pixel+b;
-				screen_rect.w = 7;
-				screen_rect.h = 1;
-
-				source_rect.x = 0;
-				source_rect.y = byte & 0x7f;
-				source_rect.w = 7;
-				source_rect.h = 1;
-				SDL_RenderCopy(Video_renderer, Video_hires_texture, &source_rect, &screen_rect);
+				for (int j = 0; j < 7; j++) {
+					if ((byte>>j)&1) {
+						glVertex2i(x_pixel, y_pixel);
+					}
+					x_pixel++;
+				}
+				y_pixel++;
 			}
 		}
-			
-
-		//for (int x = 0; x < 40; x++) {
-		//	y_pixel = y * 8 * 2;
-		//	for (int b = 0; b < 8; b++) {
-		//		x_pixel = x * 7 * 2;
-		//		uint8_t byte = mem[offset + (1024 * b) + x];
-		//		for (int j = 0; j < 7; j++) {
-		//			if ((byte>>j)&1) {
-		//				SDL_Rect rect;
-
-		//				rect.x = x_pixel;
-		//				rect.y = y_pixel;
-		//				rect.w = 2;
-		//				rect.h = 2;
-		//				SDL_RenderDrawRect(Video_renderer, &rect);
-		//			}
-		//			x_pixel += 2;
-		//		}
-		//		y_pixel += 2;
-		//	}
-		//}
 	}
+	glEnd();
 
 	// deal with the rest of the display
 	if (mixed) {
 		y_pixel = 320;  // 320 is magic number -- need to get rid of this.
 		for (auto y = 20; y < 24; y++) {
-			font *cur_font;
 			x_pixel = 0;
+			font *cur_font;
 			for (auto x = 0; x < 40; x++) {
-				// get normal or inverse font
 				uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
 				uint8_t c = mem[addr];
+
+				// get normal or inverse font
 				if (c <= 0x3f) {
 					cur_font = &Video_inverse_font;
 				} else if ((c <= 0x7f) && (Video_flash == true)) {
@@ -432,19 +328,20 @@ static void video_render_hires_mode(memory &mem)
 				// font (as we need to be 0-based from that point).  Then we can get
 				// the row/col in the bitmap sheet where the character is
 				c = character_conv[c] - cur_font->m_header.m_char_offset;
+				
+				glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
+				glColor3f(1.0f, 1.0f, 1.0f);
+				glBegin(GL_QUADS);
+					glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
+					glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);
+					glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
+					glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
+				glEnd();
+				glBindTexture(GL_TEXTURE_2D, 0);
 
-				SDL_Rect screen_rect;
-				screen_rect.x = x_pixel;
-				screen_rect.y = y_pixel;
-				screen_rect.w = cur_font->m_header.m_cell_width;
-				screen_rect.h = cur_font->m_header.m_cell_height;
-
-				// copy to screen
-				SDL_RenderCopy(Video_renderer, cur_font->m_texture, &cur_font->m_char_rects[c], &screen_rect);
-
-				x_pixel += cur_font->m_header.m_cell_width;
+				x_pixel += Video_cell_width;
 			}
-			y_pixel += cur_font->m_header.m_cell_height;
+			y_pixel += Video_cell_height;
 		}
 	}
 }
@@ -524,44 +421,66 @@ bool video_create()
 	Video_window_size.y = 0;
 	Video_window_size.w = (int)(Video_scale_factor * Video_native_size.w);
 	Video_window_size.h = (int)(Video_scale_factor * Video_native_size.h);
-
+	
 	// create SDL window
 	if (Video_window != nullptr) {
 		SDL_DestroyWindow(Video_window);
 	}
-	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)(Video_native_size.w * Video_scale_factor), (int)(Video_native_size.h * Video_scale_factor), SDL_WINDOW_SHOWN);
+	
+	// set attributes for GL
+	uint32_t sdl_window_flags = SDL_WINDOW_RESIZABLE;
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	sdl_window_flags |= SDL_WINDOW_OPENGL;
+
+	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)(Video_native_size.w * Video_scale_factor), (int)(Video_native_size.h * Video_scale_factor), sdl_window_flags);
 	if (Video_window == nullptr) {
 		printf("Unable to create SDL window: %s\n", SDL_GetError());
 		return false;
 	}
 
-	// create SDL renderer
-	if (Video_renderer != nullptr) {
-		SDL_DestroyRenderer(Video_renderer);
+	// create openGL context
+	if (Video_context != nullptr) {
+		SDL_GL_DeleteContext(Video_context);
 	}
-	Video_renderer = SDL_CreateRenderer(Video_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
-	if (Video_renderer == nullptr) {
-		printf("Unable to create SDL renderer: %s\n", SDL_GetError());
+	Video_context = SDL_GL_CreateContext(Video_window);
+		
+	if (Video_context == nullptr) {
+		printf("Unable to create GL context: %s\n", SDL_GetError());
+		return false;
+	}
+	glewExperimental = GL_TRUE;
+	glewInit();
+
+	// framebuffer and render to texture
+	glGenFramebuffers(1, &Video_framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
+
+	glGenTextures(1, &Video_framebuffer_texture);
+	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Video_native_width, Video_native_height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Video_framebuffer_texture, 0);
+	
+	GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, draw_buffers);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		printf("Unable to create framebuffer for render to texture.\n");
 		return false;
 	}
 
-	// create  backbuffer texture.  We render to this texture then scale to the window
-	if (Video_backbuffer != nullptr) {
-		SDL_DestroyTexture(Video_backbuffer);
-	}
-	SDL_SetRenderTarget(Video_renderer, nullptr);
-	Video_backbuffer = SDL_CreateTexture(Video_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, Video_native_size.w, Video_native_size.h);
+	ImGui_ImplSdl_Init(Video_window);
 
 	if (Video_font.load("apple2.tga") == false) {
 		return false;
 	}
 	if (Video_inverse_font.load("apple2_inverted.tga") == false) {
-		return false;
-	}
-	if (video_create_lores_texture() == false) {
-		return false;
-	}
-	if (video_create_hires_textures() == false) {
 		return false;
 	}
 
@@ -583,7 +502,7 @@ bool video_init(memory &mem)
 	if (video_create() == false) {
 		return false;
 	}
-		
+
 	for (auto i = 0x50; i <= 0x57 ; i++) {
 		mem.register_c000_handler(i, video_read_handler, video_write_handler);
 	}
@@ -610,15 +529,30 @@ bool video_init(memory &mem)
 
 void video_shutdown()
 {
-	SDL_DestroyRenderer(Video_renderer);
+	ImGui_ImplSdl_Shutdown();
+	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
 	SDL_Quit();
 }
 
 void video_render_frame(memory &mem)
 {
-	SDL_SetRenderTarget(Video_renderer, Video_backbuffer);
-	SDL_RenderClear(Video_renderer);
+	// render to the framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
+	glViewport(0, 0, Video_native_width, Video_native_height);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(false);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0f, (float)Video_native_width, (float)Video_native_height, 0.0f, 0.0f, 1.0f);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glEnable(GL_TEXTURE_2D);
 
 	if (Video_mode & VIDEO_MODE_TEXT) {
 		video_render_text_page(mem);
@@ -628,11 +562,28 @@ void video_render_frame(memory &mem)
 		video_render_hires_mode(mem);
 	}
 
-	// for rendering, show the buffer that we've been rendering to, which will
-	// scale to the current windows size
-	SDL_SetRenderTarget(Video_renderer, nullptr);
-	SDL_RenderCopy(Video_renderer, Video_backbuffer, &Video_native_size, &Video_window_size);
-	SDL_RenderPresent(Video_renderer);
+	// back to main framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	// render texture to window.  Just render the texture to the 
+	// full screen (using normalized device coordinates)
+	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
+		glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
+		glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
+		glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
+	glEnd();
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	ImGui_ImplSdl_NewFrame(Video_window);
+	ImGui::ShowTestWindow();
+	ImGui::Render();
+
+	SDL_GL_SwapWindow(Video_window);
 }
 
 // called when window changes size - adjust scaling parameters

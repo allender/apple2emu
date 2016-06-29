@@ -39,6 +39,8 @@ SOFTWARE.
 #include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl.h"
 
 #include "SDL.h"
 
@@ -231,19 +233,20 @@ int main(int argc, char* argv[])
 		if (should_render == true) {
          SDL_Event evt;
 
-         SDL_PollEvent(&evt);
-         switch (evt.type) {
-         case SDL_KEYDOWN:
-         case SDL_KEYUP:
-            keyboard_handle_event(evt);
-            break;
+			SDL_PollEvent(&evt);
+			ImGui_ImplSdl_ProcessEvent(&evt);
+			switch (evt.type) {
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+				keyboard_handle_event(evt);
+				break;
 
-         case SDL_WINDOWEVENT:
-            if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
-               quit = true;
-            }
-            break;
-         }
+			case SDL_WINDOWEVENT:
+				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
+					quit = true;
+				}
+				break;
+			}
 			video_render_frame(mem);
 		}
 

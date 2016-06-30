@@ -29,6 +29,7 @@ SOFTWARE.
 #include "keyboard.h"
 #include "video.h"
 #include "debugger/debugger.h"
+#include "ui/main_menu.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
@@ -149,13 +150,23 @@ void keyboard_shutdown()
 // We will put key downs into the keyboard buffer
 void keyboard_handle_event(SDL_Event &evt)
 {
+	// for now, no key repeats
+	if (evt.key.repeat) {
+		return;
+	}
+
 	if (evt.key.type == SDL_KEYDOWN) {
 		uint32_t scancode = evt.key.keysym.scancode;
 		SDL_Keymod mods = SDL_GetModState();
 
 		// check for debugger
-		if (scancode == SDL_SCANCODE_F11) {
+		if (scancode == SDL_SCANCODE_F12) {
 			debugger_enter();
+		}
+
+		// maybe bring up the main menu
+		if (scancode == SDL_SCANCODE_F1) {
+			ui_toggle_main_menu();
 		}
 
 		// check for window resize

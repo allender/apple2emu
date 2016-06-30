@@ -33,8 +33,7 @@ SOFTWARE.
 #include "SDL_image.h"
 #include "6502/video.h"
 #include "6502/font.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+#include "ui/main_menu.h"
 
 // always render to default size - SDL can scale it up
 const static int Video_native_width = 280;
@@ -475,8 +474,6 @@ bool video_create()
 		return false;
 	}
 
-	ImGui_ImplSdl_Init(Video_window);
-
 	if (Video_font.load("apple2.tga") == false) {
 		return false;
 	}
@@ -524,12 +521,13 @@ bool video_init(memory &mem)
 		Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 	}
 
+	ui_init(Video_window);
+
 	return true;
 }
 
 void video_shutdown()
 {
-	ImGui_ImplSdl_Shutdown();
 	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
 	SDL_Quit();
@@ -579,9 +577,7 @@ void video_render_frame(memory &mem)
 	glEnd();
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	ImGui_ImplSdl_NewFrame(Video_window);
-	ImGui::ShowTestWindow();
-	ImGui::Render();
+	ui_do_frame(Video_window);
 
 	SDL_GL_SwapWindow(Video_window);
 }

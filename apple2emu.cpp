@@ -233,19 +233,20 @@ int main(int argc, char* argv[])
 		if (should_render == true) {
          SDL_Event evt;
 
-			SDL_PollEvent(&evt);
-			ImGui_ImplSdl_ProcessEvent(&evt);
-			switch (evt.type) {
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-				keyboard_handle_event(evt);
-				break;
+			if (SDL_PollEvent(&evt)) {
+				ImGui_ImplSdl_ProcessEvent(&evt);
+				switch (evt.type) {
+				case SDL_KEYDOWN:
+				case SDL_KEYUP:
+					keyboard_handle_event(evt);
+					break;
 
-			case SDL_WINDOWEVENT:
-				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
-					quit = true;
+				case SDL_WINDOWEVENT:
+					if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
+						quit = true;
+					}
+					break;
 				}
-				break;
 			}
 			video_render_frame(mem);
 		}

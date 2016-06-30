@@ -47,6 +47,9 @@
     <ClCompile Include="imgui\imgui_impl_sdl.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="ui\main_menu.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompiled.h" />
@@ -107,6 +110,9 @@
     <ClInclude Include="imgui\imgui_impl_sdl.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="ui\main_menu.h">
+      <Filter>ui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="system">
@@ -123,6 +129,9 @@
     </Filter>
     <Filter Include="imgui">
       <UniqueIdentifier>{0cac1a4c-8997-4eee-b24a-bb279a454b3a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{f8404438-d132-43aa-b005-0e885defa655}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

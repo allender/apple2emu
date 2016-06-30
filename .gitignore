@@ -232,4 +232,5 @@ apple2emu
 # ignore apple specific stuff
 .DS_Store
 
-
+# imgui stuff
+imgui.ini

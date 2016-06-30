@@ -281,10 +281,12 @@ static void video_render_hires_mode(memory &mem)
 	// the memory and put the pixels on the screen
 	int x_pixel;
 	int y_pixel;
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glBegin(GL_POINTS);
+
 	for (int y = 0; y < y_end; y++) {
 		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glBegin(GL_POINTS);
 		for (int x = 0; x < 40; x++) {
 			y_pixel = y * 8;
 			for (int b = 0; b < 8; b++) {
@@ -303,8 +305,8 @@ static void video_render_hires_mode(memory &mem)
 	glEnd();
 
 	// deal with the rest of the display
+	glColor3f(1.0f, 1.0f, 1.0f);
 	if (mixed) {
-		y_pixel = 320;  // 320 is magic number -- need to get rid of this.
 		for (auto y = 20; y < 24; y++) {
 			x_pixel = 0;
 			font *cur_font;
@@ -329,7 +331,6 @@ static void video_render_hires_mode(memory &mem)
 				c = character_conv[c] - cur_font->m_header.m_char_offset;
 				
 				glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
-				glColor3f(1.0f, 1.0f, 1.0f);
 				glBegin(GL_QUADS);
 					glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
 					glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);

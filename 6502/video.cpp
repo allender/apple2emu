@@ -41,7 +41,7 @@ const static int Video_native_height = 192;
 const int Video_cell_width = Video_native_width / 40;
 const int Video_cell_height = Video_native_height / 24;
 
-static float Video_scale_factor = 4.0;
+static int Video_scale_factor = 4;
 static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
 
@@ -294,7 +294,7 @@ static void video_render_hires_mode(memory &mem)
 				uint8_t byte = mem[offset + (1024 * b) + x];
 				for (int j = 0; j < 7; j++) {
 					if ((byte>>j)&1) {
-						glVertex2i(x_pixel, y_pixel);
+						glVertex2i(x_pixel, y_pixel+1);
 					}
 					x_pixel++;
 				}
@@ -463,13 +463,14 @@ bool video_create()
 
 	glGenTextures(1, &Video_framebuffer_texture);
 	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Video_native_width, Video_native_height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Video_native_width, Video_native_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// attach texture to framebuffer
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Video_framebuffer_texture, 0);
-	
-	GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
-	glDrawBuffers(1, draw_buffers);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		printf("Unable to create framebuffer for render to texture.\n");
 		return false;
@@ -587,13 +588,13 @@ void video_render_frame(memory &mem)
 // so that we still render properly
 void video_resize(bool scale_up)
 {
-	if (scale_up == true) {
-		Video_scale_factor += 0.5f;
-	} else {
-		Video_scale_factor -= 0.5f;
-	}
+	//if (scale_up == true) {
+	//	Video_scale_factor += 0.5f;
+	//} else {
+	//	Video_scale_factor -= 0.5f;
+	//}
 
-	// create window and textures
-	video_create();
+	//// create window and textures
+	//video_create();
 }
 

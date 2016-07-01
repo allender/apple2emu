@@ -47,15 +47,18 @@ static SDL_Rect Video_window_size;
 
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
-const uint8_t Num_hires_patterns = 127;
-const uint8_t Hires_texture_width = 7;
+const uint8_t Num_hires_patterns = 128;
+const uint8_t Hires_texture_width = 8;
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
 
 SDL_Window *Video_window;
 SDL_GLContext Video_context;
-GLuint Video_lores_texture = 0;
+
+// texture for hires bit patters
+GLuint Video_hires_textures[Num_hires_patterns];
+
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
 font Video_font, Video_inverse_font;
@@ -134,6 +137,49 @@ static uint32_t timer_flash_callback(uint32_t interval, void *param)
 {
 	Video_flash = !Video_flash;
 	return interval;
+}
+
+// create internal texture which will be used for blitting hires pixel
+// patterns in high res mode
+static bool video_create_hires_textures()
+{
+	//uint8_t pixels[3 * Hires_texture_width];
+
+	// create texture that contains pixel patterns for black/white display.  Note that there are only
+	// 127 patterns because the high bit is used to determine color of pixels (when running in color mode).
+	// in monochrome mode, these are all just white pixels
+	//memset(pixels, 0, sizeof(pixels));
+
+	glGenTextures(Num_hires_patterns, Video_hires_textures);
+	// create monochrome pattern first
+	for (auto y = 0; y < 128; y++) {
+		uint8_t *pixels = new uint8_t[3 * Hires_texture_width];
+		memset(pixels, 0, 3 * Hires_texture_width);
+		//uint8_t *src = &((uint8_t *)(Video_hires_pixels))[y * Hires_texture_width * 3];
+		uint8_t *src = pixels;
+		for (auto x = 0; x < Hires_texture_width; x++) {
+			if ((y >> x) & 1) {
+				*src++ = 0xff;
+				*src++ = 0xff;
+				*src++ = 0xff;
+			} else {
+				src += 3;
+			}
+		}
+
+		// create the texture
+		glBindTexture(GL_TEXTURE_2D, Video_hires_textures[y]);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+
+	return true;
 }
 
 // renders a text page (primary or secondary)
@@ -282,9 +328,6 @@ static void video_render_hires_mode(memory &mem)
 	int x_pixel;
 	int y_pixel;
 
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glBegin(GL_POINTS);
-
 	for (int y = 0; y < y_end; y++) {
 		offset = primary?Video_hires_map[y]:Video_hires_secondary_map[y];
 		for (int x = 0; x < 40; x++) {
@@ -292,17 +335,22 @@ static void video_render_hires_mode(memory &mem)
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
 				uint8_t byte = mem[offset + (1024 * b) + x];
-				for (int j = 0; j < 7; j++) {
-					if ((byte>>j)&1) {
-						glVertex2i(x_pixel, y_pixel+1);
-					}
-					x_pixel++;
+				if (true) {
+					// color mode
+					byte &= 0x7f;
+					glBindTexture(GL_TEXTURE_2D, Video_hires_textures[byte]);
+					glColor3f(1.0f, 1.0f, 1.0f);
+					glBegin(GL_QUADS);
+						glTexCoord2f(0.0f, 0.0f); glVertex2i(x_pixel, y_pixel);
+						glTexCoord2f(1.0f, 0.0f); glVertex2i(x_pixel + 8, y_pixel);
+						glTexCoord2f(1.0f, 1.0f); glVertex2i(x_pixel + 8, y_pixel + 1);
+						glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 1);
+					glEnd();
 				}
 				y_pixel++;
 			}
 		}
 	}
-	glEnd();
 
 	// deal with the rest of the display
 	glColor3f(1.0f, 1.0f, 1.0f);
@@ -480,6 +528,10 @@ bool video_create()
 		return false;
 	}
 	if (Video_inverse_font.load("apple2_inverted.tga") == false) {
+		return false;
+	}
+
+	if (video_create_hires_textures() == false) {
 		return false;
 	}
 

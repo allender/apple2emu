@@ -44,14 +44,13 @@ SOFTWARE.
 #if defined(__APPLE__)
 #include <OpenGL/GL.h>
 #else
-#include <GL/GL.h>
+#include <GL/GL.h>>
 #endif
 
 // holds the font definition
 class font {
 private:
 	SDL_Surface   *m_surface;
-	uint32_t       m_font_tyles;
 
 public:
 	struct header {

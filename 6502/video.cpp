@@ -47,8 +47,6 @@ static SDL_Rect Video_window_size;
 
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
-const uint8_t Num_hires_patterns = 127;
-const uint8_t Hires_texture_width = 7;
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
@@ -72,22 +70,22 @@ uint16_t       Video_hires_secondary_map[MAX_TEXT_LINES];
 // for values.  Good enough for a start
 static GLubyte Lores_colors[Num_lores_colors][3] = 
 {
-	0x00, 0x00, 0x00,                 // black
-	0xe3, 0x1e, 0x60,                 // red
-	0x96, 0x4e, 0xbd,                 // dark blue
-	0xff, 0x44, 0xfd,                 // purple
-   0x00, 0xa3, 0x96,                 // dark green
-	0x9c, 0x9c, 0x9c,                 // gray
-	0x14, 0xcf, 0xfd,                 // medium blue
-	0xd0, 0xce, 0xff,                 // light blue
-	0x60, 0x72, 0x03,                 // brown
-	0xff, 0x6a, 0x32,                 // orange
-	0x9c, 0x9c, 0x9c,                 // gray
-   0xff, 0xa0, 0xd0,                 // pink
-	0x14, 0xf5, 0x3c,                 // light green
-   0xd0, 0xdd, 0x8d,                 // yellow
-	0x72, 0xff, 0xd0,                 // aqua
-	0xff, 0xff, 0xff,                 // white
+   { 0x00, 0x00, 0x00 },                 // black
+   { 0xe3, 0x1e, 0x60 },                 // red
+   { 0x96, 0x4e, 0xbd },                 // dark blue
+   { 0xff, 0x44, 0xfd },                 // purple
+   { 0x00, 0xa3, 0x96 },                 // dark green
+	{ 0x9c, 0x9c, 0x9c },                 // gray
+   { 0x14, 0xcf, 0xfd },                 // medium blue
+   { 0xd0, 0xce, 0xff },                 // light blue
+   { 0x60, 0x72, 0x03 },                 // brown
+   { 0xff, 0x6a, 0x32 },                 // orange
+   { 0x9c, 0x9c, 0x9c },                 // gray
+   { 0xff, 0xa0, 0xd0 },                 // pink
+   { 0x14, 0xf5, 0x3c },                 // light green
+   { 0xd0, 0xdd, 0x8d },                 // yellow
+	{ 0x72, 0xff, 0xd0 },                 // aqua
+   { 0xff, 0xff, 0xff },                 // white
 };
 
 static char character_conv[] = {

@@ -46,11 +46,25 @@ static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
 
 // information about internally built textures
-const uint8_t Num_lores_colors = 16;
-const uint8_t Num_hires_mono_patterns = 128;
-const uint8_t Hires_texture_width = 8;
+const int Num_lores_colors = 16;
+const int Num_hires_mono_patterns = 128;
+const int Num_hires_color_patterns = (256 * 3);
+const int Hires_texture_width = 8;
+
+// textures and pixel storage for mono mode.  There
+// are only 128 patterns since we don't need to worry
+// about the color bit (high bit)
 static GLuint Hires_mono_textures[Num_hires_mono_patterns];
 static uint8_t *Hires_mono_pixels[Num_hires_mono_patterns];
+
+// textures and pixel patterns for color mode. there are
+// 256 * 3 patterns for color because we have patterns
+// that follow the regular pattern.  A complete set
+// with left most bit set to white for when this is adjacent
+// to another pixel and a set with the right bit as white
+// when it is adjacent to another pixel
+static GLuint Hires_color_textures[Num_hires_color_patterns];
+static uint8_t *Hires_color_pixels[Num_hires_color_patterns];
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
@@ -91,6 +105,11 @@ static GLubyte Lores_colors[Num_lores_colors][3] =
 	{ 0x72, 0xff, 0xd0 },                 // aqua
    { 0xff, 0xff, 0xff },                 // white
 };
+
+static GLubyte Hires_blue_color[3] = { 20, 207, 253 };
+static GLubyte Hires_red_color[3] = { 255, 106, 60 };
+static GLubyte Hires_green_color[3] = { 20, 245, 60 };
+static GLubyte Hires_violet_color[3] = { 255, 68, 253 };
 
 static char character_conv[] = {
 
@@ -142,20 +161,13 @@ static uint32_t timer_flash_callback(uint32_t interval, void *param)
 // patterns in high res mode
 static bool video_create_hires_textures()
 {
-	//uint8_t pixels[3 * Hires_texture_width];
-
-	// create texture that contains pixel patterns for black/white display.  Note that there are only
-	// 127 patterns because the high bit is used to determine color of pixels (when running in color mode).
-	// in monochrome mode, these are all just white pixels
-	//memset(pixels, 0, sizeof(pixels));
-
-	glGenTextures(Num_hires_mono_patterns, Hires_mono_textures);
 	// create monochrome pattern first
+	glGenTextures(Num_hires_mono_patterns, Hires_mono_textures);
 	for (auto y = 0; y < 128; y++) {
 		Hires_mono_pixels[y] = new uint8_t[3 * Hires_texture_width];
 		memset(Hires_mono_pixels[y], 0, 3 * Hires_texture_width);
 		uint8_t *src = Hires_mono_pixels[y];
-		for (auto x = 0; x < Hires_texture_width; x++) {
+		for (auto x = 0; x < Hires_texture_width-1; x++) {
 			if ((y >> x) & 1) {
 				*src++ = 0xff;
 				*src++ = 0xff;
@@ -175,6 +187,64 @@ static bool video_create_hires_textures()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
+
+   // create the color patterns.  Create the standard pattern, then
+   // copy that pattern to the other two sets and just set the left or
+   // right most pixel to white.  Deal with first half (high bit off)
+   // then second half
+	glGenTextures(Num_hires_color_patterns, Hires_color_textures);
+   GLubyte *odd_color = Hires_green_color;
+   GLubyte *even_color = Hires_violet_color;
+   for (auto y = 0; y < Num_hires_color_patterns; y++) {
+      if (y == 128) {
+         odd_color = Hires_red_color;
+         even_color = Hires_blue_color;
+      }
+
+		Hires_color_pixels[y] = new uint8_t[3 * Hires_texture_width];
+		memset(Hires_color_pixels[y], 0, 3 * Hires_texture_width);
+		uint8_t *src = Hires_color_pixels[y];
+      uint8_t prev_bit = 0;
+      uint8_t next_bit;
+		for (auto x = 0; x < Hires_texture_width - 1; x++) {
+         uint8_t cur_bit = (y>>x) & 1;
+         // get the next bit in byte to determine if we have two colors
+         // next to each other
+         if (x < 6) {
+            next_bit = (y>>(x+1)) & 1;
+         } else {
+            next_bit = 0;
+         }
+         if ((prev_bit && cur_bit) || (cur_bit && next_bit)) {
+				*src++ = 0xff;
+				*src++ = 0xff;
+				*src++ = 0xff;
+         } else if (cur_bit) {
+            if (x & 1) {
+               *src++ = odd_color[0];
+               *src++ = odd_color[1];
+               *src++ = odd_color[2];
+            } else {
+               *src++ = even_color[0];
+               *src++ = even_color[1];
+               *src++ = even_color[2];
+            }
+			} else {
+				src += 3;
+			}
+         prev_bit = cur_bit;
+		}
+
+		// create the texture
+		glBindTexture(GL_TEXTURE_2D, Hires_color_textures[y]);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_color_pixels[y]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, 0);
+   }
 
 
 	return true;
@@ -333,7 +403,7 @@ static void video_render_hires_mode(memory &mem)
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
 				uint8_t byte = mem[offset + (1024 * b) + x];
-				if (true && byte) {
+				if (false && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);
@@ -344,7 +414,16 @@ static void video_render_hires_mode(memory &mem)
 						glTexCoord2f(1.0f, 1.0f); glVertex2i(x_pixel + 8, y_pixel + 1);
 						glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 1);
 					glEnd();
-				}
+				} else if (byte) {
+					glBindTexture(GL_TEXTURE_2D, Hires_color_textures[byte]);
+					glColor3f(1.0f, 1.0f, 1.0f);
+					glBegin(GL_QUADS);
+						glTexCoord2f(0.0f, 0.0f); glVertex2i(x_pixel, y_pixel);
+						glTexCoord2f(1.0f, 0.0f); glVertex2i(x_pixel + 8, y_pixel);
+						glTexCoord2f(1.0f, 1.0f); glVertex2i(x_pixel + 8, y_pixel + 1);
+						glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 1);
+					glEnd();
+            }
 				y_pixel++;
 			}
 		}

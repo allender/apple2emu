@@ -335,7 +335,7 @@ static void video_render_hires_mode(memory &mem)
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
 				uint8_t byte = mem[offset + (1024 * b) + x];
-				if (true) {
+				if (true && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Video_hires_textures[byte]);

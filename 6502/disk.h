@@ -51,6 +51,6 @@ public:
 	void set_new_track(uint8_t new_track);
 };
 
-void disk_init(memory &mem);
+void disk_init();
 bool disk_insert(const char *disk_image_filename, const uint32_t slot);
 

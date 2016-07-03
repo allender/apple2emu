@@ -129,13 +129,13 @@ static void debugger_get_status(cpu_6502 &cpu)
 }
 
 // disassemble the given address into the buffer
-static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t addr)
+static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 {
 	char internal_buffer[Debugger_disassembly_line_length];
 	Debugger_disassembly_line[0] = '\0';
 
 	// get the opcode at the address and from there we have the mode
-	cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[mem[addr]];
+	cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(addr)];
 	if (opcode->m_mnemonic == '    ') {
 		// invalid opcode.  just print ?? and continue
 		strcpy(Debugger_disassembly_line, "???");
@@ -145,7 +145,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 
 		for (uint8_t j = 0; j < 3; j++) {
 			if (j < opcode->m_size) {
-				sprintf(internal_buffer, "%02X ", mem[addr + j]);
+				sprintf(internal_buffer, "%02X ", memory_read(addr + j));
 			} else {
 				sprintf(internal_buffer, "   ");
 			}
@@ -161,17 +161,17 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 
 		uint16_t addressing_val;
 		if (opcode->m_size == 2) {
-			addressing_val = mem[addr + 1];
+			addressing_val = memory_read(addr + 1);
 		} else if (opcode->m_size == 3) {
-			addressing_val = (mem[addr + 2] << 8) | mem[addr + 1];
+			addressing_val = (memory_read(addr + 2) << 8) | memory_read(addr + 1);
 		}
 		if (opcode->m_size > 1) {
 			uint32_t mem_value = -1;
 
 			cpu_6502::addressing_mode mode = opcode->m_addressing_mode;
 			if (mode == cpu_6502::addressing_mode::RELATIVE_MODE) {
-				addressing_val = addr + mem[addr + 1] + 2;
-				if (mem[addr + 1] & 0x80) {
+				addressing_val = addr + memory_read(addr + 1) + 2;
+				if (memory_read(addr + 1) & 0x80) {
 					addressing_val -= 0x100;
 				}
 			}
@@ -200,7 +200,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 			case cpu_6502::addressing_mode::ABSOLUTE_MODE:
 			case cpu_6502::addressing_mode::ZERO_PAGE_MODE:
 				if (opcode->m_mnemonic != 'JSR ') {
-					mem_value = mem[addressing_val];
+					mem_value = memory_read(addressing_val);
 					sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
 					strcat(Debugger_disassembly_line, internal_buffer);
 					if (isprint(mem_value)) {
@@ -214,7 +214,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 			case cpu_6502::addressing_mode::X_INDEXED_MODE:
 			case cpu_6502::addressing_mode::ZERO_PAGE_INDEXED_MODE:
 				addressing_val += cpu.get_x();
-				mem_value = mem[addressing_val];
+				mem_value = memory_read(addressing_val);
 				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
 				strcat(Debugger_disassembly_line, internal_buffer);
 				if (isprint(mem_value)) {
@@ -227,7 +227,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 			case cpu_6502::addressing_mode::Y_INDEXED_MODE:
 			case cpu_6502::addressing_mode::ZERO_PAGE_INDEXED_MODE_Y:
 				addressing_val += cpu.get_y();
-				mem_value = mem[addressing_val];
+				mem_value = memory_read(addressing_val);
 				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
 				strcat(Debugger_disassembly_line, internal_buffer);
 				if (isprint(mem_value)) {
@@ -267,10 +267,10 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, memory &mem, uint32_t add
 }
 
 // disassemble at the given address
-static void debugger_disassemble(cpu_6502 &cpu, memory &mem, uint32_t addr, int32_t num_lines = 20)
+static void debugger_disassemble(cpu_6502 &cpu, uint32_t addr, int32_t num_lines = 20)
 {
 	for (auto i = 0; i < num_lines; i++) {
-		uint8_t size = debugger_get_disassembly(cpu, mem, addr);
+		uint8_t size = debugger_get_disassembly(cpu, addr);
 		printw("%s\n", Debugger_disassembly_line);
 		addr += size;
 	}
@@ -296,7 +296,7 @@ static void debugger_start_trace()
 	printw("Staring trace\n");
 }
 
-static void debugger_trace_line(memory& mem, cpu_6502& cpu)
+static void debugger_trace_line(cpu_6502& cpu)
 {
 	if (Debugger_trace_fp == nullptr) {
 		return;
@@ -304,11 +304,11 @@ static void debugger_trace_line(memory& mem, cpu_6502& cpu)
 
 	// print out the info the trace file
 	debugger_get_short_status(cpu);
-	debugger_get_disassembly(cpu, mem, cpu.get_pc());
+	debugger_get_disassembly(cpu, cpu.get_pc());
 	fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disassembly_line);
 }
 
-static void debugger_display_memory(memory &mem)
+static void debugger_display_memory()
 {
 	wclear(Debugger_memory_window);
 	box(Debugger_memory_window, 0, 0);
@@ -316,12 +316,12 @@ static void debugger_display_memory(memory &mem)
 	for (auto i = 0; i < Debugger_memory_num_lines-2; i++) {
 		mvwprintw(Debugger_memory_window, i+1, 2, "%04X: ", addr);
 		for (auto j = 0; j < Debugger_memory_display_bytes; j++) {
-			wprintw(Debugger_memory_window, "%02x ", mem[addr+j]);
+			wprintw(Debugger_memory_window, "%02x ", memory_read(addr+j));
 		}
 		wprintw(Debugger_memory_window, "  ");
 
 		for (auto j = 0; j < Debugger_memory_display_bytes; j++) {
-			wprintw(Debugger_memory_window, "%c", isprint(mem[addr + j]) ? mem[addr + j] : '.');
+			wprintw(Debugger_memory_window, "%c", isprint(memory_read(addr + j)) ? memory_read(addr + j) : '.');
 		}
 		addr += Debugger_memory_display_bytes;
 	}
@@ -353,7 +353,7 @@ static void debugger_display_registers(cpu_6502 &cpu)
 }
 
 // display the disassembly in the disassembly window
-static void debugger_display_disasm(cpu_6502 &cpu, memory &mem)
+static void debugger_display_disasm(cpu_6502 &cpu)
 {
 	wclear(Debugger_disasm_window);
 	box(Debugger_disasm_window, 0, 0);
@@ -362,7 +362,7 @@ static void debugger_display_disasm(cpu_6502 &cpu, memory &mem)
 	auto row = 1;
 	wattron(Debugger_disasm_window, A_REVERSE);
 	for (auto i = 0; i < Debugger_disasm_num_lines - 2; i++) {
-		auto size = debugger_get_disassembly(cpu, mem, addr);
+		auto size = debugger_get_disassembly(cpu, addr);
 		// see if there is breakpoint at given line and show that in red
 		for (auto j = 0; j < Debugger_num_breakpoints; j++) {
 			if (Debugger_breakpoints[j].m_addr == addr && Debugger_breakpoints[j].m_enabled) {
@@ -409,7 +409,7 @@ static void debugger_display_breakpoints()
 	wrefresh(Debugger_breakpoint_window);
 }
 
-static void debugger_display_status(memory &mem)
+static void debugger_display_status()
 {
 	wclear(Debugger_status_window);
 	box(Debugger_status_window, 0, 0);
@@ -473,21 +473,21 @@ static void debugger_display_status(memory &mem)
 
 // processes a command for the debugger.  Returns true when control
 // should return back to CPU
-static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
+static void debugger_process_commands(cpu_6502 &cpu)
 {
 	char input[Max_input];
 
 	while (1) {
 
 		// dump memory into memory window
-		debugger_display_memory(mem);
+		debugger_display_memory();
 		debugger_display_registers(cpu);
-		debugger_display_disasm(cpu, mem);
+		debugger_display_disasm(cpu);
 		debugger_display_breakpoints();
-		debugger_display_status(mem);
+		debugger_display_status();
 
 		debugger_get_status(cpu);
-		debugger_get_disassembly(cpu, mem, cpu.get_pc());
+		debugger_get_disassembly(cpu, cpu.get_pc());
 
 		//wprintw(Debugger_command_window, "%s %s\n", Debugger_status_line, Debugger_disassembly_line);
 		wprintw(Debugger_command_window, "> ");
@@ -590,7 +590,7 @@ static void debugger_process_commands(cpu_6502 &cpu, memory &mem)
 			} else {
 				addr = strtol(token, nullptr, 16);
 			}
-			debugger_disassemble(cpu, mem, addr);
+			debugger_disassemble(cpu, addr);
 		}
 
 		// view memory
@@ -676,7 +676,7 @@ void debugger_init()
 	Debugger_status_window = subwin(stdscr, Debugger_status_num_lines, Debugger_column_two_width, row, 81);
 }
 
-void debugger_process(cpu_6502 &cpu, memory &mem)
+void debugger_process(cpu_6502 &cpu)
 {
 	// check on breakpoints
 	if (Debugger_stopped == false) {
@@ -698,14 +698,14 @@ void debugger_process(cpu_6502 &cpu, memory &mem)
 	}
 	// if we are stopped, process any commands here in tight loop
 	if (Debugger_stopped) {
-		debugger_process_commands(cpu, mem);
+		debugger_process_commands(cpu);
 		if (Debugger_stopped == false) {
 			debugger_exit();
 		}
 	}
 
 	if (Debugger_trace_fp != nullptr) {
-		debugger_trace_line(mem, cpu);
+		debugger_trace_line(cpu);
 	}
 
 }

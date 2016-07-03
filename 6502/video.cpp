@@ -31,6 +31,7 @@ SOFTWARE.
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "SDL_image.h"
+#include "6502/memory.h"
 #include "6502/video.h"
 #include "6502/font.h"
 #include "ui/main_menu.h"
@@ -251,7 +252,7 @@ static bool video_create_hires_textures()
 }
 
 // renders a text page (primary or secondary)
-static void video_render_text_page(memory &mem)
+static void video_render_text_page()
 {
 	// fow now, just run through the text memory and put out whatever is there
 	int x_pixel, y_pixel;
@@ -263,7 +264,7 @@ static void video_render_text_page(memory &mem)
 		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
 			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
-			uint8_t c = mem[addr];
+			uint8_t c = memory_read(addr);
 
 			// get normal or inverse font
 			if (c <= 0x3f) {
@@ -298,7 +299,7 @@ static void video_render_text_page(memory &mem)
 }
 
 // renders lores graphics mode
-static void video_render_lores_mode(memory &mem)
+static void video_render_lores_mode()
 {
 	// fow now, just run through the text memory and put out whatever is there
 	int x_pixel, y_pixel;
@@ -311,7 +312,7 @@ static void video_render_lores_mode(memory &mem)
 			// get the 2 nibble value of the color.  Blit the corresponding colors
 			// to the screen
 			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
-			uint8_t c = mem[addr];
+			uint8_t c = memory_read(addr);
 
 			// render top cell
 			uint8_t color = c & 0x0f;
@@ -344,7 +345,7 @@ static void video_render_lores_mode(memory &mem)
 		font *cur_font;
 		for (auto x = 0; x < 40; x++) {
 			uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
-			uint8_t c = mem[addr];
+			uint8_t c = memory_read(addr);
 
 			// get normal or inverse font
 			if (c <= 0x3f) {
@@ -378,7 +379,7 @@ static void video_render_lores_mode(memory &mem)
 	}
 }
 
-static void video_render_hires_mode(memory &mem)
+static void video_render_hires_mode()
 {
 	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
 	uint16_t offset;
@@ -402,8 +403,8 @@ static void video_render_hires_mode(memory &mem)
 			y_pixel = y * 8;
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
-				uint8_t byte = mem[offset + (1024 * b) + x];
-				if (false && byte) {
+				uint8_t byte = memory_read(offset + (1024 * b) + x);
+				if (true && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);
@@ -437,7 +438,7 @@ static void video_render_hires_mode(memory &mem)
 			font *cur_font;
 			for (auto x = 0; x < 40; x++) {
 				uint16_t addr = primary ? Video_primary_text_map[y] + x : Video_secondary_text_map[y] + x;  // m_screen_map[row] + col;
-				uint8_t c = mem[addr];
+				uint8_t c = memory_read(addr);
 
 				// get normal or inverse font
 				if (c <= 0x3f) {
@@ -616,7 +617,7 @@ bool video_create()
 }
 
 // intialize the SDL system
-bool video_init(memory &mem)
+bool video_init()
 {
 	Video_native_size.x = 0;
 	Video_native_size.y = 0;
@@ -632,7 +633,7 @@ bool video_init(memory &mem)
 	}
 
 	for (auto i = 0x50; i <= 0x57 ; i++) {
-		mem.register_c000_handler(i, video_read_handler, video_write_handler);
+		memory_register_c000_handler(i, video_read_handler, video_write_handler);
 	}
 
 	// set up a timer for flashing cursor
@@ -668,7 +669,7 @@ void video_shutdown()
 	SDL_Quit();
 }
 
-void video_render_frame(memory &mem)
+void video_render_frame()
 {
 	// render to the framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
@@ -688,11 +689,11 @@ void video_render_frame(memory &mem)
 	glEnable(GL_TEXTURE_2D);
 
 	if (Video_mode & VIDEO_MODE_TEXT) {
-		video_render_text_page(mem);
+		video_render_text_page();
 	} else if (!(Video_mode & VIDEO_MODE_HIRES)) {
-		video_render_lores_mode(mem);
+		video_render_lores_mode();
 	} else if (Video_mode & VIDEO_MODE_HIRES) {
-		video_render_hires_mode(mem);
+		video_render_hires_mode();
 	}
 
 	// back to main framebuffer

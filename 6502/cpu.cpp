@@ -182,73 +182,73 @@ inline int16_t cpu_6502::relative_mode()
 
 inline int16_t cpu_6502::absolute_mode()
 {
-	uint8_t lo = m_memory[m_pc++];
-	uint8_t hi = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
+	uint8_t hi = memory_read(m_pc++);
 	return (hi << 8) | lo;
 }
 
 inline int16_t cpu_6502::zero_page_mode()
 {
-	uint8_t lo = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
 	return lo;
 }
 
 inline int16_t cpu_6502::indirect_mode()
 {
-	uint8_t addr_lo = m_memory[m_pc++];
-	uint8_t addr_hi = m_memory[m_pc++];
+	uint8_t addr_lo = memory_read(m_pc++);
+	uint8_t addr_hi = memory_read(m_pc++);
 	uint16_t addr = addr_hi << 8 | addr_lo;
-	uint16_t return_addr = m_memory[addr] & 0xff;
-	return_addr |= (m_memory[addr+1] << 8);
+	uint16_t return_addr = memory_read(addr) & 0xff;
+	return_addr |= (memory_read(addr+1) << 8);
 	return return_addr;
 }
 
 inline int16_t cpu_6502::absolute_x_mode()
 {
-	uint8_t lo = m_memory[m_pc++];
-	uint8_t hi = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
+	uint8_t hi = memory_read(m_pc++);
 	return ((hi << 8) | lo) + m_xindex;
 }
 
 inline int16_t cpu_6502::absolute_y_mode()
 {
-	uint8_t lo = m_memory[m_pc++];
-	uint8_t hi = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
+	uint8_t hi = memory_read(m_pc++);
 	return ((hi << 8) | lo) + m_yindex;
 }
 
 inline int16_t cpu_6502::zero_page_indexed_mode()
 {
-	uint8_t lo = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
 	return (lo + m_xindex) & 0xff;
 }
 
 inline int16_t cpu_6502::zero_page_indexed_mode_y()
 {
-	uint8_t lo = m_memory[m_pc++];
+	uint8_t lo = memory_read(m_pc++);
 	return (lo + m_yindex) & 0xff;
 }
 
 inline int16_t cpu_6502::indexed_indirect_mode()
 {
-	uint16_t addr_start = (m_memory[m_pc++] + m_xindex) & 0xff;
-	uint8_t lo = m_memory[addr_start];
-	uint8_t hi = m_memory[addr_start + 1];
+	uint16_t addr_start = (memory_read(m_pc++) + m_xindex) & 0xff;
+	uint8_t lo = memory_read(addr_start);
+	uint8_t hi = memory_read(addr_start + 1);
 	return (hi << 8) | lo;
 }
 
 inline int16_t cpu_6502::indirect_indexed_mode()
 {
-	uint16_t addr_start = m_memory[m_pc++];
-	uint8_t lo = m_memory[addr_start];
-	uint8_t hi = m_memory[addr_start+1];
+	uint16_t addr_start = memory_read(m_pc++);
+	uint8_t lo = memory_read(addr_start);
+	uint8_t hi = memory_read(addr_start + 1);
 	uint16_t addr = ((hi << 8) | lo) + m_yindex;
 	return addr;
 }
 
 inline void cpu_6502::branch_relative()
 {
-	uint8_t val = m_memory[m_pc-1];
+	uint8_t val = memory_read(m_pc-1);
 	m_pc += val;
 	if (val & 0x80) {
 		m_pc -= 0x100;
@@ -262,7 +262,7 @@ uint32_t cpu_6502::process_opcode()
 {
 	// get the opcode at the program counter and the just figure out what
 	// to do
-	uint8_t opcode = m_memory[m_pc++];
+	uint8_t opcode = memory_read(m_pc++);
 
 	// get addressing mode and then do appropriate work based on the mode
 	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
@@ -275,7 +275,7 @@ uint32_t cpu_6502::process_opcode()
 	switch(m_opcodes[opcode].m_mnemonic) {
 	case 'ADC ':
 		{
-			uint8_t val = m_memory[src];
+			uint8_t val = memory_read(src);
 			uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
 			uint32_t sum = (uint32_t)m_acc + (uint32_t)val + carry_bit;
 			set_flag(register_bit::CARRY_BIT, sum > 0xff);
@@ -304,7 +304,7 @@ uint32_t cpu_6502::process_opcode()
 
 	case 'AND ':
 		{
-			m_acc &= m_memory[src];
+			m_acc &= memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (m_acc>>7));
 			set_flag(register_bit::ZERO_BIT, (m_acc==0));
 			break;
@@ -316,13 +316,13 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				old_val = m_acc;
 			} else {
-				old_val = m_memory[src];
+				old_val = memory_read(src);
 			}
 			val = old_val << 1;
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
-				m_memory.write(src, val);
+				memory_write(src, val);
 			}
 			set_flag(register_bit::SIGN_BIT, val>>7);
 			set_flag(register_bit::ZERO_BIT, val==0);
@@ -353,7 +353,7 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'BIT ':
 		{
-			int8_t val = m_memory[src];
+			int8_t val = memory_read(src);
 			set_flag(register_bit::SIGN_BIT, ((val>>7)&0x1));
 			set_flag(register_bit::OVERFLOW_BIT, ((val>>6)&0x1));
 			set_flag(register_bit::ZERO_BIT, ((val & m_acc) == 0));
@@ -383,14 +383,14 @@ uint32_t cpu_6502::process_opcode()
 	case 'BRK ':
 		{
 			m_pc++;
-			m_memory.write(0x100 + m_sp--, (m_pc >> 8));
-			m_memory.write(0x100 + m_sp--, (m_pc & 0xff));
+			memory_write(0x100 + m_sp--, (m_pc >> 8));
+			memory_write(0x100 + m_sp--, (m_pc & 0xff));
 			uint8_t register_value = m_status_register;
 			register_value |= (1<<static_cast<uint8_t>(register_bit::NOT_USED_BIT));
 			register_value |= (1<<static_cast<uint8_t>(register_bit::BREAK_BIT));
-			m_memory.write(0x100 + m_sp--, register_value);
+			memory_write(0x100 + m_sp--, register_value);
 			set_flag(register_bit::INTERRUPT_BIT, 1);
-			m_pc = (m_memory[0xfffe] & 0xff) | (m_memory[0xffff] << 8);
+			m_pc = (memory_read(0xfffe) & 0xff) | (memory_read(0xffff) << 8);
 			break;
 		}
 	case 'BVC ':
@@ -429,44 +429,44 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'CMP ':
 		{
-			if (m_acc >= m_memory[src]) {
+			if (m_acc >= memory_read(src)) {
 				set_flag(register_bit::CARRY_BIT, 1);
 			} else {
 				set_flag(register_bit::CARRY_BIT, 0);
 			}
-			int8_t val = m_acc - m_memory[src];
+			int8_t val = m_acc - memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
 			break;
 		}
 	case 'CPX ':
 		{
-			if (m_xindex >= m_memory[src]) {
+			if (m_xindex >= memory_read(src)) {
 				set_flag(register_bit::CARRY_BIT, 1);
 			} else {
 				set_flag(register_bit::CARRY_BIT, 0);
 			}
-			int8_t val = m_xindex - m_memory[src];
+			int8_t val = m_xindex - memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
 			break;
 		}
 	case 'CPY ':
 		{
-			if (m_yindex >= m_memory[src]) {
+			if (m_yindex >= memory_read(src)) {
 				set_flag(register_bit::CARRY_BIT, 1);
 			} else {
 				set_flag(register_bit::CARRY_BIT, 0);
 			}
-			int8_t val = m_yindex - m_memory[src];
+			int8_t val = m_yindex - memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
 			break;
 		}
 	case 'DEC ':
 		{
-			uint8_t val = m_memory[src] - 1;
-			m_memory.write(src, val);
+			uint8_t val = memory_read(src) - 1;
+			memory_write(src, val);
 			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
 			break;
@@ -487,7 +487,7 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'EOR ':
 		{
-			uint8_t val = m_memory[src];
+			uint8_t val = memory_read(src);
 			m_acc ^= val;
 			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
@@ -495,8 +495,8 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'INC ':
 		{
-			uint8_t val = m_memory[src] + 1;
-			m_memory.write(src, val);
+			uint8_t val = memory_read(src) + 1;
+			memory_write(src, val);
 			set_flag(register_bit::SIGN_BIT, (val>>7)&0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
 			break;
@@ -529,34 +529,34 @@ uint32_t cpu_6502::process_opcode()
 			} else if (src == 0xf004) {
 				m_acc = _getch();
 			} else {
-				m_memory[0x100 + m_sp--] = ((m_pc - 1)>> 8);
-				m_memory[0x100 + m_sp--] = (m_pc - 1) & 0xff;
+				memory_read(0x100 + m_sp--) = ((m_pc - 1)>> 8);
+				memory_read(0x100 + m_sp--) = (m_pc - 1) & 0xff;
 				m_pc = src;
 			}
 #else
-			m_memory.write(0x100 + m_sp--, ((m_pc - 1)>> 8));
-			m_memory.write(0x100 + m_sp--, (m_pc - 1) & 0xff);
+			memory_write(0x100 + m_sp--, ((m_pc - 1)>> 8));
+			memory_write(0x100 + m_sp--, (m_pc - 1) & 0xff);
 			m_pc = src;
 #endif
 			break;
 		}
 	case 'LDA ':
 		{
-			m_acc = m_memory[src];
+			m_acc = memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, (m_acc == 0) & 0x1);
 			break;
 		}
 	case 'LDX ':
 		{
-			m_xindex = m_memory[src];
+			m_xindex = memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (m_xindex >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, (m_xindex == 0) & 0x1);
 			break;
 		}
 	case 'LDY ':
 		{
-			m_yindex = m_memory[src];
+			m_yindex = memory_read(src);
 			set_flag(register_bit::SIGN_BIT, (m_yindex >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, (m_yindex == 0) & 0x1);
 			break;
@@ -567,14 +567,14 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
-				val = m_memory[src];
+				val = memory_read(src);
 			}
 			set_flag(register_bit::CARRY_BIT, val & 1);
 			val >>= 1;
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
-				m_memory.write(src, val);
+				memory_write(src, val);
 			}
 			set_flag(register_bit::SIGN_BIT, 0);
 			set_flag(register_bit::ZERO_BIT, val == 0);
@@ -586,7 +586,7 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'ORA ':
 		{
-			uint8_t val = m_memory[src];
+			uint8_t val = memory_read(src);
 			m_acc |= val;
 			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, m_acc == 0);
@@ -594,12 +594,12 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'PHA ':
 		{
-			m_memory.write(0x100 + m_sp--, m_acc);
+			memory_write(0x100 + m_sp--, m_acc);
 			break;
 		}
 	case 'PLA ':
 		{
-			m_acc = m_memory[0x100 + ++m_sp];
+			m_acc = memory_read(0x100 + ++m_sp);
 			set_flag(register_bit::SIGN_BIT, (m_acc >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, m_acc == 0);
 			break;
@@ -609,12 +609,12 @@ uint32_t cpu_6502::process_opcode()
 			uint8_t register_value = m_status_register;
 			register_value |= 1 << (static_cast<uint8_t>(register_bit::BREAK_BIT));
 			register_value |= 1 << (static_cast<uint8_t>(register_bit::NOT_USED_BIT));
-			m_memory.write(0x100 + m_sp--, register_value);
+			memory_write(0x100 + m_sp--, register_value);
 			break;
 		}
 	case 'PLP ':
 		{
-			m_status_register = m_memory[0x100 + ++m_sp];
+			m_status_register = memory_read(0x100 + ++m_sp);
 			break;
 		}
 	case 'ROL ':
@@ -623,7 +623,7 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
-				val = m_memory[src];
+				val = memory_read(src);
 			}
 			uint8_t carry_bit = (val >> 7) & 0x1;
 			val <<= 1;
@@ -634,7 +634,7 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
-				m_memory.write(src, val);
+				memory_write(src, val);
 			}
 			break;
 		}
@@ -644,7 +644,7 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
-				val = m_memory[src];
+				val = memory_read(src);
 			}
 			uint8_t carry_bit = val & 0x1;
 			val >>= 1;
@@ -655,28 +655,28 @@ uint32_t cpu_6502::process_opcode()
 			if (mode == addressing_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
-				m_memory.write(src, val);
+				memory_write(src, val);
 			}
 			break;
 		}
 	case 'RTI ':
 		{
-			m_status_register = m_memory[0x100 + ++m_sp];
-			m_pc = m_memory[0x100 + ++m_sp];
-			m_pc = (m_memory[0x100 + ++m_sp] << 8) | m_pc;
+			m_status_register = memory_read(0x100 + ++m_sp);
+			m_pc = memory_read(0x100 + ++m_sp);
+			m_pc = (memory_read(0x100 + ++m_sp) << 8) | m_pc;
 			break;
 		}
 	case 'RTS ':
 		{
-			uint16_t addr = m_memory[0x100 + ++m_sp] & 0x00ff;
-			addr |= (m_memory[0x100 + ++m_sp] << 8);
+			uint16_t addr = memory_read(0x100 + ++m_sp) & 0x00ff;
+			addr |= (memory_read(0x100 + ++m_sp) << 8);
 			m_pc = addr;
 			m_pc++;
 			break;
 		}
 	case 'SBC ':
 		{
-			uint8_t val = m_memory[src];
+			uint8_t val = memory_read(src);
 			uint32_t sum;
 			uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
 			sum = m_acc + (~val & 0xff) + carry_bit;
@@ -724,17 +724,17 @@ uint32_t cpu_6502::process_opcode()
 		}
 	case 'STA ':
 		{
-			m_memory.write(src, m_acc);
+			memory_write(src, m_acc);
 			break;
 		}
 	case 'STX ':
 		{
-			m_memory.write(src, m_xindex);
+			memory_write(src, m_xindex);
 			break;
 		}
 	case 'STY ':
 		{
-			m_memory.write(src, m_yindex);
+			memory_write(src, m_yindex);
 			break;
 		}
 	case 'TAX ':
@@ -782,10 +782,9 @@ uint32_t cpu_6502::process_opcode()
 		{
 			assert(0);
 		}
-		
-
 	}
 
 	// return the number of cycles that we executed
 	return cycles;
 }
+

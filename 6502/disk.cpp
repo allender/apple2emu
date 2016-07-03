@@ -222,9 +222,9 @@ void write_handler(uint16_t addr, uint8_t val)
 }
 
 // initialize the disk system
-void disk_init(memory &mem)
+void disk_init()
 {
-	mem.register_slot_handler(6, read_handler, write_handler);
+	memory_register_slot_handler(6, read_handler, write_handler);
 	drive_1.init();
 	drive_2.init();
 	Current_drive = &drive_1;

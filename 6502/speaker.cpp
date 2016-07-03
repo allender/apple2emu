@@ -39,7 +39,7 @@ void speaker_write_handler(uint16_t addr, uint8_t val)
 
 // initialize the speaker system.  For now, this is just setting up a handler
 // for the memory location that will do nothing
-void speaker_init(memory &mem)
+void speaker_init()
 {
-	mem.register_c000_handler(0x30, speaker_read_handler, speaker_write_handler);
+	memory_register_c000_handler(0x30, speaker_read_handler, speaker_write_handler);
 }

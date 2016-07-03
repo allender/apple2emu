@@ -50,9 +50,6 @@ SOFTWARE.
 
 INITIALIZE_EASYLOGGINGPP
 
-#define MEMORY_SIZE (64 * 1024 * 1024)
-int8_t memory_buffer[MEMORY_SIZE];
-
 static const double Render_time = 33;   // roughly 30 fps
 
 static void configure_logging()
@@ -108,12 +105,12 @@ int main(int argc, char* argv[])
 	// configure logging before anything else
 	configure_logging();
 
-	memory mem(MEMORY_SIZE, memory_buffer);
-	cpu_6502 cpu(mem);
+   memory_init();
+	cpu_6502 cpu;
 	cpu.init();
 
 	debugger_init();
-	disk_init(mem);
+	disk_init();
 
 	//// get command line options
 	//const char *assembly_file = nullptr;
@@ -180,12 +177,12 @@ int main(int argc, char* argv[])
 		}
 		fread(buffer, 1, buffer_size, fp);
 		fclose(fp);
-		mem.load_memory(buffer, buffer_size, load_addr);
+		memory_load_buffer(buffer, buffer_size, load_addr);
 		cpu.set_pc(prog_start);
 
 	// load up the ROMs
 	} else {
-		cpu.set_pc(mem[0xfffc] | mem[0xfffd] << 8);
+		cpu.set_pc(memory_read(0xfffc) | memory_read(0xfffd) << 8);
 
 		// see if there is disk imace
 		const char *disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
@@ -193,8 +190,8 @@ int main(int argc, char* argv[])
 			disk_insert(disk_image_filename, 1);
 		}
 	}
-	video_init(mem);
-	speaker_init(mem);
+	video_init();
+	speaker_init();
 	keyboard_init();
 
 	bool quit = false;
@@ -206,7 +203,7 @@ int main(int argc, char* argv[])
 
 		// process debugger (before opcode processing so that we can break on
 		// specific addresses properly
-		debugger_process(cpu, mem);
+		debugger_process(cpu);
 
 		// process the next opcode
 		uint32_t cycles = cpu.process_opcode();
@@ -248,7 +245,7 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
-			video_render_frame(mem);
+			video_render_frame();
 		}
 
 	}

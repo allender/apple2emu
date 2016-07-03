@@ -29,43 +29,22 @@ SOFTWARE.
 #define MEMORY_H
 
 #include <stdint.h>
-//#include "video.h"
-
-#define MAX_SLOTS 7
 
 typedef std::function<uint8_t(uint16_t)> slot_io_read_function;
 typedef std::function<void(uint16_t, uint8_t)> slot_io_write_function;
 
-//
-// basic memory class.
-class memory {
-
-	struct slot_handlers {
-		slot_io_read_function    m_read_handler;
-		slot_io_write_function   m_write_handler;
-	};
-
-public:
-	memory() : m_memory(nullptr), m_size(0) { }
-	memory(int size, void *memory);
-
-	bool load_memory(const char *filename, uint16_t location);
-	bool load_memory(uint8_t *buffer, uint16_t size, uint16_t location);
-
-	// handlers for various i/o
-	void register_c000_handler(const uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function);
-	void register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function);
-
-public:
-	uint8_t  operator[] (const uint16_t index);
-	void     write(const uint16_t addr, uint8_t val);
-
-private:
-	uint8_t   *m_memory;  // memory being represented
-	int        m_size;    // size of the memory
-
-	slot_handlers  m_c000_handlers[256];
+// information for slot handlers/soft switches
+struct slot_handlers {
+   slot_io_read_function    m_read_handler;
+   slot_io_write_function   m_write_handler;
 };
 
+void memory_init();
+void memory_shutdown();
+bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location);
+uint8_t memory_read(uint16_t addr);
+void memory_write(uint16_t addr, uint8_t val);
+void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function);
+void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function );
 
 #endif  // MEMORY_H

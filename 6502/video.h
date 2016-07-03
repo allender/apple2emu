@@ -28,7 +28,6 @@ SOFTWARE.
 #pragma once
 
 #include "SDL.h"
-#include "memory.h"
 
 #define MAX_TEXT_LINES   24
 #define MAX_TEXT_COLUMNS 40
@@ -43,7 +42,7 @@ extern SDL_Window *Video_window;
 extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
 
-bool video_init(memory &mem);
+bool video_init();
 void video_shutdown();
-void video_render_frame(memory &mem);
+void video_render_frame();
 void video_resize(bool scale_up = true);

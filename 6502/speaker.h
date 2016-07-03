@@ -27,6 +27,4 @@ SOFTWARE.
 
 #pragma once
 
-#include "memory.h"
-
-void speaker_init(memory &mem);
+void speaker_init();

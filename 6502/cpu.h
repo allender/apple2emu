@@ -30,7 +30,6 @@ SOFTWARE.
 
 #include <functional>
 #include <stdint.h>
-#include "memory.h"
 
 
 class cpu_6502 {
@@ -79,7 +78,7 @@ public:
 	static opcode_info m_opcodes[256];
 	
 public:
-	cpu_6502(memory &mem): m_memory(mem) { }
+	cpu_6502() { }
 	void init();
 	uint32_t process_opcode();
 	void set_pc(uint16_t pc) { m_pc = pc; }
@@ -98,7 +97,6 @@ private:
 	uint8_t          m_acc;
 	uint8_t          m_xindex;
 	uint8_t          m_yindex;
-	memory&          m_memory;         // CPU can get right at the memory
 	uint8_t          m_status_register;
 
 	addressing_function m_addressing_functions[static_cast<uint8_t>(addressing_mode::NUM_ADDRESSING_MODES)];

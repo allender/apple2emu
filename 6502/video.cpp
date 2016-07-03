@@ -47,17 +47,16 @@ static SDL_Rect Video_window_size;
 
 // information about internally built textures
 const uint8_t Num_lores_colors = 16;
-const uint8_t Num_hires_patterns = 128;
+const uint8_t Num_hires_mono_patterns = 128;
 const uint8_t Hires_texture_width = 8;
+static GLuint Hires_mono_textures[Num_hires_mono_patterns];
+static uint8_t *Hires_mono_pixels[Num_hires_mono_patterns];
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
 
 SDL_Window *Video_window;
 SDL_GLContext Video_context;
-
-// texture for hires bit patters
-GLuint Video_hires_textures[Num_hires_patterns];
 
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
@@ -150,13 +149,12 @@ static bool video_create_hires_textures()
 	// in monochrome mode, these are all just white pixels
 	//memset(pixels, 0, sizeof(pixels));
 
-	glGenTextures(Num_hires_patterns, Video_hires_textures);
+	glGenTextures(Num_hires_mono_patterns, Hires_mono_textures);
 	// create monochrome pattern first
 	for (auto y = 0; y < 128; y++) {
-		uint8_t *pixels = new uint8_t[3 * Hires_texture_width];
-		memset(pixels, 0, 3 * Hires_texture_width);
-		//uint8_t *src = &((uint8_t *)(Video_hires_pixels))[y * Hires_texture_width * 3];
-		uint8_t *src = pixels;
+		Hires_mono_pixels[y] = new uint8_t[3 * Hires_texture_width];
+		memset(Hires_mono_pixels[y], 0, 3 * Hires_texture_width);
+		uint8_t *src = Hires_mono_pixels[y];
 		for (auto x = 0; x < Hires_texture_width; x++) {
 			if ((y >> x) & 1) {
 				*src++ = 0xff;
@@ -168,9 +166,9 @@ static bool video_create_hires_textures()
 		}
 
 		// create the texture
-		glBindTexture(GL_TEXTURE_2D, Video_hires_textures[y]);
+		glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[y]);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_mono_pixels[y]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -338,7 +336,7 @@ static void video_render_hires_mode(memory &mem)
 				if (true && byte) {
 					// color mode
 					byte &= 0x7f;
-					glBindTexture(GL_TEXTURE_2D, Video_hires_textures[byte]);
+					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);
 					glColor3f(1.0f, 1.0f, 1.0f);
 					glBegin(GL_QUADS);
 						glTexCoord2f(0.0f, 0.0f); glVertex2i(x_pixel, y_pixel);
@@ -582,6 +580,10 @@ bool video_init(memory &mem)
 
 void video_shutdown()
 {
+   // free the pixels used for the hires texture patterns
+   for (auto i = 0; i < Num_hires_mono_patterns; i++) {
+      delete Hires_mono_pixels[i];
+   }
 	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
 	SDL_Quit();

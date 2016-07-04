@@ -64,6 +64,49 @@ void keyboard_clear_write_handler(uint16_t addr, uint8_t val)
 	keyboard_clear_read_handler(addr);
 }
 
+static bool memory_load_from_filename(const char *filename, uint16_t location)
+{
+	FILE *fp = fopen(filename, "rb");
+	if (fp == nullptr) {
+		return false;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	uint32_t buffer_size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	// allocate the memory buffer
+	fread(&Memory_buffer[location], 1, buffer_size, fp);
+	fclose(fp);
+	return true;
+}
+
+// loads up appropriate rom images which is based on the
+// type of machine we are trying to initialize
+static void memory_load_rom_images()
+{
+   // for now are are al just apple][ +
+	memory_load_from_filename("roms/apple2_plus.rom", 0xd000);
+	memory_load_from_filename("roms/disk2.rom", 0xc600);
+}
+
+// initialize the memory buffer with "random" pattern.  I am
+// following the discussion here:
+//
+// https://github.com/AppleWin/AppleWin/issues/206
+// https://github.com/AppleWin/AppleWin/issues/225
+// 
+// as it covers the issue well.  That and I don't have my apple ][
+// anymore on which to test
+static void memory_initialize()
+{
+   memset(Memory_buffer, 0, MEMORY_SIZE);
+   for (auto i = 0; i < 0xc000; i += 4) {
+      Memory_buffer[i] = 0xff;
+      Memory_buffer[i + 1] = 0xff;
+   }
+}
+
 
 uint8_t memory_read(const uint16_t addr)
 {
@@ -101,30 +144,6 @@ void memory_write(const uint16_t addr, uint8_t val)
 	Memory_buffer[addr] = val;
 }
 
-bool memory_load_from_filename(const char *filename, uint16_t location)
-{
-	FILE *fp = fopen(filename, "rb");
-	if (fp == nullptr) {
-		return false;
-	}
-
-	fseek(fp, 0, SEEK_END);
-	uint32_t buffer_size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	// allocate the memory buffer
-	fread(&Memory_buffer[location], 1, buffer_size, fp);
-	fclose(fp);
-	return true;
-}
-
-static void memory_load_rom_images()
-{
-	// load up ROM/PROM images
-	memory_load_from_filename("roms/apple2_plus.rom", 0xd000);
-	memory_load_from_filename("roms/disk2.rom", 0xc600);
-}
-
 void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function)
 {
 	m_c000_handlers[addr].m_read_handler = read_function;
@@ -156,6 +175,12 @@ void memory_init()
 {
    Memory_buffer = new uint8_t[MEMORY_SIZE];
 
+   // initialize memory with "random" pattern.  there was long discussion
+   // in applewin github issues tracker related to what to do about
+   // memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
+   memory_initialize();
+   
+   // load rom images based on the type of machine we are starting
    memory_load_rom_images();
 
 	for (auto i = 0; i < 256; i++) {

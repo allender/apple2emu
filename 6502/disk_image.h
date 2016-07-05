@@ -69,6 +69,7 @@ public:
 	void init();
 	bool load_image(const char *filename);
 	uint32_t read_track(const int track, uint8_t* buffer);
+	std::string& get_filename();
 
 	image_type   m_image_type;
 	uint8_t      m_num_tracks;

@@ -37,10 +37,8 @@ SOFTWARE.
 #define MEMORY_SIZE (64 * 1024 * 1024)
 #define MAX_SLOTS 7
 
-static uint8_t *Memory_buffer;
-
+static uint8_t *Memory_buffer = nullptr;
 static slot_handlers  m_c000_handlers[256];
-
 static uint8_t last_key = 0;
 
 uint8_t keyboard_read_handler(uint16_t addr)
@@ -100,7 +98,7 @@ static void memory_load_rom_images()
 // anymore on which to test
 static void memory_initialize()
 {
-   memset(Memory_buffer, 0, MEMORY_SIZE);
+   memset(Memory_buffer, 0, 0xc000);
    for (auto i = 0; i < 0xc000; i += 4) {
       Memory_buffer[i] = 0xff;
       Memory_buffer[i + 1] = 0xff;
@@ -173,16 +171,20 @@ bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
 // initliaze the memory subsystem
 void memory_init()
 {
-   Memory_buffer = new uint8_t[MEMORY_SIZE];
+	// init might get called on machine reset - so do some things only once
+	if (Memory_buffer == nullptr) {
+		Memory_buffer = new uint8_t[MEMORY_SIZE];
+
+		// load rom images based on the type of machine we are starting
+		memset(Memory_buffer, 0, MEMORY_SIZE);
+		memory_load_rom_images();
+	}
 
    // initialize memory with "random" pattern.  there was long discussion
    // in applewin github issues tracker related to what to do about
    // memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
    memory_initialize();
    
-   // load rom images based on the type of machine we are starting
-   memory_load_rom_images();
-
 	for (auto i = 0; i < 256; i++) {
 		m_c000_handlers[i].m_read_handler = nullptr;
 		m_c000_handlers[i].m_write_handler = nullptr;

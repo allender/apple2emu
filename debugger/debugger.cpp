@@ -64,12 +64,12 @@ static breakpoint Debugger_breakpoints[Max_breakpoints];
 static int Debugger_num_breakpoints;
 
 // Variables for windows
-static WINDOW *Debugger_memory_window;
-static WINDOW *Debugger_register_window;
-static WINDOW *Debugger_command_window;
-static WINDOW *Debugger_disasm_window;
-static WINDOW *Debugger_breakpoint_window;
-static WINDOW *Debugger_status_window;
+static WINDOW *Debugger_memory_window = nullptr;
+static WINDOW *Debugger_register_window = nullptr;
+static WINDOW *Debugger_command_window = nullptr;
+static WINDOW *Debugger_disasm_window = nullptr;
+static WINDOW *Debugger_breakpoint_window = nullptr;
+static WINDOW *Debugger_status_window = nullptr;
 static uint32_t Debugger_memory_display_bytes = 16;
 static uint32_t Debugger_memory_num_lines = 12;
 static uint32_t Debugger_register_num_lines = 9;
@@ -313,14 +313,14 @@ static void debugger_display_memory()
 	wclear(Debugger_memory_window);
 	box(Debugger_memory_window, 0, 0);
 	uint32_t addr = Debugger_memory_display_address;
-	for (auto i = 0; i < Debugger_memory_num_lines-2; i++) {
+	for (uint32_t i = 0; i < Debugger_memory_num_lines-2; i++) {
 		mvwprintw(Debugger_memory_window, i+1, 2, "%04X: ", addr);
-		for (auto j = 0; j < Debugger_memory_display_bytes; j++) {
+		for (uint32_t j = 0; j < Debugger_memory_display_bytes; j++) {
 			wprintw(Debugger_memory_window, "%02x ", memory_read(addr+j));
 		}
 		wprintw(Debugger_memory_window, "  ");
 
-		for (auto j = 0; j < Debugger_memory_display_bytes; j++) {
+		for (uint32_t j = 0; j < Debugger_memory_display_bytes; j++) {
 			wprintw(Debugger_memory_window, "%c", isprint(memory_read(addr + j)) ? memory_read(addr + j) : '.');
 		}
 		addr += Debugger_memory_display_bytes;
@@ -361,7 +361,7 @@ static void debugger_display_disasm(cpu_6502 &cpu)
 	auto addr = cpu.get_pc();
 	auto row = 1;
 	wattron(Debugger_disasm_window, A_REVERSE);
-	for (auto i = 0; i < Debugger_disasm_num_lines - 2; i++) {
+	for (uint32_t i = 0; i < Debugger_disasm_num_lines - 2; i++) {
 		auto size = debugger_get_disassembly(cpu, addr);
 		// see if there is breakpoint at given line and show that in red
 		for (auto j = 0; j < Debugger_num_breakpoints; j++) {
@@ -653,27 +653,31 @@ void debugger_init()
 	initscr();
 	scrollok(stdscr, true);
 
-   // set the disassembly window size after initting the screen so we know
-   // how many lines and columns we have
-   Debugger_disasm_num_lines = LINES - Debugger_memory_num_lines - Debugger_command_num_lines;
-   Debugger_breakpoint_num_lines = (LINES - Debugger_register_num_lines) / 2;
-   Debugger_status_num_lines = Debugger_breakpoint_num_lines;
+	// debugger init might get called from reset, so make sure we don't keep creating
+	// debug windows
+	if (Debugger_memory_window == nullptr) {
+		// set the disassembly window size after initting the screen so we know
+		// how many lines and columns we have
+		Debugger_disasm_num_lines = LINES - Debugger_memory_num_lines - Debugger_command_num_lines;
+		Debugger_breakpoint_num_lines = (LINES - Debugger_register_num_lines) / 2;
+		Debugger_status_num_lines = Debugger_breakpoint_num_lines;
 
-	// create some windows for debugger use
-	int row = 0;
-	Debugger_memory_window = subwin(stdscr, Debugger_memory_num_lines, Debugger_column_one_width, row, 0);
-	row += Debugger_memory_num_lines;
-	Debugger_disasm_window = subwin(stdscr, Debugger_disasm_num_lines, Debugger_column_one_width, row, 0);
-	row += Debugger_disasm_num_lines;
-	Debugger_command_window = subwin(stdscr, Debugger_command_num_lines, Debugger_column_one_width, row, 0);
-   scrollok(Debugger_command_window, true);
+		// create some windows for debugger use
+		int row = 0;
+		Debugger_memory_window = subwin(stdscr, Debugger_memory_num_lines, Debugger_column_one_width, row, 0);
+		row += Debugger_memory_num_lines;
+		Debugger_disasm_window = subwin(stdscr, Debugger_disasm_num_lines, Debugger_column_one_width, row, 0);
+		row += Debugger_disasm_num_lines;
+		Debugger_command_window = subwin(stdscr, Debugger_command_num_lines, Debugger_column_one_width, row, 0);
+		scrollok(Debugger_command_window, true);
 
-	row = 0;
-	Debugger_register_window = subwin(stdscr, Debugger_register_num_lines, Debugger_column_two_width, row, 81);
-	row += Debugger_register_num_lines;
-	Debugger_breakpoint_window = subwin(stdscr, Debugger_breakpoint_num_lines, Debugger_column_two_width, row, 81);
-	row += Debugger_breakpoint_num_lines;
-	Debugger_status_window = subwin(stdscr, Debugger_status_num_lines, Debugger_column_two_width, row, 81);
+		row = 0;
+		Debugger_register_window = subwin(stdscr, Debugger_register_num_lines, Debugger_column_two_width, row, 81);
+		row += Debugger_register_num_lines;
+		Debugger_breakpoint_window = subwin(stdscr, Debugger_breakpoint_num_lines, Debugger_column_two_width, row, 81);
+		row += Debugger_breakpoint_num_lines;
+		Debugger_status_window = subwin(stdscr, Debugger_status_num_lines, Debugger_column_two_width, row, 81);
+	}
 }
 
 void debugger_process(cpu_6502 &cpu)

@@ -59,6 +59,11 @@ disk_image::~disk_image()
 	}
 }
 
+std::string& disk_image::get_filename()
+{
+	return m_filename;
+}
+
 void disk_image::initialize_image()
 {
 	// check the size of the image to see if we have dsk image

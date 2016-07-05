@@ -70,7 +70,7 @@ static uint8_t *Hires_color_pixels[Num_hires_color_patterns];
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
 
-SDL_Window *Video_window;
+SDL_Window *Video_window = nullptr;
 SDL_GLContext Video_context;
 
 SDL_TimerID Video_flash_timer;
@@ -627,43 +627,45 @@ bool video_create()
 // intialize the SDL system
 bool video_init()
 {
-	Video_native_size.x = 0;
-	Video_native_size.y = 0;
-	Video_native_size.w = Video_native_width;
-	Video_native_size.h = Video_native_height;
+	if (Video_window == nullptr) {
+		Video_native_size.x = 0;
+		Video_native_size.y = 0;
+		Video_native_size.w = Video_native_width;
+		Video_native_size.h = Video_native_height;
 
-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
-		printf("Error initializing SDL: %s\n", SDL_GetError());
-		return false;
-	}
-	if (video_create() == false) {
-		return false;
+		if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
+			printf("Error initializing SDL: %s\n", SDL_GetError());
+			return false;
+		}
+		if (video_create() == false) {
+			return false;
+		}
+
+		// set up a timer for flashing cursor
+		Video_flash = false;
+		Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
+
+		// set up screen map for video output.  This per/row
+		// table gets starting memory address for that row of text
+		//
+		// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
+		for (int i = 0; i < MAX_TEXT_LINES; i++) {
+			Video_primary_text_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+			Video_secondary_text_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
+
+			// set up the hires map at the same time -- same number of lines just offset by fixed amount
+			Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
+			Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
+		}
+
+		ui_init(Video_window);
+
+		video_set_mono_type(video_mono_types::MONO_WHITE);
 	}
 
 	for (auto i = 0x50; i <= 0x57 ; i++) {
 		memory_register_c000_handler(i, video_read_handler, video_write_handler);
 	}
-
-	// set up a timer for flashing cursor
-	Video_flash = false;
-	Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
-
-	// set up screen map for video output.  This per/row
-	// table gets starting memory address for that row of text
-	//
-	// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
-	for (int i = 0; i < MAX_TEXT_LINES; i++) {
-		Video_primary_text_map[i] = 1024 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
-		Video_secondary_text_map[i] = 2048 + 256 * ((i/2) % 4)+(128*(i%2))+40*((i/8)%4);
-
-		// set up the hires map at the same time -- same number of lines just offset by fixed amount
-		Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
-		Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
-	}
-
-	ui_init(Video_window);
-
-   video_set_mono_type(video_mono_types::MONO_GREEN);
 
 	return true;
 }

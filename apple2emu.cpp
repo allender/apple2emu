@@ -41,6 +41,7 @@ SOFTWARE.
 #include "utils/path_utils.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
+#include "apple2emu.h"
 
 #include "SDL.h"
 
@@ -51,6 +52,10 @@ SOFTWARE.
 INITIALIZE_EASYLOGGINGPP
 
 static const double Render_time = 33;   // roughly 30 fps
+
+const char *Disk_image_filename = nullptr;
+	
+cpu_6502 cpu;
 
 static void configure_logging()
 {
@@ -100,48 +105,34 @@ bool dissemble_6502(const char *filename)
 	return true;
 }
 
+void reset_machine()
+{
+   memory_init();
+	cpu.init();
+	debugger_init();
+	speaker_init();
+	keyboard_init();
+	disk_init();
+
+	// load up disk images
+	std::string filename = disk_get_mounted_filename(1);
+	if (filename.empty()) {
+		disk_insert(Disk_image_filename, 1);
+	}
+
+	video_init();
+}
+
 int main(int argc, char* argv[])
 {
 	// configure logging before anything else
 	configure_logging();
 
-   memory_init();
-	cpu_6502 cpu;
-	cpu.init();
+	// grab some needed command line options
+	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
 
-	debugger_init();
-	disk_init();
-
-	//// get command line options
-	//const char *assembly_file = nullptr;
-	//const char *dissembly_file = nullptr;
-	//assembly_file = get_cmdline_option(argv, argv+argc, "-a", "--assemble");
-
-	//// let's test assembler
-	//if (assembly_file != nullptr) {
-	//	assemble_6502(assembly_file);
-	//	return 0;
-	//}
-
-	//dissembly_file = get_cmdline_option(argv, argv+argc, "-d", "--disassemble");
-	//if (dissembly_file != nullptr) {
-	//	dissemble_6502(dissembly_file);
-	//}
-	
-	//FILE *fp = fopen("test.bin", "rb");
-	//fseek(fp, 0, SEEK_END);
-	//uint32_t buffer_size = ftell(fp);
-	//fseek(fp, 0, SEEK_SET);
-
-	//// allocate the memory buffer
-	//uint8_t *buffer = new uint8_t[buffer_size];
-	//if (buffer == nullptr) {
-	//	printf("Unable to allocate %d bytes for source code file buffer\n", buffer_size);
-	//	fclose(fp);
-	//	exit(-1);
-	//}
-	//fread(buffer, 1, buffer_size, fp);
-	//fclose(fp);
+	// initialize the video subsystem
+	reset_machine();
 
 	uint16_t prog_start = 0x600;
 	uint16_t load_addr = 0x0;
@@ -179,20 +170,8 @@ int main(int argc, char* argv[])
 		fclose(fp);
 		memory_load_buffer(buffer, buffer_size, load_addr);
 		cpu.set_pc(prog_start);
-
-	// load up the ROMs
 	} else {
-		cpu.set_pc(memory_read(0xfffc) | memory_read(0xfffd) << 8);
-
-		// see if there is disk imace
-		const char *disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
-		if (disk_image_filename != nullptr) {
-			disk_insert(disk_image_filename, 1);
-		}
 	}
-	video_init();
-	speaker_init();
-	keyboard_init();
 
 	bool quit = false;
 	uint32_t total_cycles = 0;
@@ -253,6 +232,7 @@ int main(int argc, char* argv[])
 	video_shutdown();
 	keyboard_shutdown();
    debugger_shutdown();
+	memory_shutdown();
 
 	return 0;
 }

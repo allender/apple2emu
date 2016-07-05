@@ -117,29 +117,13 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
 	};
 
 
-//std::function<uint16_t(void)> addressing_mode_table[cpu_6502::addressing_mode::NUM_ADDRESSING_MODES] = {
-//	[this] { return 0; },
-//	[this] { return 0; },
-//	[this] { int16_t val = m_pc++; return val; },
-//	[this] { return 0; },
-//	[this] { return 0; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; uint8_t hi = m_memory[m_pc++]; return (hi << 8) | lo; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; return lo; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; uint8_t hi = m_memory[m_pc++]; return (hi << 8) | lo; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; uint8_t hi = m_memory[m_pc++]; return ((hi << 8) | lo) + m_xindex; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; uint8_t hi = m_memory[m_pc++]; return ((hi << 8) | lo) + m_yindex; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; return lo + m_xindex; },
-//	[this] { uint16_t addr_start = m_memory[m_pc++] + m_xindex; uint8_t lo = m_memory[addr_start]; uint8_t hi = m_memory[addr_start + 1]; return (hi << 8) | lo; },
-//	[this] { uint8_t lo = m_memory[m_pc++]; uint8_t hi = m_memory[m_pc++]; uint16_t addr = ((hi << 8) | lo) + m_yindex; return addr; },
-//};
-uint16_t (cpu_6502::*mode_call)(void) = nullptr;
-
-
-
 void cpu_6502::init()
 {
 	m_pc = 0;
 	m_sp = 0xff;
+	m_xindex = 0;
+	m_yindex = 0;
+	m_acc = 0;
 	m_status_register = 0;
 	set_flag(register_bit::NOT_USED_BIT, 1);
 
@@ -158,6 +142,9 @@ void cpu_6502::init()
 	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ZERO_PAGE_INDEXED_MODE_Y)] = &cpu_6502::zero_page_indexed_mode_y;
 	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDEXED_INDIRECT_MODE)] = &cpu_6502::indexed_indirect_mode;
 	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDIRECT_INDEXED_MODE)] = &cpu_6502::indirect_indexed_mode;
+
+	// start vector
+	set_pc(memory_read(0xfffc) | memory_read(0xfffd) << 8);
 }
 
 inline int16_t cpu_6502::accumulator_mode()

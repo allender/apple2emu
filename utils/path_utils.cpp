@@ -46,3 +46,27 @@ bool path_utils_change_ext(std::string &new_filename, const std::string &old_fil
 	
 	return true;	
 }
+
+void path_utils_get_filename(std::string &full_path, std::string &filename)
+{
+	int extension_loc = full_path.find_last_of('.');
+	int path_loc = full_path.find_last_of('\\');
+	if (path_loc == std::string::npos) {
+		path_loc = full_path.find_last_of('/');
+	}
+
+	// no path separator or extension
+	if (path_loc == std::string::npos && extension_loc == std::string::npos) {
+		filename = full_path;
+	}
+
+	// no path separator, but extension
+	else if (path_loc == std::string::npos) {
+		filename = full_path.substr(0, extension_loc - 1);
+	}
+
+	// path separator and extensiona
+	else {
+		filename = full_path.substr(path_loc + 1, extension_loc - 1);
+	}
+}

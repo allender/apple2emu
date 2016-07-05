@@ -43,7 +43,6 @@ SOFTWARE.
 
 //#define LOG_DISK
 
-
 // I NEED TO FIGURE OUT WHAT THIS DEFINE WORKS
 #define NIBBLES_PER_TRACK 0x1A00
 
@@ -53,13 +52,18 @@ static disk_drive *Current_drive;
 
 void disk_drive::init()
 {
-	m_current_track = 0;
-	m_half_track_count = 0;
-	m_phase_status = 0;
 	m_motor_on = false;
-	m_track_data = nullptr;
-	m_current_byte = 0;
+	m_write_mode = false;
+	m_phase_status = 0;
+	m_half_track_count = 0;
+	m_current_track = 0;
 	m_data_buffer = 0;
+	m_current_byte = 0;
+	if (m_track_data != nullptr) {
+		delete[] m_track_data;
+	}
+	m_track_data = nullptr;
+	m_track_size = 0;
 }
 
 void disk_drive::readwrite()
@@ -110,9 +114,15 @@ void disk_drive::set_new_track(const uint8_t track)
 // inserts a disk image into the given slot
 bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
-	Current_drive->m_disk_image = new disk_image();
-	Current_drive->m_disk_image->init();
-	Current_drive->m_disk_image->load_image(disk_image_filename);
+	if (slot == 1) {
+		drive_1.m_disk_image = new disk_image();
+		drive_1.m_disk_image->init();
+		drive_1.m_disk_image->load_image(disk_image_filename);
+	} else {
+		drive_2.m_disk_image = new disk_image();
+		drive_2.m_disk_image->init();
+		drive_2.m_disk_image->load_image(disk_image_filename);
+	}
 	return true;
 }
 
@@ -228,4 +238,17 @@ void disk_init()
 	drive_1.init();
 	drive_2.init();
 	Current_drive = &drive_1;
+}
+
+// return the filename of the mounted disk in the given slot
+std::string& disk_get_mounted_filename(const uint32_t slot)
+{
+	static std::string empty_string;
+	if (slot == 1 && drive_1.m_disk_image != nullptr) {
+		return drive_1.m_disk_image->get_filename();
+	} else if (slot == 2 && drive_2.m_disk_image != nullptr) {
+		return drive_2.m_disk_image->get_filename();
+	} else {
+		return empty_string;
+	}
 }

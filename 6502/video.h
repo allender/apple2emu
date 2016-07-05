@@ -38,6 +38,15 @@ SOFTWARE.
 #define VIDEO_MODE_PRIMARY (1 << 2)
 #define VIDEO_MODE_HIRES   (1 << 3)
 
+// display types (mono)
+enum class video_mono_types : uint8_t {
+   MONO_WHITE = 0,
+   MONO_AMBER,
+   MONO_GREEN,
+   NUM_MONO_TYPES,
+};
+
+
 extern SDL_Window *Video_window;
 extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
@@ -46,3 +55,6 @@ bool video_init();
 void video_shutdown();
 void video_render_frame();
 void video_resize(bool scale_up = true);
+void video_set_mono_type(video_mono_types type);
+
+

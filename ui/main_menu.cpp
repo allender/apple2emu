@@ -28,6 +28,7 @@ SOFTWARE.
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "main_menu.h"
+#include "6502/video.h"
 
 bool Show_main_menu = false;
 
@@ -84,16 +85,18 @@ static void ui_show_main_menu()
 			 if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 						ImGui::EndMenu();
 		  }
-        //if (ImGui::BeginMenu("Edit"))
-        //{
-        //    if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-        //    if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-        //    ImGui::Separator();
-        //    if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-        //    if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-        //    if (ImGui::MenuItem("Paste", "CTRL+V")) {}
-        //    ImGui::EndMenu();
-        //}
+        if (ImGui::BeginMenu("Options"))
+        {
+			 if (ImGui::BeginMenu("Monochrome Color")) {
+            static int mono_type = 0;
+            ImGui::RadioButton("White", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
+            ImGui::RadioButton("Amber", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
+            ImGui::RadioButton("Green", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
+            ImGui::EndMenu();
+            video_set_mono_type(static_cast<video_mono_types>(mono_type));
+          }
+          ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
     }
 }
@@ -114,7 +117,7 @@ void ui_do_frame(SDL_Window *window)
 	if (Show_main_menu) {
 		ui_show_main_menu();
 	}
-	//ImGui::ShowTestWindow();
+	ImGui::ShowTestWindow();
 	ImGui::Render();
 }
 

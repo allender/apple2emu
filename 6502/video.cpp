@@ -84,6 +84,14 @@ uint16_t       Video_secondary_text_map[MAX_TEXT_LINES];
 uint16_t       Video_hires_map[MAX_TEXT_LINES];
 uint16_t       Video_hires_secondary_map[MAX_TEXT_LINES];
 
+static GLfloat Mono_colors[static_cast<uint8_t>(video_mono_types::NUM_MONO_TYPES)][3] = 
+{
+   { 1.0f, 1.0f, 1.0f },
+   { 1.0f, 0.5f, 0.0f },
+   { 0.0f, 0.75f, 0.0f },
+};
+static GLfloat *Mono_color;
+
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
 // for values.  Good enough for a start
@@ -655,6 +663,8 @@ bool video_init()
 
 	ui_init(Video_window);
 
+   video_set_mono_type(video_mono_types::MONO_GREEN);
+
 	return true;
 }
 
@@ -702,6 +712,8 @@ void video_render_frame()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
+   glColor3fv(Mono_color);
+
 	// render texture to window.  Just render the texture to the 
 	// full screen (using normalized device coordinates)
 	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
@@ -716,6 +728,11 @@ void video_render_frame()
 	ui_do_frame(Video_window);
 
 	SDL_GL_SwapWindow(Video_window);
+}
+
+void video_set_mono_type(video_mono_types type)
+{
+   Mono_color = Mono_colors[static_cast<uint8_t>(type)];
 }
 
 // called when window changes size - adjust scaling parameters

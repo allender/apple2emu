@@ -42,6 +42,7 @@ SOFTWARE.
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "apple2emu.h"
+#include "easylogging++.h"
 
 #include "SDL.h"
 

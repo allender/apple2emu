@@ -33,6 +33,7 @@ SOFTWARE.
 #include "curses.h"
 #include "debugger/debugger.h"
 #include "6502/keyboard.h"
+#include "easylogging++.h"
 
 #define MEMORY_SIZE (64 * 1024 * 1024)
 #define MAX_SLOTS 7

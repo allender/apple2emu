@@ -39,7 +39,7 @@ SOFTWARE.
 #endif
 
 //#define ELPP_STACKTRACE_ON_CRASH
-#include "easylogging++.h"
+//#include "easylogging++.h"
 
 #define USE_SDL
 

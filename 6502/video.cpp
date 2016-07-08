@@ -213,36 +213,111 @@ static bool video_create_hires_textures()
 		Hires_color_pixels[y] = new uint8_t[3 * Hires_texture_width];
 		memset(Hires_color_pixels[y], 0, 3 * Hires_texture_width);
 		uint8_t *src = Hires_color_pixels[y];
-      uint8_t prev_bit = 0;
-      uint8_t next_bit;
-		for (auto x = 0; x < Hires_texture_width - 1; x++) {
-         uint8_t cur_bit = (y>>x) & 1;
-         // get the next bit in byte to determine if we have two colors
-         // next to each other
-         if (x < 6) {
-            next_bit = (y>>(x+1)) & 1;
-         } else {
-            next_bit = 0;
-         }
-         if ((prev_bit && cur_bit) || (cur_bit && next_bit)) {
+		for (auto x = 0; x < Hires_texture_width - 1; x += 2) {
+			uint8_t cur_bit = (y >> x) & 1;
+			uint8_t next_bit = (y >> (x + 1)) & 1;
+			if (cur_bit && next_bit) {
 				*src++ = 0xff;
 				*src++ = 0xff;
 				*src++ = 0xff;
-         } else if (cur_bit) {
-            if (x & 1) {
-               *src++ = odd_color[0];
-               *src++ = odd_color[1];
-               *src++ = odd_color[2];
-            } else {
-               *src++ = even_color[0];
-               *src++ = even_color[1];
-               *src++ = even_color[2];
-            }
+				*src++ = 0xff;
+				*src++ = 0xff;
+				*src++ = 0xff;
+			} else if (cur_bit && !next_bit) {
+				*src++ = odd_color[0];
+				*src++ = odd_color[1];
+				*src++ = odd_color[2];
+				*src++ = odd_color[0];
+				*src++ = odd_color[1];
+				*src++ = odd_color[2];
+			} else if (!cur_bit && next_bit) {
+				*src++ = even_color[0];
+				*src++ = even_color[1];
+				*src++ = even_color[2];
+				*src++ = even_color[0];
+				*src++ = even_color[1];
+				*src++ = even_color[2];
 			} else {
-				src += 3;
+				src += 6;
 			}
-         prev_bit = cur_bit;
+			
 		}
+		// set all of the pixels in this byte to a color, and then
+		// we'll make pixels white or black where appropriate
+		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
+		//	if (y & 1) {
+		//		*src++ = odd_color[0];
+		//		*src++ = odd_color[1];
+		//		*src++ = odd_color[2];
+		//	} else {
+		//		*src++ = even_color[0];
+		//		*src++ = even_color[1];
+		//		*src++ = even_color[2];
+		//	}
+		//}
+		//// now reset pixels to white or black that are next to each other
+		//src = Hires_color_pixels[y];
+  //    uint8_t prev_bit = 0;
+		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
+  //       uint8_t cur_bit = (y>>x) & 1;
+		//	if (cur_bit && prev_bit) {
+		//		*src++ = 0xff;
+		//		*src++ = 0xff;
+		//		*src++ = 0xff;
+		//	} else if (!cur_bit && !prev_bit) {
+		//		*src++ = 0x0;
+		//		*src++ = 0x0;
+		//		*src++ = 0x0;
+		//	} else {
+		//		src += 3;
+		//	}
+
+		//	prev_bit = cur_bit;
+
+		//}
+
+		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
+  //       uint8_t cur_bit = (y>>x) & 1;
+  //       // get the next bit in byte to determine if we have two colors
+  //       // next to each other
+  //       if (x < 6) {
+  //          next_bit = (y>>(x+1)) & 1;
+  //       } else {
+  //          next_bit = 0;
+  //       }
+  //       if ((prev_bit && cur_bit) || (cur_bit && next_bit)) {
+		//		*src++ = 0xff;
+		//		*src++ = 0xff;
+		//		*src++ = 0xff;
+  //       } else if (cur_bit) {
+  //          if (x & 1) {
+  //             *src++ = odd_color[0];
+  //             *src++ = odd_color[1];
+  //             *src++ = odd_color[2];
+  //          } else {
+  //             *src++ = even_color[0];
+  //             *src++ = even_color[1];
+  //             *src++ = even_color[2];
+  //          }
+		//	} else {
+		//		// current bit is black.  If prev bit black or next bit black, then
+		//		// this bit is black.  Otherwise it's the color
+		//		if (!prev_bit || !next_bit) {
+		//			src += 3;
+		//		} else {
+		//			if (x & 1) {
+		//				*src++ = even_color[0];
+		//				*src++ = even_color[1];
+		//				*src++ = even_color[2];
+		//			} else {
+		//				*src++ = odd_color[0];
+		//				*src++ = odd_color[1];
+		//				*src++ = odd_color[2];
+		//			}
+		//		}
+		//	}
+  //       prev_bit = cur_bit;
+		//}
 
 		// create the texture
 		glBindTexture(GL_TEXTURE_2D, Hires_color_textures[y]);
@@ -412,7 +487,7 @@ static void video_render_hires_mode()
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
 				uint8_t byte = memory_read(offset + (1024 * b) + x);
-				if (true && byte) {
+				if (false && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);

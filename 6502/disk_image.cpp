@@ -29,6 +29,7 @@ SOFTWARE.
 // implementation for disk image loading/saving
 //
 
+#include <alloca.h>
 #include "disk_image.h"
 
 uint8_t* disk_image::m_work_buffer = nullptr;

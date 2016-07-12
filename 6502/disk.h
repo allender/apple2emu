@@ -37,17 +37,19 @@ private:
 	uint32_t     m_track_size;       // size of the sector data
 
 public:
+	bool        m_write_protected;  // is this disk write protected
 	bool        m_motor_on;
 	bool        m_write_mode;
+	bool        m_track_dirty;
 	uint8_t     m_phase_status;
 	uint8_t     m_half_track_count;
 	uint8_t     m_current_track;
 	disk_image* m_disk_image;       // holds information about the disk image
-	uint8_t     m_data_buffer;
+	uint8_t     m_data_register;    // data register from controller which holds bytes to/from disk
 	uint32_t    m_current_byte;
 
 	disk_drive():m_disk_image(nullptr) {} 
-	void init();
+	void init(bool warm_init);
 	void readwrite();
 	void set_new_track(uint8_t new_track);
 };

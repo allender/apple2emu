@@ -29,6 +29,7 @@ SOFTWARE.
 // implementation for disk image loading/saving
 //
 
+#include <assert.h>
 #include "disk_image.h"
 
 uint8_t* disk_image::m_work_buffer = nullptr;
@@ -106,6 +107,16 @@ bool disk_image::load_image(const char *filename)
 	m_filename = filename;
 	m_volume_num = 254;
 	return true; 
+}
+
+bool disk_image::unload_image()
+{
+	if (m_raw_buffer != nullptr) {
+		delete[] m_raw_buffer;
+	}
+	m_filename.clear();
+
+	return true;
 }
 
 uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
@@ -211,8 +222,43 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 	return work_ptr - buffer;  // number of bytes "read"
 }
 
+uint32_t disk_image::denibbilize_track(const int track, uint8_t *buffer)
+{
+	// get a pointer to the beginning of the track information
+	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
+	uint8_t *work_ptr = buffer;  // working pointer into the final data
+
+	// skip past gap 1
+	while (*work_ptr != 0xff) {
+		work_ptr++;
+	}
+
+	// this is the address field (d5 aa 96)
+	uint8_t prologue[3];
+	for (auto i = 0; i < 3; i++) {
+		prologue[i] = *work_ptr++;
+	}
+	if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0x96) {
+		// prologue doesn't match.  It should  Can we even do anything about this?
+		return 0;
+	}
+
+	// need to get the sector number.  Let's also verify that the track number
+	// matches
+	work_ptr += 2;  // skip past the volume number
+	uint8_t encoded_track = (*work_ptr++ & 0x55) << 1 | (*work_ptr++ & 0x55);
+	assert(encoded_track == track);
+
+	uint8_t encoded_sector = (*work_ptr++ & 0x55) << 1 | (*work_ptr++ & 0x55);
+	work_ptr += 2;  // skip past the checksum
+
+
+
+	return 0;
+}
+
 // read the track data into the supplied buffer
-uint32_t disk_image::read_track(const int track, uint8_t *buffer) {
+uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer) {
 	if (m_work_buffer == nullptr) {
 		return false;
 	}
@@ -221,4 +267,14 @@ uint32_t disk_image::read_track(const int track, uint8_t *buffer) {
 	uint32_t num_bytes = nibbilize_track(track, buffer);
 
 	return num_bytes;
+}
+
+bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
+{
+	// denybbilze track data stored in buffer to the work buffer
+	// and then store that work buffer into the loaded disk image
+
+	uint32_t num_bytes = denibbilize_track(track, buffer);
+
+	return true;
 }

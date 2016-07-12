@@ -51,6 +51,7 @@ private:
 
 	void initialize_image();
 	uint32_t nibbilize_track(const int track, uint8_t *buffer);
+	uint32_t denibbilize_track(const int track, uint8_t *buffer);
 
 public:
 	// constants that will be useful
@@ -68,7 +69,9 @@ public:
 	~disk_image();
 	void init();
 	bool load_image(const char *filename);
-	uint32_t read_track(const int track, uint8_t* buffer);
+	bool unload_image();
+	uint32_t read_track(const uint32_t track, uint8_t* buffer);
+	bool write_track(const uint32_t track, uint8_t *buffer);
 	std::string& get_filename();
 
 	image_type   m_image_type;

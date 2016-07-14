@@ -164,7 +164,7 @@ void ui_do_frame(SDL_Window *window)
 	if (Show_disk_menu) {
 		ui_show_disk_menu();
 	}
-	ImGui::ShowTestWindow();
+	//ImGui::ShowTestWindow();
 	ImGui::Render();
 }
 

@@ -40,18 +40,19 @@ class disk_image
 	};
 
 private:
-	static const uint8_t m_diskbyte_lookup[0x40];
+	static const uint8_t m_write_translate_table[64];
+	static const uint8_t m_read_translate_table[128];
 	static const uint8_t m_sector_map[16];
 
 	uint8_t*         m_raw_buffer;
 	size_t           m_buffer_size;
 	uint8_t          m_volume_num;
 	std::string      m_filename;
-	static uint8_t*  m_work_buffer;
+	bool             m_image_dirty;
 
 	void initialize_image();
 	uint32_t nibbilize_track(const int track, uint8_t *buffer);
-	uint32_t denibbilize_track(const int track, uint8_t *buffer);
+	void denibbilize_track(const int track, uint8_t *buffer);
 
 public:
 	// constants that will be useful
@@ -69,10 +70,11 @@ public:
 	~disk_image();
 	void init();
 	bool load_image(const char *filename);
+	bool save_image();
 	bool unload_image();
 	uint32_t read_track(const uint32_t track, uint8_t* buffer);
 	bool write_track(const uint32_t track, uint8_t *buffer);
-	std::string& get_filename();
+	const char *get_filename();
 
 	image_type   m_image_type;
 	uint8_t      m_num_tracks;

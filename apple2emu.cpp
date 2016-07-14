@@ -115,8 +115,8 @@ void reset_machine()
 	disk_init();
 
 	// load up disk images
-	std::string filename = disk_get_mounted_filename(1);
-	if (filename.empty()) {
+	const char *filename = disk_get_mounted_filename(1);
+	if (filename == nullptr) {
 		disk_insert(Disk_image_filename, 1);
 	}
 
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 	// grab some needed command line options
 	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
 
-	// initialize the video subsystem
+	// reset the machine
 	reset_machine();
 
 	uint16_t prog_start = 0x600;
@@ -230,6 +230,7 @@ int main(int argc, char* argv[])
 	}
 
 	video_shutdown();
+	disk_shutdown();
 	keyboard_shutdown();
    debugger_shutdown();
 	memory_shutdown();

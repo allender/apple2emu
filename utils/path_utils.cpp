@@ -70,3 +70,10 @@ void path_utils_get_filename(std::string &full_path, std::string &filename)
 		filename = full_path.substr(path_loc + 1, extension_loc - 1);
 	}
 }
+
+void path_utils_get_filename(const char *full_path, std::string &filename) {
+	filename = "";
+	if (full_path != nullptr) {
+		path_utils_get_filename(std::string(full_path), filename);
+	}
+}

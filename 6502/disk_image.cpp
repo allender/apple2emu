@@ -32,11 +32,11 @@ SOFTWARE.
 #include <assert.h>
 #include "disk_image.h"
 
-uint8_t* disk_image::m_work_buffer = nullptr;
-
 #define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
 
-const uint8_t disk_image::m_diskbyte_lookup[0x40] =
+// translate table used during nibbilize process to go
+// from 6-bit bytes to 8 bit disk bytes
+const uint8_t disk_image::m_write_translate_table[64] =
 {
 	0x96,0x97,0x9A,0x9B,0x9D,0x9E,0x9F,0xA6,
 	0xA7,0xAB,0xAC,0xAD,0xAE,0xAF,0xB2,0xB3,
@@ -48,21 +48,57 @@ const uint8_t disk_image::m_diskbyte_lookup[0x40] =
 	0xF7,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF
 };
 
+// this table is used during de-nibbilize to go 
+// from 8 bit disk byte to 6 bit bytes.  The table
+// is _really_ 64 entries large because we only
+// have a one to one mapping from disk bytes
+// to 6 bit bytes.  But doing that mapping would
+// require std::map, and while that's fine, it's
+// easier to just create this table once and leave it
+// as a static variable.  While we are truly only
+// using 64 of these entires (one to one mapping of
+// disk bytes to 6 bit bytes), then table needs to
+// be large because we have holse in the read translate
+// table.  All disk bytes have high bit set so there
+// are 128 _potential_ entries, although only 64 are
+// used
+const uint8_t disk_image::m_read_translate_table[128] =
+{
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,
+	0x00,0x00,0x08,0x0c,0x00,0x10,0x14,0x18,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x1c,0x20,
+	0x00,0x00,0x00,0x24,0x28,0x2c,0x30,0x34,
+	0x00,0x00,0x38,0x3c,0x40,0x44,0x48,0x4c,
+	0x00,0x50,0x54,0x58,0x5c,0x60,0x64,0x68,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x6c,0x00,0x70,0x74,0x78,
+	0x00,0x00,0x00,0x7c,0x00,0x00,0x80,0x84,
+	0x00,0x88,0x8c,0x90,0x94,0x98,0x9c,0xa0,
+	0x00,0x00,0x00,0x00,0x00,0xa4,0xa8,0xac,
+	0x00,0xb0,0xb4,0xb8,0xbc,0xc0,0xc4,0xc8,
+	0x00,0x00,0xcc,0xd0,0xd4,0xd8,0xdc,0xe0,
+	0x00,0xe4,0xe8,0xec,0xf0,0xf4,0xf8,0xfc,
+};
+
 const uint8_t disk_image::m_sector_map[16] =
 {
-	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04, 0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,
+	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04,0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,
 };
 
 disk_image::~disk_image()
 {
+	// save the image if we have written to it
+	save_image();
 	if (m_raw_buffer != nullptr) {
 		delete [] m_raw_buffer;
 	}
 }
 
-std::string& disk_image::get_filename()
+const char *disk_image::get_filename()
 {
-	return m_filename;
+	return m_filename.c_str();
 }
 
 void disk_image::initialize_image()
@@ -78,7 +114,7 @@ void disk_image::initialize_image()
 void disk_image::init()
 {
 	m_raw_buffer = nullptr;
-	m_work_buffer = new uint8_t[m_total_sectors * m_sector_bytes];
+	m_filename.clear();
 }
 
 bool disk_image::load_image(const char *filename)
@@ -106,11 +142,31 @@ bool disk_image::load_image(const char *filename)
 	initialize_image();
 	m_filename = filename;
 	m_volume_num = 254;
+	m_image_dirty = false;
 	return true; 
+}
+
+bool disk_image::save_image()
+{
+	if (m_image_dirty == true) {
+		FILE *fp = fopen(m_filename.c_str(), "wb");
+		if (fp == nullptr) {
+			return false;
+		}
+		size_t num_written = fwrite(m_raw_buffer, 1, m_buffer_size, fp);
+		fclose(fp);
+		if (num_written != m_buffer_size) {
+			printf("Didn't write out full image!\n");
+		}
+		m_image_dirty = false;
+	}
+	return true;
 }
 
 bool disk_image::unload_image()
 {
+	// save the image if we have written to it
+	save_image();
 	if (m_raw_buffer != nullptr) {
 		delete[] m_raw_buffer;
 	}
@@ -205,7 +261,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 
 			// translate the 6-bit bytes into disk bytes directly to the work buffer  
 			for (auto i = 0; i <= 342; i++) {
-				*work_ptr++ = m_diskbyte_lookup[nib_data[i] >> 2];
+				*work_ptr++ = m_write_translate_table[nib_data[i] >> 2];
 			}
 		}
 
@@ -222,47 +278,89 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 	return work_ptr - buffer;  // number of bytes "read"
 }
 
-uint32_t disk_image::denibbilize_track(const int track, uint8_t *buffer)
+void disk_image::denibbilize_track(const int track, uint8_t *buffer)
 {
-	// get a pointer to the beginning of the track information
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
 	uint8_t *work_ptr = buffer;  // working pointer into the final data
 
-	// skip past gap 1
-	while (*work_ptr != 0xff) {
-		work_ptr++;
+	for (auto num_sectors = 0; num_sectors < 16; num_sectors++) {
+
+		// skip past gap 1
+		while (*work_ptr == 0xff) {
+			work_ptr++;
+		}
+
+		// this is the address field (d5 aa 96)
+		uint8_t prologue[3];
+		for (auto i = 0; i < 3; i++) {
+			prologue[i] = *work_ptr++;
+		}
+		if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0x96) {
+			// prologue doesn't match.  It should  Can we even do anything about this?
+			return;
+		}
+
+		// need to get the sector number.  Let's also verify that the track number
+		// matches
+		work_ptr += 2;  // skip past the volume number
+		uint8_t encoded_track = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
+		work_ptr += 2;
+		assert(encoded_track == track);
+
+		uint8_t encoded_sector = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
+		work_ptr += 2;
+		uint8_t mapped_sector = m_sector_map[encoded_sector];
+		uint8_t *sector_ptr = &track_ptr[mapped_sector * m_sector_bytes];
+
+		work_ptr += 2;  // skip past the checksum
+		work_ptr += 3;  // skip past the epilogue
+
+		// skip past gap 2
+		while (*work_ptr == 0xff) {
+			work_ptr++;
+		}
+		for (auto i = 0; i < 3; i++) {
+			prologue[i] = *work_ptr++;
+		}
+		if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0xad) {
+			// prologue doesn't match.  It should.  Can we even do anything about this?
+			return;
+		}
+
+		// convert disk bytes back to 6 bit bytes
+		// first do the reverse lookup from the read table.  This mapping
+		// goes from disk bytes to 6 bit bytes
+		uint8_t *nib_data = (uint8_t *)alloca(344);
+		for (auto count = 0; count <= 343; count++) {
+			nib_data[count] = disk_image::m_read_translate_table[(*work_ptr++) & 0x7f];
+		}
+
+		// skip epilogue
+		work_ptr += 5;
+
+		// xor the buffer with itself
+		auto xor_value = 0;
+		for (auto i = 0; i < 343; i++) {
+			nib_data[i] = nib_data[i] ^ xor_value;
+			xor_value = nib_data[i];
+		}
+
+		// now convert 6 bit bytes to 256 8 bit bytes.  Value is stored in the track itself (presumably for
+		// writing soon after this is done).  Start at offset 0x56 into the data as that is there the
+		// 6 bit bytes are stored.  These will be combined with the bits in the first 0x56 bytes to
+		// form the true 256 bytes for storage
+		for (auto byte_num = 0; byte_num < 0x56; byte_num++) {
+			sector_ptr[byte_num] = (nib_data[byte_num + 0x56] & 0xfc) | ((nib_data[byte_num] & 0x08) >> 3) | ((nib_data[byte_num] & 0x04) >> 1);
+			sector_ptr[byte_num + 0x56] = (nib_data[byte_num + 0x56 + 0x56] & 0xfc) | ((nib_data[byte_num] & 0x20) >> 5) | ((nib_data[byte_num] & 0x10) >> 3);
+			if (byte_num + 0xac < 0x100) {
+				sector_ptr[byte_num + 0xac] = (nib_data[byte_num + 0xac + 0x56] & 0xfc) | ((nib_data[byte_num] & 0x80) >> 7) | ((nib_data[byte_num] & 0x40) >> 5);
+			}
+		}
 	}
-
-	// this is the address field (d5 aa 96)
-	uint8_t prologue[3];
-	for (auto i = 0; i < 3; i++) {
-		prologue[i] = *work_ptr++;
-	}
-	if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0x96) {
-		// prologue doesn't match.  It should  Can we even do anything about this?
-		return 0;
-	}
-
-	// need to get the sector number.  Let's also verify that the track number
-	// matches
-	work_ptr += 2;  // skip past the volume number
-	uint8_t encoded_track = (*work_ptr++ & 0x55) << 1 | (*work_ptr++ & 0x55);
-	assert(encoded_track == track);
-
-	uint8_t encoded_sector = (*work_ptr++ & 0x55) << 1 | (*work_ptr++ & 0x55);
-	work_ptr += 2;  // skip past the checksum
-
-
-
-	return 0;
 }
 
 // read the track data into the supplied buffer
 uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer) {
-	if (m_work_buffer == nullptr) {
-		return false;
-	}
-
 	// with the data in the work buffer, we need to nibbilize the data
 	uint32_t num_bytes = nibbilize_track(track, buffer);
 
@@ -273,8 +371,8 @@ bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	// denybbilze track data stored in buffer to the work buffer
 	// and then store that work buffer into the loaded disk image
-
-	uint32_t num_bytes = denibbilize_track(track, buffer);
+	denibbilize_track(track, buffer);
+	m_image_dirty = true;
 
 	return true;
 }

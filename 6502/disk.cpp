@@ -61,6 +61,9 @@ void disk_drive::init(bool warm_init)
 	if (m_track_data != nullptr) {
 		delete[] m_track_data;
 	}
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+	}
 	m_track_data = nullptr;
 	m_track_size = 0;
 
@@ -127,25 +130,42 @@ void disk_drive::set_new_track(const uint8_t track)
 	m_track_size = 0;
 }
 
+bool disk_drive::insert_disk(const char *filename)
+{
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+		m_disk_image = nullptr;
+	}
+	init(true);
+	m_disk_image = new disk_image();
+	m_disk_image->init();
+	m_disk_image->load_image(filename);
+	return true;
+}
+
+const char *disk_drive::get_mounted_filename()
+{
+	if (m_disk_image != nullptr) {
+		return m_disk_image->get_filename();
+	}
+	return nullptr;
+}
+
+uint8_t disk_drive::get_num_tracks()
+{
+	if (m_disk_image != nullptr) {
+		return m_disk_image->m_num_tracks;
+	}
+	return 0;
+}
+
 // inserts a disk image into the given slot
 bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
 	if (slot == 1) {
-		if (drive_1.m_disk_image != nullptr) {
-			delete drive_1.m_disk_image;
-		}
-		drive_1.init(true);
-		drive_1.m_disk_image = new disk_image();
-		drive_1.m_disk_image->init();
-		drive_1.m_disk_image->load_image(disk_image_filename);
+		drive_1.insert_disk(disk_image_filename);
 	} else {
-		if (drive_2.m_disk_image != nullptr) {
-			delete drive_2.m_disk_image;
-		}
-		drive_2.init(true);
-		drive_2.m_disk_image = new disk_image();
-		drive_2.m_disk_image->init();
-		drive_2.m_disk_image->load_image(disk_image_filename);
+		drive_2.insert_disk(disk_image_filename);
 	}
 	return true;
 }
@@ -191,7 +211,7 @@ uint8_t read_handler(uint16_t addr)
 
 			if (dir != 0) {
 				Current_drive->m_half_track_count = std::max(0, std::min(79, Current_drive->m_half_track_count + dir));
-				auto new_track = std::min(Current_drive->m_disk_image->m_num_tracks - 1, Current_drive->m_half_track_count >> 1);
+				auto new_track = std::min(Current_drive->get_num_tracks() - 1, Current_drive->m_half_track_count >> 1);
 				if (new_track != Current_drive->m_current_track) {
 					Current_drive->set_new_track(new_track);
 				}
@@ -274,15 +294,17 @@ void disk_init()
 	Current_drive = &drive_1;
 }
 
-// return the filename of the mounted disk in the given slot
-std::string& disk_get_mounted_filename(const uint32_t slot)
+void disk_shutdown()
 {
-	static std::string empty_string;
-	if (slot == 1 && drive_1.m_disk_image != nullptr) {
-		return drive_1.m_disk_image->get_filename();
-	} else if (slot == 2 && drive_2.m_disk_image != nullptr) {
-		return drive_2.m_disk_image->get_filename();
-	} else {
-		return empty_string;
+}
+
+// return the filename of the mounted disk in the given slot
+const char *disk_get_mounted_filename(const uint32_t slot)
+{
+	if (slot == 1) {
+		return drive_1.get_mounted_filename();
+	} else if (slot == 2) {
+		return drive_2.get_mounted_filename();
 	}
+	return nullptr;
 }

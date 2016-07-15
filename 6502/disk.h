@@ -35,10 +35,9 @@ class disk_drive {
 private:
 	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
 	uint32_t     m_track_size;       // size of the sector data
-	disk_image*  m_disk_image;       // holds information about the disk image
 
 public:
-	bool        m_write_protected;  // is this disk write protected
+	disk_image* m_disk_image;       // holds information about the disk image
 	bool        m_motor_on;
 	bool        m_write_mode;
 	bool        m_track_dirty;

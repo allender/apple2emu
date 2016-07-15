@@ -29,6 +29,8 @@ SOFTWARE.
 // implementation for disk image loading/saving
 //
 
+#include <stdio.h>
+#include <io.h>
 #include <assert.h>
 #include "disk_image.h"
 
@@ -87,6 +89,8 @@ const uint8_t disk_image::m_sector_map[16] =
 	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04,0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,
 };
 
+// destructor for a diskimage.  Make sure the
+// image is saved before deleting it
 disk_image::~disk_image()
 {
 	// save the image if we have written to it
@@ -117,11 +121,13 @@ void disk_image::init()
 	m_filename.clear();
 }
 
+// load an image from disk.  Read the entirety
+// of the image into local memory.  Makes
+// reading and writing super fast since we do it
+// straight to memory
 bool disk_image::load_image(const char *filename)
 {
-	// for now, just load the disk image into a buffer and we will use
-	// that to load
-
+	// load disk into buffer
 	FILE *fp = fopen(filename, "rb");
 	if (fp == nullptr) {
 		return false;
@@ -138,6 +144,12 @@ bool disk_image::load_image(const char *filename)
 	fread(m_raw_buffer, 1, m_buffer_size, fp);
 	fclose(fp);
 
+	// determien read-only access for the file
+	m_read_only = false;
+	if (access(filename, 2)) {
+		m_read_only = true;
+	}
+
 	// get all the information needed about this disk image
 	initialize_image();
 	m_filename = filename;
@@ -146,6 +158,8 @@ bool disk_image::load_image(const char *filename)
 	return true; 
 }
 
+// save a disk image (if needed).  This will write out the entire disk
+// image which is stored in memory
 bool disk_image::save_image()
 {
 	if (m_image_dirty == true) {
@@ -163,6 +177,8 @@ bool disk_image::save_image()
 	return true;
 }
 
+// unload a disk image.  Called when a new disk is inserted.  This call will
+// clean up the image (saving if necessary)
 bool disk_image::unload_image()
 {
 	// save the image if we have written to it
@@ -175,6 +191,27 @@ bool disk_image::unload_image()
 	return true;
 }
 
+// the nuibbilize function.  This code (and the following denibbilize code) can be
+// pretty difficult to understsand.  For those playing at home, the following
+// reference is invaluable:
+//
+// http://mirrors.apple2.org.za/Apple%20II%20Documentation%20Project/Books/Beneath%20Apple%20ProDOS.pdf
+//
+// In essence, .DSK images contains track/sector data that is _not_
+// in the same format that an original apple ][ disk.  The apple ][
+// disks store their data in a nibbilized format.  When the nibbilized
+// data is read off of disk, the driver will denibbilize the data which
+// turns in into the real data used by the computer.  On writing,
+// the real data is nibbilized and then stored on disk.
+//
+// Because the .DSK images store the raw data (i.e. not nibbilized data), we
+// must perform the opposite operation on read/write.  Meaning, when we
+// read the data out of a .DSK image, we need to nibbilize the data before
+// handing it to the driver.  When we write the data, it will be nibbilized
+// so we must denibbilize the data before writing it to the .DSK image.
+// The following two routines take care of nibbilizing and denibbilizing.
+// The code works on a track at a time (i.e. 16 sectors for dos 3.3 format)
+// to make things speedier.
 uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 {
 	// get a pointer to the beginning of the track information
@@ -278,7 +315,9 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 	return work_ptr - buffer;  // number of bytes "read"
 }
 
-void disk_image::denibbilize_track(const int track, uint8_t *buffer)
+// denibbilize a track.  See the comments above the previous
+// function for an explanation.
+bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 {
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
 	uint8_t *work_ptr = buffer;  // working pointer into the final data
@@ -297,7 +336,7 @@ void disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		}
 		if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0x96) {
 			// prologue doesn't match.  It should  Can we even do anything about this?
-			return;
+			return false;
 		}
 
 		// need to get the sector number.  Let's also verify that the track number
@@ -324,7 +363,7 @@ void disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		}
 		if (prologue[0] != 0xd5 || prologue[1] != 0xaa || prologue[2] != 0xad) {
 			// prologue doesn't match.  It should.  Can we even do anything about this?
-			return;
+			return false;
 		}
 
 		// convert disk bytes back to 6 bit bytes
@@ -357,6 +396,8 @@ void disk_image::denibbilize_track(const int track, uint8_t *buffer)
 			}
 		}
 	}
+
+	return true;
 }
 
 // read the track data into the supplied buffer
@@ -371,8 +412,6 @@ bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	// denybbilze track data stored in buffer to the work buffer
 	// and then store that work buffer into the loaded disk image
-	denibbilize_track(track, buffer);
 	m_image_dirty = true;
-
-	return true;
+	return denibbilize_track(track, buffer);
 }

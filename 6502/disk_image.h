@@ -49,10 +49,11 @@ private:
 	uint8_t          m_volume_num;
 	std::string      m_filename;
 	bool             m_image_dirty;
+	bool             m_read_only;
 
 	void initialize_image();
 	uint32_t nibbilize_track(const int track, uint8_t *buffer);
-	void denibbilize_track(const int track, uint8_t *buffer);
+	bool denibbilize_track(const int track, uint8_t *buffer);
 
 public:
 	// constants that will be useful
@@ -72,6 +73,7 @@ public:
 	bool load_image(const char *filename);
 	bool save_image();
 	bool unload_image();
+	bool read_only() { return m_read_only; }
 	uint32_t read_track(const uint32_t track, uint8_t* buffer);
 	bool write_track(const uint32_t track, uint8_t *buffer);
 	const char *get_filename();

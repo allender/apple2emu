@@ -55,7 +55,6 @@ void disk_drive::init(bool warm_init)
 	m_motor_on = false;
 	m_write_mode = false;
 	m_track_dirty = false;
-	m_write_protected = false;
 	m_data_register = 0;
 	m_current_byte = 0;
 	if (m_track_data != nullptr) {
@@ -118,7 +117,7 @@ std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
 void disk_drive::set_new_track(const uint8_t track)
 {
 	// write out old track if we are switching to a new track.
-	if (m_track_dirty == true && m_current_track != track) {
+	if (m_track_dirty == true && m_current_track != track && m_track_data != nullptr) {
 		m_disk_image->write_track(Current_drive->m_current_track, m_track_data);
 	}
 	m_current_track = track;
@@ -255,7 +254,7 @@ uint8_t read_handler(uint16_t addr)
 		// we would or a high bit into the data register as this bit
 		// is used to determine write protect status.  Removing
 		// the high bit forces the QA bit low which enables writing
-		if (Current_drive->m_write_protected) {
+		if (Current_drive->m_disk_image->read_only() == true) {
 			Current_drive->m_data_register |= 0x80;
 		} else {
 			Current_drive->m_data_register &= 0x7f;
@@ -296,6 +295,12 @@ void disk_init()
 
 void disk_shutdown()
 {
+	if (drive_1.m_disk_image != nullptr) {
+		delete drive_1.m_disk_image;
+	}
+	if (drive_2.m_disk_image != nullptr) {
+		delete drive_2.m_disk_image;
+	}
 }
 
 // return the filename of the mounted disk in the given slot

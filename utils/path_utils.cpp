@@ -74,6 +74,7 @@ void path_utils_get_filename(std::string &full_path, std::string &filename)
 void path_utils_get_filename(const char *full_path, std::string &filename) {
 	filename = "";
 	if (full_path != nullptr) {
-		path_utils_get_filename(std::string(full_path), filename);
+      std::string tmp_string(full_path);
+		path_utils_get_filename(tmp_string, filename);
 	}
 }

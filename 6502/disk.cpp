@@ -50,20 +50,29 @@ static disk_drive drive_1;
 static disk_drive drive_2;
 static disk_drive *Current_drive;
 
-void disk_drive::init()
+void disk_drive::init(bool warm_init)
 {
 	m_motor_on = false;
 	m_write_mode = false;
-	m_phase_status = 0;
-	m_half_track_count = 0;
-	m_current_track = 0;
-	m_data_buffer = 0;
+	m_track_dirty = false;
+	m_data_register = 0;
 	m_current_byte = 0;
 	if (m_track_data != nullptr) {
 		delete[] m_track_data;
 	}
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+	}
 	m_track_data = nullptr;
 	m_track_size = 0;
+
+	// for warm initialization, we don't do certain things
+	// like move track and phase motors
+	if (warm_init == false) {
+		m_phase_status = 0;
+		m_half_track_count = 0;
+		m_current_track = 0;
+	}
 }
 
 void disk_drive::readwrite()
@@ -78,21 +87,26 @@ void disk_drive::readwrite()
 	// read the data out of the disk image into the track image
 	if (m_track_size == 0) {
 #if defined(LOG_DISK)
-		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)drive_1.m_current_track << "  read";
+		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)Current_drive->m_current_track << "  read";
 #endif
-	 	m_track_size = m_disk_image->read_track(drive_1.m_current_track, m_track_data);
+	 	m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
+		m_track_dirty = false;
 		m_current_byte = 0;
 	}
 
 	if (m_write_mode == false) {
 		// this is read mode
-		m_data_buffer = m_track_data[m_current_byte];
+		m_data_register = m_track_data[m_current_byte];
 #if defined(LOG_DISK)
 		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
-std::setw(2) << std::setbase(16) << (uint32_t)m_data_buffer;
+std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
 #endif
 	} else {
-	// this is write mode
+		// when writing, here we will just apply the byte to the track
+		// data.  It will get written when we change tracks or eject
+		// the disk
+		m_track_data[m_current_byte] = m_data_register;
+		m_track_dirty = true;
 	}
 	m_current_byte++;
 	if (m_current_byte == m_track_size) {
@@ -102,6 +116,10 @@ std::setw(2) << std::setbase(16) << (uint32_t)m_data_buffer;
 
 void disk_drive::set_new_track(const uint8_t track)
 {
+	// write out old track if we are switching to a new track.
+	if (m_track_dirty == true && m_current_track != track && m_track_data != nullptr) {
+		m_disk_image->write_track(Current_drive->m_current_track, m_track_data);
+	}
 	m_current_track = track;
 
 	// get rid of the old sector data.  Need to do this a better way to avoid
@@ -111,17 +129,42 @@ void disk_drive::set_new_track(const uint8_t track)
 	m_track_size = 0;
 }
 
+bool disk_drive::insert_disk(const char *filename)
+{
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+		m_disk_image = nullptr;
+	}
+	init(true);
+	m_disk_image = new disk_image();
+	m_disk_image->init();
+	m_disk_image->load_image(filename);
+	return true;
+}
+
+const char *disk_drive::get_mounted_filename()
+{
+	if (m_disk_image != nullptr) {
+		return m_disk_image->get_filename();
+	}
+	return nullptr;
+}
+
+uint8_t disk_drive::get_num_tracks()
+{
+	if (m_disk_image != nullptr) {
+		return m_disk_image->m_num_tracks;
+	}
+	return 0;
+}
+
 // inserts a disk image into the given slot
 bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
 	if (slot == 1) {
-		drive_1.m_disk_image = new disk_image();
-		drive_1.m_disk_image->init();
-		drive_1.m_disk_image->load_image(disk_image_filename);
+		drive_1.insert_disk(disk_image_filename);
 	} else {
-		drive_2.m_disk_image = new disk_image();
-		drive_2.m_disk_image->init();
-		drive_2.m_disk_image->load_image(disk_image_filename);
+		drive_2.insert_disk(disk_image_filename);
 	}
 	return true;
 }
@@ -167,7 +210,7 @@ uint8_t read_handler(uint16_t addr)
 
 			if (dir != 0) {
 				Current_drive->m_half_track_count = std::max(0, std::min(79, Current_drive->m_half_track_count + dir));
-				auto new_track = std::min(Current_drive->m_disk_image->m_num_tracks - 1, Current_drive->m_half_track_count >> 1);
+				auto new_track = std::min(Current_drive->get_num_tracks() - 1, Current_drive->m_half_track_count >> 1);
 				if (new_track != Current_drive->m_current_track) {
 					Current_drive->set_new_track(new_track);
 				}
@@ -207,7 +250,15 @@ uint8_t read_handler(uint16_t addr)
 		break;
 		
 	case 0xd:
-		// load data latch
+		// check write-protect status. If the drive is write protected,
+		// we would or a high bit into the data register as this bit
+		// is used to determine write protect status.  Removing
+		// the high bit forces the QA bit low which enables writing
+		if (Current_drive->m_disk_image->read_only() == true) {
+			Current_drive->m_data_register |= 0x80;
+		} else {
+			Current_drive->m_data_register &= 0x7f;
+		}
 		break;
 
 	case 0xe:
@@ -220,7 +271,7 @@ uint8_t read_handler(uint16_t addr)
 	}
 
 	if (!(addr & 0x1)) {
-		return Current_drive->m_data_buffer;
+		return Current_drive->m_data_register;
 	} else {
 		return 0;
 	}
@@ -229,26 +280,36 @@ uint8_t read_handler(uint16_t addr)
 
 void write_handler(uint16_t addr, uint8_t val)
 {
+	read_handler(addr);
+	Current_drive->m_data_register = val;
 }
 
 // initialize the disk system
 void disk_init()
 {
 	memory_register_slot_handler(6, read_handler, write_handler);
-	drive_1.init();
-	drive_2.init();
+	drive_1.init(false);
+	drive_2.init(false);
 	Current_drive = &drive_1;
 }
 
-// return the filename of the mounted disk in the given slot
-std::string& disk_get_mounted_filename(const uint32_t slot)
+void disk_shutdown()
 {
-	static std::string empty_string;
-	if (slot == 1 && drive_1.m_disk_image != nullptr) {
-		return drive_1.m_disk_image->get_filename();
-	} else if (slot == 2 && drive_2.m_disk_image != nullptr) {
-		return drive_2.m_disk_image->get_filename();
-	} else {
-		return empty_string;
+	if (drive_1.m_disk_image != nullptr) {
+		delete drive_1.m_disk_image;
 	}
+	if (drive_2.m_disk_image != nullptr) {
+		delete drive_2.m_disk_image;
+	}
+}
+
+// return the filename of the mounted disk in the given slot
+const char *disk_get_mounted_filename(const uint32_t slot)
+{
+	if (slot == 1) {
+		return drive_1.get_mounted_filename();
+	} else if (slot == 2) {
+		return drive_2.get_mounted_filename();
+	}
+	return nullptr;
 }

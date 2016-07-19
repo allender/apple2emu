@@ -48,12 +48,43 @@ static void ui_get_disk_image(uint8_t slot_num)
 	}
 }
 
+static void ui_show_disk_menu() {
+	ImGui::Text("Slot 6, Disk 1:");
+	std::string filename;
+	path_utils_get_filename(disk_get_mounted_filename(1), filename);
+	if (filename.empty()) {
+		filename = "<none>";
+	}
+	ImGui::SameLine();
+	ImGui::PushItemWidth(-1);
+	if (ImGui::Button(filename.c_str())) {
+		ui_get_disk_image(1);
+	}
+	ImGui::PopItemWidth();
+	ImGui::Separator();
+
+	ImGui::Text("Slot 6, Disk 2:");
+	path_utils_get_filename(disk_get_mounted_filename(2), filename);
+	if (filename.empty()) {
+		filename = "<none>";
+	}
+	ImGui::SameLine();
+	ImGui::PushItemWidth(-1);
+	if (ImGui::Button(filename.c_str())) {
+		ui_get_disk_image(2);
+	}
+	ImGui::PopItemWidth();
+	ImGui::Separator();
+	ImGui::Separator();
+	if (ImGui::Button("Reboot")) {
+		reset_machine();
+	}
+}
+
 static void ui_show_main_menu()
 {
-	if (ImGui::BeginMainMenuBar())
-	{
-		if (ImGui::BeginMenu("File"))
-		{
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Reboot")) {
 				reset_machine();
 			}
@@ -61,37 +92,16 @@ static void ui_show_main_menu()
 			//if (ImGui::MenuItem("Save", "Ctrl+S")) {}
 			//if (ImGui::MenuItem("Save As..")) {}
 			ImGui::Separator();
-			//if (ImGui::BeginMenu("Options"))
-			//{
-			//	static bool enabled = true;
-			//	ImGui::MenuItem("Enabled", "", &enabled);
-			//	ImGui::BeginChild("child", ImVec2(0, 60), true);
-			//	for (int i = 0; i < 10; i++)
-			//		ImGui::Text("Scrolling Text %d", i);
-			//	ImGui::EndChild();
-			//	static float f = 0.5f;
-			//	static int n = 0;
-			//	ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
-			//	ImGui::InputFloat("Input", &f, 0.1f);
-			//	ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
-			//	ImGui::EndMenu();
-			//}
-			//if (ImGui::BeginMenu("Colors"))
-			//{
-			  //  for (int i = 0; i < ImGuiCol_COUNT; i++)
-			  //		ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
-			  //  ImGui::EndMenu();
-			//}
-			//if (ImGui::BeginMenu("Disabled", false)) // Disabled
-			//{
-			  //  IM_ASSERT(0);
-			//}
-			//if (ImGui::MenuItem("Checked", NULL, true)) {}
-			if (ImGui::MenuItem("Quit", "Alt+F4")) {}
+			if (ImGui::MenuItem("Exit", "")) {
+				// add quit event to SDL queue
+				SDL_Event evt;
+				evt.type = SDL_QUIT;
+				evt.quit.type = SDL_QUIT;
+				SDL_PushEvent(&evt);
+			}
 			ImGui::EndMenu();
 		}
-		if (ImGui::BeginMenu("Options"))
-		{
+		if (ImGui::BeginMenu("Options")) {
 			if (ImGui::BeginMenu("Monochrome Color")) {
 				static int mono_type = 0;
 				ImGui::RadioButton("White", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
@@ -102,47 +112,14 @@ static void ui_show_main_menu()
 			}
 			ImGui::EndMenu();
 		}
+
+		// disk menu - for mounting disk images
+		if (ImGui::BeginMenu("Disks")) {
+			ui_show_disk_menu();
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
 	}
-}
-
-void ui_show_disk_menu()
-{
-	ImGui::Begin("Disk Info");
-	{
-		ImGui::Text("Slot 6, Disk 1:");
-		std::string filename;
-		path_utils_get_filename(disk_get_mounted_filename(1), filename);
-		if (filename.empty()) {
-			filename = "<none>";
-		}
-		ImGui::SameLine();
-		ImGui::PushItemWidth(-1);
-		if (ImGui::Button(filename.c_str())) {
-			ui_get_disk_image(1);
-		}
-		ImGui::PopItemWidth();
-		ImGui::Separator();
-
-		ImGui::Text("Slot 6, Disk 2:");
-		path_utils_get_filename(disk_get_mounted_filename(2), filename);
-		if (filename.empty()) {
-			filename = "<none>";
-		}
-		ImGui::SameLine();
-		ImGui::PushItemWidth(-1);
-		if (ImGui::Button(filename.c_str())) {
-			ui_get_disk_image(2);
-		}
-		ImGui::PopItemWidth();
-		ImGui::Separator();
-		ImGui::Separator();
-		if (ImGui::Button("Reboot")) {
-			reset_machine();
-		}
-
-	}
-	ImGui::End();
 }
 
 void ui_init(SDL_Window *window)

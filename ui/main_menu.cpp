@@ -37,6 +37,18 @@ SOFTWARE.
 bool Show_main_menu = false;
 bool Show_disk_menu = false;
 
+static void ui_show_general_options()
+{
+	static bool auto_start = true;
+
+	ImGui::Text("General Options:");
+	ImGui::Checkbox("Auto Start", &auto_start);
+	ImGui::SameLine(200);
+	if (ImGui::Button("Reboot")) {
+		reset_machine();
+	}
+}
+
 static void ui_get_disk_image(uint8_t slot_num)
 {
 	nfdchar_t *outPath = NULL;
@@ -48,7 +60,11 @@ static void ui_get_disk_image(uint8_t slot_num)
 	}
 }
 
-static void ui_show_disk_menu() {
+static void ui_show_disk_menu()
+{
+	ImGui::Text("Disk Drive Options:");
+	ImGui::Spacing();
+	ImGui::Spacing();
 	ImGui::Text("Slot 6, Disk 1:");
 	std::string filename;
 	path_utils_get_filename(disk_get_mounted_filename(1), filename);
@@ -56,12 +72,10 @@ static void ui_show_disk_menu() {
 		filename = "<none>";
 	}
 	ImGui::SameLine();
-	ImGui::PushItemWidth(-1);
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(1);
 	}
-	ImGui::PopItemWidth();
-	ImGui::Separator();
+	ImGui::Spacing();
 
 	ImGui::Text("Slot 6, Disk 2:");
 	path_utils_get_filename(disk_get_mounted_filename(2), filename);
@@ -69,20 +83,35 @@ static void ui_show_disk_menu() {
 		filename = "<none>";
 	}
 	ImGui::SameLine();
-	ImGui::PushItemWidth(-1);
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(2);
 	}
-	ImGui::PopItemWidth();
-	ImGui::Separator();
-	ImGui::Separator();
-	if (ImGui::Button("Reboot")) {
-		reset_machine();
-	}
+}
+
+static void ui_show_video_output_menu()
+{
+	static int mono_type = 0;
+	ImGui::Text("Video Output Options:");
+	ImGui::RadioButton("White", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
+	ImGui::SameLine();
+	ImGui::RadioButton("Amber", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
+	ImGui::SameLine();
+	ImGui::RadioButton("Green", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
+	//ImGui::RadioButton("Color", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
+	video_set_mono_type(static_cast<video_mono_types>(mono_type));
 }
 
 static void ui_show_main_menu()
 {
+	ImGui::Begin("Options");
+	ui_show_general_options();
+	ImGui::Separator();
+	ui_show_video_output_menu();
+	ImGui::Separator();
+	ui_show_disk_menu();
+	ImGui::End();
+
+#if 0
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Reboot")) {
@@ -120,6 +149,7 @@ static void ui_show_main_menu()
 		}
 		ImGui::EndMainMenuBar();
 	}
+#endif
 }
 
 void ui_init(SDL_Window *window)

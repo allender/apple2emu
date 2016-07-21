@@ -39,10 +39,17 @@ class disk_image
 		DSK_IMAGE
 	};
 
+	enum class format_type : uint8_t {
+		DOS_FORMAT,
+		PRODOS_FORMAT,
+		NUM_FORMATS
+	};
+
 private:
 	static const uint8_t m_write_translate_table[64];
 	static const uint8_t m_read_translate_table[128];
-	static const uint8_t m_sector_map[16];
+	static const uint8_t m_sector_map[static_cast<uint8_t>(format_type::NUM_FORMATS)][16];
+	static const uint8_t m_prodos_block_map[8][2];
 
 	uint8_t*         m_raw_buffer;
 	size_t           m_buffer_size;
@@ -50,6 +57,8 @@ private:
 	std::string      m_filename;
 	bool             m_image_dirty;
 	bool             m_read_only;
+	format_type      m_format;
+	image_type       m_image_type;
 
 	void initialize_image();
 	uint32_t nibbilize_track(const int track, uint8_t *buffer);
@@ -78,6 +87,5 @@ public:
 	bool write_track(const uint32_t track, uint8_t *buffer);
 	const char *get_filename();
 
-	image_type   m_image_type;
 	uint8_t      m_num_tracks;
 };

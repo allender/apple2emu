@@ -222,6 +222,9 @@ int main(int argc, char* argv[])
 						quit = true;
 					}
 					break;
+				case SDL_QUIT:
+					quit = true;
+					break;
 				}
 			}
 			video_render_frame();

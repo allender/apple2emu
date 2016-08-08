@@ -141,6 +141,12 @@ static void memory_initialize()
 	}
 }
 
+// Read/write handler for the memory expansion card in SLOT 0.  A 16K
+// card for the apple ii and ii plus.  The informat here was
+// mainly obtained from the following document:
+//
+// http://apple2online.com/web_documents/microsoft_ramcard_-_manual.pdf
+//
 static uint8_t memory_expansion_read_handler(uint16_t addr)
 {
 	static uint8_t last_access = 0;

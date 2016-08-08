@@ -37,12 +37,77 @@ SOFTWARE.
 bool Show_main_menu = false;
 bool Show_disk_menu = false;
 
+static const int Line_length = 256;
+static const char *Settings_filename = "settings.txt";
+
+// settings to be stored
+static bool Auto_start = false;
+static int Video_color_type = static_cast<int>(video_mono_types::MONO_WHITE);
+
+// inserts disk image into the given disk drive
+static void ui_insert_disk(const char *disk_filename, int slot)
+{
+	FILE *fp = fopen(disk_filename, "rb");
+	if (fp == nullptr) {
+		return;
+	}
+	fclose(fp);
+
+	disk_insert(disk_filename, slot);
+}
+
+static void ui_load_settings()
+{
+	char line[Line_length];
+	FILE *fp = fopen(Settings_filename, "rt");
+	if (fp == nullptr) {
+		return;
+	}
+	while (!feof(fp)) {
+		char *ptr = fgets(line, Line_length, fp);
+		if (ptr != nullptr) {
+			char setting[Line_length], value[Line_length];
+			int num_scanned = fscanf(fp, "%s = %s\n", setting, value);
+			if (num_scanned == 2) {
+				if (!stricmp(setting, "auto_start")) {
+					int i_val = strtol(value, nullptr, 10);
+					Auto_start = i_val?true:false;
+				} else if (!stricmp(setting, "disk1")) {
+					ui_insert_disk(value, 1);
+				} else if (!stricmp(setting, "disk2")) {
+					ui_insert_disk(value, 2);
+				} else if (!stricmp(setting, "video")) {
+					Video_color_type = (uint8_t)strtol(value, nullptr, 10);
+					video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
+				}
+			}
+			
+		}
+	}
+
+	fclose(fp);
+}
+
+static void ui_save_settings()
+{
+	FILE *fp = fopen(Settings_filename, "wt");
+	if (fp == nullptr) {
+		printf("Unable to open settings file for writing\n");
+		return;
+	}
+	fprintf(fp, "auto_start = %d\n", Auto_start == true ? 1 : 0);
+	fprintf(fp, "disk1 = %s\n", disk_get_mounted_filename(1));
+	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
+	fprintf(fp, "video = %d\n", Video_color_type);
+
+	fclose(fp);
+}
+
+
 static void ui_show_general_options()
 {
-	static bool auto_start = true;
-
 	ImGui::Text("General Options:");
-	ImGui::Checkbox("Auto Start", &auto_start);
+	ImGui::Checkbox("Auto Start", &Auto_start);
 	ImGui::SameLine(200);
 	if (ImGui::Button("Reboot")) {
 		reset_machine();
@@ -90,15 +155,14 @@ static void ui_show_disk_menu()
 
 static void ui_show_video_output_menu()
 {
-	static int mono_type = 0;
 	ImGui::Text("Video Output Options:");
-	ImGui::RadioButton("White", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
+	ImGui::RadioButton("White", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
 	ImGui::SameLine();
-	ImGui::RadioButton("Amber", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
+	ImGui::RadioButton("Amber", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
 	ImGui::SameLine();
-	ImGui::RadioButton("Green", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
+	ImGui::RadioButton("Green", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
 	//ImGui::RadioButton("Color", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
-	video_set_mono_type(static_cast<video_mono_types>(mono_type));
+	video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
 }
 
 static void ui_show_main_menu()
@@ -155,11 +219,13 @@ static void ui_show_main_menu()
 void ui_init(SDL_Window *window)
 {
 	ImGui_ImplSdl_Init(window);
+	ui_load_settings();
 }
 
 void ui_shutdown()
 {
 	ImGui_ImplSdl_Shutdown();
+	ui_save_settings();
 }
 
 void ui_do_frame(SDL_Window *window)

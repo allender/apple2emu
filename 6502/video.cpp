@@ -658,9 +658,11 @@ bool video_init()
 			Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 		}
 
+		video_set_mono_type(video_mono_types::MONO_WHITE);
+
+		// initialize UI here since we need the window handle for imgui
 		ui_init(Video_window);
 
-		video_set_mono_type(video_mono_types::MONO_WHITE);
 	}
 
 	for (auto i = 0x50; i <= 0x57 ; i++) {
@@ -672,6 +674,7 @@ bool video_init()
 
 void video_shutdown()
 {
+	ui_shutdown();
    // free the pixels used for the hires texture patterns
    for (auto i = 0; i < Num_hires_mono_patterns; i++) {
       delete Hires_mono_pixels[i];

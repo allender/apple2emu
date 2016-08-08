@@ -113,13 +113,6 @@ void reset_machine()
 	speaker_init();
 	keyboard_init();
 	disk_init();
-
-	// load up disk images
-	const char *filename = disk_get_mounted_filename(1);
-	if (filename == nullptr) {
-		disk_insert(Disk_image_filename, 1);
-	}
-
 	video_init();
 }
 

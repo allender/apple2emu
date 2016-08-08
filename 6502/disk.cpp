@@ -63,11 +63,6 @@ void disk_drive::init(bool warm_init)
 	m_track_data = nullptr;
 	m_track_size = 0;
 
-	if (m_disk_image != nullptr) {
-		delete m_disk_image;
-	}
-	m_disk_image = nullptr;
-
 	// for warm initialization, we don't do certain things
 	// like move track and phase motors
 	if (warm_init == false) {

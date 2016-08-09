@@ -117,7 +117,7 @@ static void ui_show_general_options()
 static void ui_get_disk_image(uint8_t slot_num)
 {
 	nfdchar_t *outPath = NULL;
-	nfdresult_t result = NFD_OpenDialog("dsk", nullptr, &outPath);
+	nfdresult_t result = NFD_OpenDialog("dsk,do", nullptr, &outPath);
 
 	if (result == NFD_OKAY) {
 		disk_insert(outPath, slot_num);

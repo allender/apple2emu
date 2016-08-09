@@ -126,6 +126,10 @@ uint32_t keyboard_get_key()
 		key = '\b';
 	} else if (key == SDL_SCANCODE_ESCAPE) {
 		key = 0x9b;
+	} else if (key == SDL_SCANCODE_RIGHT) {
+		key = 0x95;
+	} else if (key == SDL_SCANCODE_LEFT) {
+		key = 0x88;
 	} else {
 		key = key_ascii_table[key];
 		if (key >= 'a' && key <= 'z') {

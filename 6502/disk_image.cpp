@@ -136,7 +136,7 @@ void disk_image::initialize_image()
 		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
 		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos. 
 		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
-		//		format = disk_image::format_type::DOS_FORMAT;
+		//		format = format_type::DOS_FORMAT;
 		//		break;
 		//	}
 		//}
@@ -181,11 +181,12 @@ bool disk_image::load_image(const char *filename)
 		m_read_only = true;
 	}
 
-	// get all the information needed about this disk image
-	initialize_image();
 	m_filename = filename;
 	m_volume_num = 254;
 	m_image_dirty = false;
+
+	// get all the information needed about this disk image
+	initialize_image();
 	return true; 
 }
 

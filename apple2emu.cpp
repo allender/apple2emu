@@ -36,6 +36,7 @@ SOFTWARE.
 #include "6502/video.h"
 #include "6502/disk.h"
 #include "6502/keyboard.h"
+#include "6502/joystick.h"
 #include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
@@ -112,6 +113,7 @@ void reset_machine()
 	debugger_init();
 	speaker_init();
 	keyboard_init();
+	joystick_init();
 	disk_init();
 	video_init();
 }
@@ -123,6 +125,12 @@ int main(int argc, char* argv[])
 
 	// grab some needed command line options
 	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
+
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
 
 	// reset the machine
 	reset_machine();
@@ -210,6 +218,16 @@ int main(int argc, char* argv[])
 					keyboard_handle_event(evt);
 					break;
 
+				case SDL_CONTROLLERAXISMOTION:
+					joystick_handle_axis(evt);
+					break;
+
+				case SDL_CONTROLLERBUTTONDOWN:
+				case SDL_CONTROLLERBUTTONUP:
+					joystick_handle_button(evt);
+					break;
+
+
 				case SDL_WINDOWEVENT:
 					if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
 						quit = true;
@@ -228,8 +246,11 @@ int main(int argc, char* argv[])
 	video_shutdown();
 	disk_shutdown();
 	keyboard_shutdown();
+	joystick_shutdown();
    debugger_shutdown();
 	memory_shutdown();
+
+	SDL_Quit();
 
 	return 0;
 }

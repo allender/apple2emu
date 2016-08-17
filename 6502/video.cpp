@@ -633,10 +633,6 @@ bool video_init()
 		Video_native_size.w = Video_native_width;
 		Video_native_size.h = Video_native_height;
 
-		if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
-			printf("Error initializing SDL: %s\n", SDL_GetError());
-			return false;
-		}
 		if (video_create() == false) {
 			return false;
 		}
@@ -681,7 +677,6 @@ void video_shutdown()
    }
 	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
-	SDL_Quit();
 }
 
 void video_render_frame()

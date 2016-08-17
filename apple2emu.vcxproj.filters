@@ -56,6 +56,9 @@
     <ClCompile Include="nativefiledialog\src\nfd_common.cpp">
       <Filter>nativefiledialog</Filter>
     </ClCompile>
+    <ClCompile Include="6502\joystick.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompiled.h" />
@@ -128,6 +131,9 @@
     </ClInclude>
     <ClInclude Include="nativefiledialog\src\common.h">
       <Filter>nativefiledialog</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\joystick.h">
+      <Filter>system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #include "SDL.h"
+#include "apple2emu.h"
 #include "joystick.h"
 
 static int Num_controllers;
@@ -37,6 +38,7 @@ public:
 	SDL_GameController      *m_gc;            // pointer to game controller structure
 	int8_t                   m_button_state[SDL_CONTROLLER_BUTTON_MAX];
 	int16_t                  m_axis_state[SDL_CONTROLLER_AXIS_MAX];
+	uint32_t                 m_axis_timer_state[SDL_CONTROLLER_AXIS_MAX];
 	SDL_GameControllerButton m_buttons[SDL_CONTROLLER_BUTTON_MAX];  // mapping from button number to button enum
 	SDL_GameControllerAxis   m_axis[SDL_CONTROLLER_AXIS_MAX];       // mapping from axis number to axis enum
 
@@ -44,6 +46,7 @@ public:
 
 };
 
+const float Joystick_cycles_scale = 2816.0f / 255.0f;   // ~2816 total cycles for 558 timer
 const int Max_controllers = 16;
 controller Controllers[Max_controllers];
 
@@ -56,9 +59,16 @@ static uint8_t joystick_read_button(uint8_t button_num)
 
 static uint8_t joystick_read_axis(uint8_t axis_num)
 {
-	int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[axis_num]);
-	uint8_t ret_value =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
-	return ret_value;
+	// timer state for paddles is controlled by ths number of cycles.  The axis
+	// timer state will have been previously set to the total cycles run
+	// plus the axis value * number of cycles
+	if (Total_cycles < Controllers[0].m_axis_timer_state[axis_num]) {
+		return 255;
+	}
+	return 0;
+	//int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[axis_num]);
+	//uint8_t ret_value =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
+	//return ret_value;
 }
 
 uint8_t joystick_read_handler(uint16_t addr)
@@ -85,7 +95,31 @@ uint8_t joystick_read_handler(uint16_t addr)
 
 void joystick_write_handler(uint16_t addr, uint8_t val)
 {
+	joystick_read_handler(addr);
+}
 
+// this function initiates the analog to digital conversion from the
+// controllers (paddles/joysticks) to 0-255 digital value which will
+// be read from the axis read handler.  Basically set up
+// internal timer to indicate when the 558 timer should time out
+// based on the paddle/joystick value.  Read Inside the Apple ][e
+// chapter 10 for more information
+uint8_t joystick_reset_read_handler(uint16_t addr)
+{
+	// set the axis timer state to be current cycle count
+	// plus the cycle count when the timer should time out.
+	// The internal paddle read routine reads every 11ms
+	for (auto i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+		int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[i]);
+		uint8_t val_uint8 =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
+		Controllers[0].m_axis_timer_state[i] = Total_cycles + (val_uint8 * Joystick_cycles_scale);
+	}
+	return 0;
+}
+
+void joystick_reset_write_handler(uint16_t addr, uint8_t val)
+{
+	joystick_reset_read_handler(addr);
 }
 
 void joystick_init()
@@ -102,6 +136,7 @@ void joystick_init()
 				}
 				for (auto j = 0; j < SDL_CONTROLLER_AXIS_MAX; j++) {
 					Controllers[i].m_axis_state[j] = 0;
+					Controllers[i].m_axis_timer_state[j] = 0;
 					Controllers[i].m_axis[j] = static_cast<SDL_GameControllerAxis>(static_cast<int>(SDL_CONTROLLER_AXIS_LEFTX) + j);
 				}
 			}
@@ -112,6 +147,7 @@ void joystick_init()
 	for (auto i = 0x61; i < 0x67; i++) {
 		memory_register_c000_handler(i, joystick_read_handler, joystick_write_handler);
 	}
+	memory_register_c000_handler(0x70, joystick_reset_read_handler, joystick_reset_write_handler);
 }
 
 void joystick_shutdown()
@@ -127,6 +163,8 @@ void joystick_handle_axis(SDL_Event &evt)
 {
 	uint32_t joy_num = evt.caxis.which  - 1;
 	int32_t value = evt.caxis.value;
+
+	// scale between 0 and 255
 	value = (int)((float)(value + 32768) * (float)(255.0f / 65536.0f));
 	Controllers[joy_num].m_axis_state[evt.caxis.axis] = value;
 }

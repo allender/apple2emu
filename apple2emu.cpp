@@ -55,6 +55,8 @@ INITIALIZE_EASYLOGGINGPP
 static const double Render_time = 33;   // roughly 30 fps
 
 const char *Disk_image_filename = nullptr;
+
+uint32_t Total_cycles, Total_cycles_this_frame;
 	
 cpu_6502 cpu;
 
@@ -175,9 +177,9 @@ int main(int argc, char* argv[])
 	}
 
 	bool quit = false;
-	uint32_t total_cycles = 0;
 	double last_time = SDL_GetTicks();
 	double processed_time = 0;
+	Total_cycles_this_frame = Total_cycles = 0;
 
 	while (!quit) {
 
@@ -187,11 +189,13 @@ int main(int argc, char* argv[])
 
 		// process the next opcode
 		uint32_t cycles = cpu.process_opcode();
-		total_cycles += cycles;
+		Total_cycles_this_frame += cycles;
+		Total_cycles += cycles;
 
-		if (total_cycles > 17030) {
-			//video_render_frame(mem);
-			total_cycles -= 17030;
+		if (Total_cycles_this_frame > CYCLES_PER_FRAME) {
+			// this is essentially number of cycles for one redraw cycle
+			// for TV/monitor.  ARound 17030 cycles I believe
+			Total_cycles_this_frame -= CYCLES_PER_FRAME;
 		}
 
 		// determine whether to render or not.  Calculate diff

@@ -34,7 +34,7 @@ SOFTWARE.
 #include "6502/memory.h"
 #include "6502/video.h"
 #include "6502/font.h"
-#include "ui/main_menu.h"
+#include "ui/interface.h"
 
 // always render to default size - SDL can scale it up
 const static int Video_native_width = 280;

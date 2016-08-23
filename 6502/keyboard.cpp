@@ -29,7 +29,7 @@ SOFTWARE.
 #include "keyboard.h"
 #include "video.h"
 #include "debugger/debugger.h"
-#include "ui/main_menu.h"
+#include "ui/interface.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)

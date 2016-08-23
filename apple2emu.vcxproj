@@ -155,7 +155,7 @@
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="ui\main_menu.cpp">
+    <ClCompile Include="ui\interface.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="utils\path_utils.cpp">
@@ -191,7 +191,7 @@
     <ClInclude Include="nativefiledialog\src\include\nfd.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />
     <ClInclude Include="precompiled.h" />
-    <ClInclude Include="ui\main_menu.h" />
+    <ClInclude Include="ui\interface.h" />
     <ClInclude Include="utils\path_utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

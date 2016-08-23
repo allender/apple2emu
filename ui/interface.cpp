@@ -27,7 +27,7 @@ SOFTWARE.
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
-#include "main_menu.h"
+#include "interface.h"
 #include "6502/video.h"
 #include "6502/disk.h"
 #include "utils/path_utils.h"

@@ -181,12 +181,9 @@ int main(int argc, char* argv[])
 		fclose(fp);
 		memory_load_buffer(buffer, buffer_size, load_addr);
 		cpu.set_pc(prog_start);
-	} else {
 	}
 
 	bool quit = false;
-	double last_time = SDL_GetTicks();
-	double processed_time = 0;
 	Total_cycles_this_frame = Total_cycles = 0;
 	cpu_sem = SDL_CreateSemaphore(0);
 	if (cpu_sem == nullptr) {

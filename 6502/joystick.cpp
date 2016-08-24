@@ -111,8 +111,16 @@ uint8_t joystick_reset_read_handler(uint16_t addr)
 	// The internal paddle read routine reads every 11ms
 	for (auto i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
 		int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[i]);
-		uint8_t val_uint8 =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
-		Controllers[0].m_axis_timer_state[i] = Total_cycles + uint32_t(val_uint8 * Joystick_cycles_scale);
+		value = (uint16_t)(floor((float)(value + 32768) * (float)(255.0f / 65535.0f)));
+		// from kegs and other emulators.  I need to dig into why this is necessary because
+		// based on timings, it should not work like this.  Currently, I am getting a value
+		// back from the pdl read code of around 235 when axis at max value (instead of
+		// 255).  So this code (as is in other emulators) will force us to get to 255.  But
+		// seems like we should solve this the real way with timing.
+		if (value >= 255) {
+			value = 280;
+		}
+		Controllers[0].m_axis_timer_state[i] = Total_cycles + uint32_t(value * Joystick_cycles_scale);
 	}
 	return 0;
 }

@@ -398,11 +398,12 @@ inline int16_t cpu_6502::absolute_y_mode()
 
 inline int16_t cpu_6502::absolute_x_check_boundary_mode()
 {
+	uint16_t save_pc = m_pc;
 	// get the new address
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
 	uint16_t addr = ((hi << 8) | lo) + m_xindex;
-	if ((addr ^ m_pc) >> 8) {
+	if ((addr ^ save_pc) >> 8) {
 		// we have crossed page boundary, so cycle count increases
 		// by one here
 		m_extra_cycles += 1;
@@ -413,11 +414,13 @@ inline int16_t cpu_6502::absolute_x_check_boundary_mode()
 
 inline int16_t cpu_6502::absolute_y_check_boundary_mode()
 {
+	int16_t save_pc = m_pc;
+
 	// get the new address
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
 	uint16_t addr = ((hi << 8) | lo) + m_yindex;
-	if ((addr ^ m_pc) >> 8) {
+	if ((addr ^ save_pc) >> 8) {
 		// we have crossed page boundary, so cycle count increases
 		// by one here
 		m_extra_cycles += 1;

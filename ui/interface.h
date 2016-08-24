@@ -31,4 +31,5 @@ void ui_init(SDL_Window *window);
 void ui_shutdown();
 void ui_do_frame(SDL_Window *window);
 void ui_toggle_main_menu();
-void ui_toggle_disk_menu();
+void ui_toggle_debug_menu();
+void ui_update_cycle_count();

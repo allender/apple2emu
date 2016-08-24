@@ -29,5 +29,3 @@ SOFTWARE.
 
 void joystick_init();
 void joystick_shutdown();
-void joystick_handle_axis(SDL_Event &evt);
-void joystick_handle_button(SDL_Event &evt);

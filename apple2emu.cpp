@@ -40,6 +40,7 @@ SOFTWARE.
 #include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
+#include "ui/interface.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "apple2emu.h"
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
 	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
 
 	// initialize SDL before everything else
-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_GAMECONTROLLER) != 0) {
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER) != 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());
 		return -1;
 	}
@@ -193,8 +194,9 @@ int main(int argc, char* argv[])
 		Total_cycles += cycles;
 
 		if (Total_cycles_this_frame > CYCLES_PER_FRAME) {
+			ui_update_cycle_count();
 			// this is essentially number of cycles for one redraw cycle
-			// for TV/monitor.  ARound 17030 cycles I believe
+			// for TV/monitor.  Around 17030 cycles I believe
 			Total_cycles_this_frame -= CYCLES_PER_FRAME;
 		}
 
@@ -222,16 +224,6 @@ int main(int argc, char* argv[])
 					keyboard_handle_event(evt);
 					break;
 
-				case SDL_CONTROLLERAXISMOTION:
-					joystick_handle_axis(evt);
-					break;
-
-				case SDL_CONTROLLERBUTTONDOWN:
-				case SDL_CONTROLLERBUTTONUP:
-					joystick_handle_button(evt);
-					break;
-
-
 				case SDL_WINDOWEVENT:
 					if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
 						quit = true;
@@ -244,7 +236,6 @@ int main(int argc, char* argv[])
 			}
 			video_render_frame();
 		}
-
 	}
 
 	video_shutdown();

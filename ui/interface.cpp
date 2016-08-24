@@ -35,7 +35,7 @@ SOFTWARE.
 #include "nfd.h"
 
 bool Show_main_menu = false;
-bool Show_disk_menu = false;
+bool Show_debug_menu = false;
 
 static const int Line_length = 256;
 static const char *Settings_filename = "settings.txt";
@@ -43,6 +43,10 @@ static const char *Settings_filename = "settings.txt";
 // settings to be stored
 static bool Auto_start = false;
 static int Video_color_type = static_cast<int>(video_mono_types::MONO_WHITE);
+
+static const int Cycles_array_size = 64;
+static int Cycles_per_frame[Cycles_array_size];
+static int Current_cycles_array_entry = 0;
 
 // inserts disk image into the given disk drive
 static void ui_insert_disk(const char *disk_filename, int slot)
@@ -174,52 +178,40 @@ static void ui_show_main_menu()
 	ImGui::Separator();
 	ui_show_disk_menu();
 	ImGui::End();
+}
 
-#if 0
-	if (ImGui::BeginMainMenuBar()) {
-		if (ImGui::BeginMenu("File")) {
-			if (ImGui::MenuItem("Reboot")) {
-				reset_machine();
-			}
-			//if (ImGui::MenuItem("Open", "Ctrl+O")) {}
-			//if (ImGui::MenuItem("Save", "Ctrl+S")) {}
-			//if (ImGui::MenuItem("Save As..")) {}
-			ImGui::Separator();
-			if (ImGui::MenuItem("Exit", "")) {
-				// add quit event to SDL queue
-				SDL_Event evt;
-				evt.type = SDL_QUIT;
-				evt.quit.type = SDL_QUIT;
-				SDL_PushEvent(&evt);
-			}
-			ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu("Options")) {
-			if (ImGui::BeginMenu("Monochrome Color")) {
-				static int mono_type = 0;
-				ImGui::RadioButton("White", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
-				ImGui::RadioButton("Amber", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
-				ImGui::RadioButton("Green", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
-				ImGui::EndMenu();
-				video_set_mono_type(static_cast<video_mono_types>(mono_type));
-			}
-			ImGui::EndMenu();
-		}
+static void ui_show_debug_menu()
+{
+	static bool animate = true;
+	static float cycles[Cycles_array_size];
 
-		// disk menu - for mounting disk images
-		if (ImGui::BeginMenu("Disks")) {
-			ui_show_disk_menu();
-			ImGui::EndMenu();
+	ImGui::Begin("Debug");
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGui::Separator();
+	ImGui::Checkbox("Animate", &animate);
+	if (animate == true) {
+		auto index = 0;
+		auto i = Current_cycles_array_entry;
+		while (true) {
+			cycles[index++] = static_cast<float>(Cycles_per_frame[i]);
+			i = (i + 1) % Cycles_array_size;
+			if (i == Current_cycles_array_entry) {
+				break;
+			}
 		}
-		ImGui::EndMainMenuBar();
 	}
-#endif
+	ImGui::PlotLines("Cycles/Frame", cycles, Cycles_array_size, 0, nullptr, 17020.0f, 17050.0f, ImVec2(0, 50));
+	ImGui::End();
 }
 
 void ui_init(SDL_Window *window)
 {
 	ImGui_ImplSdl_Init(window);
 	ui_load_settings();
+
+	for (auto i = 0; i < Cycles_array_size; i++) {
+		Cycles_per_frame[i] = 0;
+	}
 }
 
 void ui_shutdown()
@@ -234,8 +226,8 @@ void ui_do_frame(SDL_Window *window)
 	if (Show_main_menu) {
 		ui_show_main_menu();
 	}
-	if (Show_disk_menu) {
-		ui_show_disk_menu();
+	if (Show_debug_menu) {
+		ui_show_debug_menu();
 	}
 	//ImGui::ShowTestWindow();
 	ImGui::Render();
@@ -246,7 +238,15 @@ void ui_toggle_main_menu()
 	Show_main_menu = !Show_main_menu;
 }
 
-void ui_toggle_disk_menu()
+void ui_toggle_debug_menu()
 {
-	Show_disk_menu = !Show_disk_menu;
+	Show_debug_menu = !Show_debug_menu;
+}
+
+// since rendering is decoupled from cycles on the machine, extra
+// function to store off cycles for debug display
+void ui_update_cycle_count()
+{
+	Cycles_per_frame[Current_cycles_array_entry] = Total_cycles_this_frame;
+	Current_cycles_array_entry = (Current_cycles_array_entry + 1) % Cycles_array_size;
 }

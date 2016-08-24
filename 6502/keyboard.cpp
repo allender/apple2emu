@@ -175,7 +175,7 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_main_menu();
 		}
 		if (scancode == SDL_SCANCODE_F2) {
-			ui_toggle_disk_menu();
+			ui_toggle_debug_menu();
 		}
 
 		// check for window resize

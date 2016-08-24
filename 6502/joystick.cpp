@@ -30,12 +30,14 @@ SOFTWARE.
 #include "joystick.h"
 
 static int Num_controllers;
+static const char *Game_controller_mapping_file = "gamecontrollerdb.txt";
 
 // information for joysticks
 class controller {
 public:
 	bool                     m_initialized;   // is this joystick initialized
 	SDL_GameController      *m_gc;            // pointer to game controller structure
+	const char              *m_name;          // name of controller
 	int8_t                   m_button_state[SDL_CONTROLLER_BUTTON_MAX];
 	int16_t                  m_axis_state[SDL_CONTROLLER_AXIS_MAX];
 	uint32_t                 m_axis_timer_state[SDL_CONTROLLER_AXIS_MAX];
@@ -54,7 +56,8 @@ controller Controllers[Max_controllers];
 static uint8_t joystick_read_button(uint8_t button_num)
 {
 	uint8_t val = SDL_GameControllerGetButton(Controllers[0].m_gc, Controllers[0].m_buttons[button_num]);
-	return val;
+	// signals is active low.  So return 0 when on, and high bit set when not
+	return val ? 0 : 0x80;
 }
 
 static uint8_t joystick_read_axis(uint8_t axis_num)
@@ -63,12 +66,9 @@ static uint8_t joystick_read_axis(uint8_t axis_num)
 	// timer state will have been previously set to the total cycles run
 	// plus the axis value * number of cycles
 	if (Total_cycles < Controllers[0].m_axis_timer_state[axis_num]) {
-		return 255;
+		return 0x80;
 	}
 	return 0;
-	//int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[axis_num]);
-	//uint8_t ret_value =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
-	//return ret_value;
 }
 
 uint8_t joystick_read_handler(uint16_t addr)
@@ -112,7 +112,7 @@ uint8_t joystick_reset_read_handler(uint16_t addr)
 	for (auto i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
 		int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[i]);
 		uint8_t val_uint8 =  (uint8_t)(floor((float)(value + 32768) * (float)(255.0f / 65536.0f)));
-		Controllers[0].m_axis_timer_state[i] = Total_cycles + (val_uint8 * Joystick_cycles_scale);
+		Controllers[0].m_axis_timer_state[i] = Total_cycles + uint32_t(val_uint8 * Joystick_cycles_scale);
 	}
 	return 0;
 }
@@ -124,12 +124,21 @@ void joystick_reset_write_handler(uint16_t addr, uint8_t val)
 
 void joystick_init()
 {
+	// load game controller mappings
+	int num_mappings = SDL_GameControllerAddMappingsFromFile(Game_controller_mapping_file);
+	if (num_mappings == -1) {
+		printf("Unable to load mappings file %s for SDL game controllers.\n", Game_controller_mapping_file);
+		return;
+	}
+
 	Num_controllers = SDL_NumJoysticks();
 	for (auto i = 0; i < Num_controllers; i++) {
 		if (SDL_IsGameController(i)) {
 			Controllers[i].m_gc = SDL_GameControllerOpen(i);
 			if (Controllers[i].m_gc != nullptr) {
 				Controllers[i].m_initialized = true;
+				Controllers[i].m_name = SDL_GameControllerNameForIndex(i);
+
 				for (auto j = 0; j < SDL_CONTROLLER_BUTTON_MAX; j++) {
 					Controllers[i].m_button_state[j] = 0;
 					Controllers[i].m_buttons[j] = static_cast<SDL_GameControllerButton>(static_cast<int>(SDL_CONTROLLER_BUTTON_A) + j);
@@ -157,20 +166,4 @@ void joystick_shutdown()
 			SDL_GameControllerClose(Controllers[i].m_gc);
 		}
 	}
-}
-
-void joystick_handle_axis(SDL_Event &evt)
-{
-	uint32_t joy_num = evt.caxis.which  - 1;
-	int32_t value = evt.caxis.value;
-
-	// scale between 0 and 255
-	value = (int)((float)(value + 32768) * (float)(255.0f / 65536.0f));
-	Controllers[joy_num].m_axis_state[evt.caxis.axis] = value;
-}
-
-void joystick_handle_button(SDL_Event &evt)
-{
-	uint32_t joy_num = evt.cbutton.which;
-	Controllers[joy_num].m_button_state[evt.cbutton.button] = evt.cbutton.state;
 }

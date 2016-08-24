@@ -35,6 +35,7 @@ const double CLOCK_14M = 14318181.8181;
 // chapter in fact) for information on this and other timing
 // related items.  
 const double FREQ_6502 = (CLOCK_14M * 65.0) / ((65.0 * 14) + 2);
+const uint32_t FREQ_6502_MS = (uint32_t)((CLOCK_14M * 65.0) / ((65.0 * 14) + 2) / 1000.0f);
 
 // timing related to video refresh.  See Understanding the
 // Apple ][ page 3-11.  

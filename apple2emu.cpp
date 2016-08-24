@@ -54,6 +54,7 @@ SOFTWARE.
 INITIALIZE_EASYLOGGINGPP
 
 static const double Render_time = 33;   // roughly 30 fps
+static SDL_sem *cpu_sem;
 
 const char *Disk_image_filename = nullptr;
 
@@ -102,6 +103,12 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 		return false;
 	}
 	return true;
+}
+
+static uint32_t render_event_timer(uint32_t interval, void *param)
+{
+	SDL_SemPost(cpu_sem);
+	return interval;
 }
 
 bool dissemble_6502(const char *filename)
@@ -181,6 +188,18 @@ int main(int argc, char* argv[])
 	double last_time = SDL_GetTicks();
 	double processed_time = 0;
 	Total_cycles_this_frame = Total_cycles = 0;
+	cpu_sem = SDL_CreateSemaphore(0);
+	if (cpu_sem == nullptr) {
+		printf("Unable to create semaphore for CPU speed throttling: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	// set up a timer for rendering
+	SDL_TimerID render_timer = SDL_AddTimer(16, render_event_timer, nullptr);
+	if (render_timer == 0) {
+		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
+		exit(-1);
+	}
 
 	while (!quit) {
 
@@ -189,34 +208,25 @@ int main(int argc, char* argv[])
 		debugger_process(cpu);
 
 		// process the next opcode
-		uint32_t cycles = cpu.process_opcode();
-		Total_cycles_this_frame += cycles;
-		Total_cycles += cycles;
+		while (true) {
+			uint32_t cycles = cpu.process_opcode();
+			Total_cycles_this_frame += cycles;
+			Total_cycles += cycles;
 
-		if (Total_cycles_this_frame > CYCLES_PER_FRAME) {
-			ui_update_cycle_count();
-			// this is essentially number of cycles for one redraw cycle
-			// for TV/monitor.  Around 17030 cycles I believe
-			Total_cycles_this_frame -= CYCLES_PER_FRAME;
+			if (Total_cycles_this_frame > CYCLES_PER_FRAME) {
+				ui_update_cycle_count();
+				// this is essentially number of cycles for one redraw cycle
+				// for TV/monitor.  Around 17030 cycles I believe
+				Total_cycles_this_frame -= CYCLES_PER_FRAME;
+				SDL_SemWait(cpu_sem);
+				break;
+			}
 		}
 
-		// determine whether to render or not.  Calculate diff
-		// between last frame.
-		double cur_time = SDL_GetTicks();
-		double diff_time = cur_time - last_time;
-		last_time = cur_time;
-
-		bool should_render = false;
-		processed_time += diff_time;
-		while (processed_time > Render_time) {
-			should_render = true;
-			processed_time -= Render_time;
-		}
-
-		if (should_render == true) {
+		{
          SDL_Event evt;
 
-			if (SDL_PollEvent(&evt)) {
+			while (SDL_PollEvent(&evt)) {
 				ImGui_ImplSdl_ProcessEvent(&evt);
 				switch (evt.type) {
 				case SDL_KEYDOWN:
@@ -229,6 +239,7 @@ int main(int argc, char* argv[])
 						quit = true;
 					}
 					break;
+
 				case SDL_QUIT:
 					quit = true;
 					break;
@@ -237,6 +248,8 @@ int main(int argc, char* argv[])
 			video_render_frame();
 		}
 	}
+
+	SDL_DestroySemaphore(cpu_sem);
 
 	video_shutdown();
 	disk_shutdown();

@@ -29,11 +29,8 @@ SOFTWARE.
 // implementation for disk image loading/saving
 //
 
-#include <alloca.h>
 #include <stdio.h>
-#if defined(__WIN32)
 #include <io.h>
-#endif
 #include <assert.h>
 #include "disk_image.h"
 

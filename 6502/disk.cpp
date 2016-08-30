@@ -60,9 +60,6 @@ void disk_drive::init(bool warm_init)
 	if (m_track_data != nullptr) {
 		delete[] m_track_data;
 	}
-	if (m_disk_image != nullptr) {
-		delete m_disk_image;
-	}
 	m_track_data = nullptr;
 	m_track_size = 0;
 

@@ -180,11 +180,11 @@ static record_type parse_line(char *line)
 	_ASSERT(strlen(opcode_str) == 3);
 	opcode = opcode_str[0] << 24 | opcode_str[1] << 16 | opcode_str[2] << 8 | ' ';
 
-	cpu_6502::addressing_mode mode = cpu_6502::addressing_mode::NO_MODE;
+	cpu_6502::addr_mode mode = cpu_6502::addr_mode::NO_MODE;
 	const char *p = &addressing_str[1];
 	if (addressing_str[0] == '#') {
 		// #$c0  -- Immediate
-		mode = cpu_6502::addressing_mode::IMMEDIATE_MODE;
+		mode = cpu_6502::addr_mode::IMMEDIATE_MODE;
 	} else if (addressing_str[0] == '(') {
 		// indirect modes
 		// ($c000) -- indirect
@@ -192,17 +192,17 @@ static record_type parse_line(char *line)
 		// ($c0),Y -- Indirect indexed
 		while (*p != '\0') {
 			if ((*p == 'X') || (*p == 'x')) {
-				mode = cpu_6502::addressing_mode::INDEXED_INDIRECT_MODE;
+				mode = cpu_6502::addr_mode::INDEXED_INDIRECT_MODE;
 				break;
 			}
 			if ((*p == 'Y') || (*p == 'y')) {
-				mode = cpu_6502::addressing_mode::INDIRECT_INDEXED_MODE;
+				mode = cpu_6502::addr_mode::INDIRECT_INDEXED_MODE;
 				break;
 			}
 			p++;
 		}
 		if (*p == '\0') {
-			mode = cpu_6502::addressing_mode::INDIRECT_MODE;
+			mode = cpu_6502::addr_mode::INDIRECT_MODE;
 		}
 	} else if (addressing_str[0] == '$') {
 		// $c000 -- Absolute
@@ -220,9 +220,9 @@ static record_type parse_line(char *line)
 		int size = p - addressing_str - 1;
 		if (*p == '\0') {
 			if (size == 2) {
-				mode = cpu_6502::addressing_mode::ZERO_PAGE_MODE;
+				mode = cpu_6502::addr_mode::ZERO_PAGE_MODE;
 			} else if (size == 4) {
-				mode = cpu_6502::addressing_mode::ABSOLUTE_MODE;
+				mode = cpu_6502::addr_mode::ABSOLUTE_MODE;
 			}
 		} else {
 			// we hit a comma.  SKip past that and eat white space
@@ -233,11 +233,11 @@ static record_type parse_line(char *line)
 			if ((*p == 'x') || (*p == 'X') ) {
 				if (size == 2) {
 				} else if (size == 4) {
-					mode = cpu_6502::addressing_mode::X_INDEXED_MODE;
+					mode = cpu_6502::addr_mode::X_INDEXED_MODE;
 				}
 			} else if ((*p == 'y') || (*p == 'Y') ) { 
 				if (size == 4) {
-					mode = cpu_6502::addressing_mode::Y_INDEXED_MODE;
+					mode = cpu_6502::addr_mode::Y_INDEXED_MODE;
 				}
 			}
 		}
@@ -254,9 +254,9 @@ static record_type parse_line(char *line)
 	// bytes needed
 	for (auto i = 0; i < 256; i++ ) {
 		if (cpu_6502::m_opcodes[i].m_mnemonic == opcode) {
-			if ((mode == cpu_6502::addressing_mode::NO_MODE) ||
-				 (cpu_6502::m_opcodes[i].m_addressing_mode == mode) ||
-				 ((cpu_6502::m_opcodes[i].m_addressing_mode == cpu_6502::addressing_mode::RELATIVE_MODE) && (mode == cpu_6502::addressing_mode::ZERO_PAGE_MODE))) {
+			if ((mode == cpu_6502::addr_mode::NO_MODE) ||
+				 (cpu_6502::m_opcodes[i].m_addr_mode == mode) ||
+				 ((cpu_6502::m_opcodes[i].m_addr_mode == cpu_6502::addr_mode::RELATIVE_MODE) && (mode == cpu_6502::addr_mode::ZERO_PAGE_MODE))) {
 				Parsed_opcode = i;
 				break;
 			}
@@ -344,49 +344,49 @@ static uint8_t encode_instruction(uint8_t *buffer, uint8_t opcode, char *source_
 	const char *addressing_loc = &source_line[4];
 
 	uint8_t size = cpu_6502::m_opcodes[opcode].m_size;
-	cpu_6502::addressing_mode addr_mode = cpu_6502::m_opcodes[opcode].m_addressing_mode;
+	cpu_6502::addr_mode addr_mode = cpu_6502::m_opcodes[opcode].m_addr_mode;
 
 	// parse out the source line
 	const char *label_str, *opcode_str, *addressing_str;
 	get_line_components(source_line, label_str, opcode_str, addressing_str);
 
 	switch(addr_mode) {
-	case cpu_6502::addressing_mode::IMMEDIATE_MODE:
-	case cpu_6502::addressing_mode::ZERO_PAGE_MODE:
+	case cpu_6502::addr_mode::IMMEDIATE_MODE:
+	case cpu_6502::addr_mode::ZERO_PAGE_MODE:
 		buffer[loc++] = encode_byte(addressing_str+1);
 		break;
 
-	case cpu_6502::addressing_mode::RELATIVE_MODE:
+	case cpu_6502::addr_mode::RELATIVE_MODE:
 		// for branch statements
 		buffer[loc++] = encode_relative_address(addressing_str, pc);
 		break;
 
-	case cpu_6502::addressing_mode::ACCUMULATOR_MODE:
+	case cpu_6502::addr_mode::ACCUMULATOR_MODE:
 		// just the opcode is needed here
 		break;
 
-	case cpu_6502::addressing_mode::IMPLIED_MODE:
+	case cpu_6502::addr_mode::IMPLIED_MODE:
 		// just the opcode is required here
 		break;
 
-	case cpu_6502::addressing_mode::ABSOLUTE_MODE:
-	case cpu_6502::addressing_mode::X_INDEXED_MODE:
-	case cpu_6502::addressing_mode::Y_INDEXED_MODE:
+	case cpu_6502::addr_mode::ABSOLUTE_MODE:
+	case cpu_6502::addr_mode::X_INDEXED_MODE:
+	case cpu_6502::addr_mode::Y_INDEXED_MODE:
 		addr = encode_word_or_label(addressing_str);
 		memcpy(&buffer[loc], &addr, sizeof(addr));
 		loc += 2;
 		break;
 
-	case cpu_6502::addressing_mode::INDIRECT_MODE:
+	case cpu_6502::addr_mode::INDIRECT_MODE:
 		addr = encode_word(addressing_str+1);
 		memcpy(&buffer[loc], &addr, sizeof(addr));
 		loc += 2;
 		break;
-	case cpu_6502::addressing_mode::ZERO_PAGE_INDEXED_MODE:
+	case cpu_6502::addr_mode::ZP_INDEXED_MODE:
 		buffer[loc++] = encode_byte(addressing_str);
 		break;
-	case cpu_6502::addressing_mode::INDEXED_INDIRECT_MODE:
-	case cpu_6502::addressing_mode::INDIRECT_INDEXED_MODE:
+	case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
+	case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
 		buffer[loc++] = encode_byte(addressing_str+1);
 		break;
 	default:

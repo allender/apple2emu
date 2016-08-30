@@ -35,86 +35,294 @@ SOFTWARE.
 
 cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
 		// 0x00 - 0x0f
-		{ 'BRK ', 1, 7, addressing_mode::IMPLIED_MODE }, { 'ORA ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE          }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE      }, { 'ORA ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'ASL ', 2, 0, addressing_mode::ZERO_PAGE_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'PHP ', 1, 3, addressing_mode::IMPLIED_MODE }, { 'ORA ', 2, 2, addressing_mode::IMMEDIATE_MODE        }, { 'ASL ', 1, 0, addressing_mode::ACCUMULATOR_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE      }, { 'ORA ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'ASL ', 3, 0, addressing_mode::ABSOLUTE_MODE    }, { '    ', 0, 0, addressing_mode::NO_MODE },
+	{ 'BRK ', 1, 7, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ORA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ORA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'ASL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'PHP ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ORA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'ASL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ORA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
 		// 0x10 - 
-		{ 'BPL ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'ORA ', 2, 5, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'ORA ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'ASL ', 2, 0, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CLC ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'ORA ', 3, 4, addressing_mode::Y_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'ORA ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'ASL ', 3, 0, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x20 - 
-		{ 'JSR ', 3, 6, addressing_mode::ABSOLUTE_MODE  }, { 'AND ', 2, 0, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE          }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'BIT ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { 'AND ', 2, 0, addressing_mode::ZERO_PAGE_MODE        }, { 'ROL ', 2, 5, addressing_mode::ZERO_PAGE_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'PLP ', 1, 4, addressing_mode::IMPLIED_MODE   }, { 'AND ', 2, 0, addressing_mode::IMMEDIATE_MODE        }, { 'ROL ', 1, 2, addressing_mode::ACCUMULATOR_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'BIT ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { 'AND ', 3, 0, addressing_mode::ABSOLUTE_MODE          }, { 'ROL ', 3, 6, addressing_mode::ABSOLUTE_MODE    }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x30 - 
-		{ 'BMI ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'AND ', 2, 0, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'AND ', 2, 0, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'ROL ', 2, 6, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'SEC ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'AND ', 3, 0, addressing_mode::Y_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'AND ', 3, 0, addressing_mode::X_INDEXED_MODE         }, { 'ROL ', 3, 7, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x40 - 
-		{ 'RTI ', 1, 6, addressing_mode::IMPLIED_MODE  }, { 'EOR ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE          }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'EOR ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'LSR ', 2, 5, addressing_mode::ZERO_PAGE_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'PHA ', 1, 3, addressing_mode::IMPLIED_MODE  }, { 'EOR ', 2, 2, addressing_mode::IMMEDIATE_MODE        }, { 'LSR ', 1, 2, addressing_mode::ACCUMULATOR_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'JMP ', 3, 3, addressing_mode::ABSOLUTE_MODE }, { 'EOR ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'LSR ', 3, 6, addressing_mode::ABSOLUTE_MODE    }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x50 - 
-		{ 'BVC ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'EOR ', 2, 5, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'EOR ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'LSR ', 2, 6, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CLI ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'EOR ', 3, 4, addressing_mode::Y_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'EOR ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'LSR ', 3, 7, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x60 - 
-		{ 'RTS ', 1, 6, addressing_mode::IMPLIED_MODE  }, { 'ADC ', 2, 0, addressing_mode::INDEXED_INDIRECT_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE          }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'ADC ', 2, 0, addressing_mode::ZERO_PAGE_MODE  }, { 'ROR ', 2, 5, addressing_mode::ZERO_PAGE_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'PLA ', 1, 4, addressing_mode::IMPLIED_MODE  }, { 'ADC ', 2, 0, addressing_mode::IMMEDIATE_MODE  }, { 'ROR ', 1, 2, addressing_mode::ACCUMULATOR_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'JMP ', 3, 5, addressing_mode::INDIRECT_MODE }, { 'ADC ', 0, 0, addressing_mode::ABSOLUTE_MODE  }, { 'ROR ', 3, 6, addressing_mode::ABSOLUTE_MODE    }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x70 - 
-		{ 'BVS ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'ADC ', 3, 0, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'ADC ', 2, 0, addressing_mode::ZERO_PAGE_INDEXED_MODE  }, { 'ROR ', 2, 6, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'SEI ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'ADC ', 3, 0, addressing_mode::Y_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'ADC ', 3, 0, addressing_mode::X_INDEXED_MODE  }, { 'ROR ', 3, 7, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x80 - 
-		{ '    ', 0, 0, addressing_mode::NO_MODE        }, { 'STA ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE        }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'STY ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { 'STA ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'STX ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'DEY ', 1, 2, addressing_mode::IMPLIED_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE               }, { 'TXA ', 1, 2, addressing_mode::IMPLIED_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'STY ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { 'STA ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'STX ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0x90 - 
-		{ 'BCC ', 2, 0, addressing_mode::RELATIVE_MODE          }, { 'STA ', 2, 6, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'STY ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'STA ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'STX ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE_Y }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'TYA ', 1, 2, addressing_mode::IMPLIED_MODE           }, { 'STA ', 3, 5, addressing_mode::Y_INDEXED_MODE         }, { 'TXS ', 1, 2, addressing_mode::IMPLIED_MODE             }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE                }, { 'STA ', 3, 5, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xa0 - 
-		{ 'LDY ', 2, 2, addressing_mode::IMMEDIATE_MODE }, { 'LDA ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { 'LDX ', 2, 2, addressing_mode::IMMEDIATE_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'LDY ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { 'LDA ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'LDX ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'TAY ', 1, 2, addressing_mode::IMPLIED_MODE   }, { 'LDA ', 2, 2, addressing_mode::IMMEDIATE_MODE        }, { 'TAX ', 1, 2, addressing_mode::IMPLIED_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'LDY ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { 'LDA ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'LDX ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xb0 - 
-		{ 'BCS ', 2, 0, addressing_mode::RELATIVE_MODE          }, { 'LDA ', 2, 5, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'LDY ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'LDA ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'LDX ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE_Y }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CLV ', 1, 2, addressing_mode::IMPLIED_MODE           }, { 'LDA ', 3, 4, addressing_mode::Y_INDEXED_MODE         }, { 'TSX ', 1, 2, addressing_mode::IMPLIED_MODE             }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'LDY ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'LDA ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'LDX ', 3, 4, addressing_mode::Y_INDEXED_MODE           }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xc0 - 
-		{ 'CPY ', 2, 2, addressing_mode::IMMEDIATE_MODE }, { 'CMP ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE        }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CPY ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { 'CMP ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'DEC ', 2, 5, addressing_mode::ZERO_PAGE_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'INY ', 1, 2, addressing_mode::IMPLIED_MODE   }, { 'CMP ', 2, 2, addressing_mode::IMMEDIATE_MODE        }, { 'DEX ', 1, 2, addressing_mode::IMPLIED_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CPY ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { 'CMP ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'DEC ', 3, 6, addressing_mode::ABSOLUTE_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xd0 - 
-		{ 'BNE ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'CMP ', 2, 5, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'CMP ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'DEC ', 2, 6, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CLD ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'CMP ', 3, 4, addressing_mode::Y_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'CMP ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'DEC ', 3, 7, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xe0 - 
-		{ 'CPX ', 2, 2, addressing_mode::IMMEDIATE_MODE }, { 'SBC ', 2, 6, addressing_mode::INDEXED_INDIRECT_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE        }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CPX ', 2, 3, addressing_mode::ZERO_PAGE_MODE }, { 'SBC ', 2, 3, addressing_mode::ZERO_PAGE_MODE        }, { 'INC ', 2, 5, addressing_mode::ZERO_PAGE_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'INX ', 1, 2, addressing_mode::IMPLIED_MODE   }, { 'SBC ', 2, 2, addressing_mode::IMMEDIATE_MODE        }, { 'NOP ', 1, 2, addressing_mode::IMPLIED_MODE   }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'CPX ', 3, 4, addressing_mode::ABSOLUTE_MODE  }, { 'SBC ', 3, 4, addressing_mode::ABSOLUTE_MODE         }, { 'INC ', 3, 6, addressing_mode::ABSOLUTE_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		// 0xf0 - 
-		{ 'BEQ ', 2, 0, addressing_mode::RELATIVE_MODE }, { 'SBC ', 2, 5, addressing_mode::INDIRECT_INDEXED_MODE  }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'SBC ', 2, 4, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { 'INC ', 2, 6, addressing_mode::ZERO_PAGE_INDEXED_MODE }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ 'SED ', 1, 2, addressing_mode::IMPLIED_MODE  }, { 'SBC ', 3, 4, addressing_mode::Y_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE                }, { '    ', 0, 0, addressing_mode::NO_MODE },
-		{ '    ', 0, 0, addressing_mode::NO_MODE       }, { 'SBC ', 3, 4, addressing_mode::X_INDEXED_MODE         }, { 'INC ', 3, 7, addressing_mode::X_INDEXED_MODE         }, { '    ', 0, 0, addressing_mode::NO_MODE },
-	};
+	{ 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ORA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+   { 'ASL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CLC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ORA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ORA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'ASL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x20 - 
+	{ 'JSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'AND ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'BIT ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'AND ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'ROL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'PLP ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'AND ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'ROL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'BIT ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'AND ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'ROL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+
+	// 0x30 - 
+	{ 'BMI ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'AND ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'AND ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'ROL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'SEC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'AND ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'AND ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'ROL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x40 - 
+	{ 'RTI ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'EOR ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'EOR ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'LSR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode  },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'PHA ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'EOR ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'LSR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'JMP ', 3, 3, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'EOR ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'LSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x50 - 
+	{ 'BVC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'EOR ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'EOR ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'LSR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CLI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'EOR ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'EOR ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'LSR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x60 - 
+	{ 'RTS ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ADC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ADC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'ROR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'PLA ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ADC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'ROR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'JMP ', 3, 5, addr_mode::INDIRECT_MODE, &cpu_6502::indirect_mode },
+	{ 'ADC ', 0, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'ROR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x70 - 
+	{ 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ADC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'ROR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'SEI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'ADC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'ADC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'ROR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x80 - 
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'STA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'STY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'STA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'STX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'DEY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'TXA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'STY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'STA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'STX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0x90 - 
+	{ 'BCC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'STA ', 2, 6, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'STY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'STA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'STX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'TYA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'STA ', 3, 5, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_mode },
+	{ 'TXS ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'STA ', 3, 5, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xa0 - 
+	{ 'LDY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'LDA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ 'LDX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'LDY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'LDA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'LDX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'TAY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'LDA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'TAX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'LDY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'LDA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'LDX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xb0 - 
+	{ 'BCS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'LDA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'LDY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'LDA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'LDX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CLV ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'LDA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ 'TSX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'LDY ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'LDA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'LDX ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xc0 - 
+	{ 'CPY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'CMP ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CPY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'CMP ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'DEC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'INY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'CMP ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'DEX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CPY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'CMP ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'DEC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xd0 - 
+	{ 'BNE ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'CMP ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CMP ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'DEC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CLD ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'CMP ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CMP ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'DEC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xe0 - 
+	{ 'CPX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'SBC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CPX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'SBC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ 'INC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'INX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'SBC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+	{ 'NOP ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'CPX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'SBC ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ 'INC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+	// 0xf0 - 
+	{ 'BEQ ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+	{ 'SBC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'SBC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ 'INC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'SED ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+	{ 'SBC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+	{ 'SBC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+	{ 'INC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+	{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+};
 
 
 void cpu_6502::init()
@@ -126,22 +334,6 @@ void cpu_6502::init()
 	m_acc = 0;
 	m_status_register = 0;
 	set_flag(register_bit::NOT_USED_BIT, 1);
-
-	// set up the addressing mode calls
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::NO_MODE)] = nullptr;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ACCUMULATOR_MODE)] = &cpu_6502::accumulator_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::IMMEDIATE_MODE)] = &cpu_6502::immediate_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::IMPLIED_MODE)] = &cpu_6502::implied_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::RELATIVE_MODE)] = &cpu_6502::relative_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ABSOLUTE_MODE)] = &cpu_6502::absolute_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ZERO_PAGE_MODE)] = &cpu_6502::zero_page_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDIRECT_MODE)] = &cpu_6502::indirect_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::X_INDEXED_MODE)] = &cpu_6502::absolute_x_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::Y_INDEXED_MODE)] = &cpu_6502::absolute_y_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ZERO_PAGE_INDEXED_MODE)] = &cpu_6502::zero_page_indexed_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::ZERO_PAGE_INDEXED_MODE_Y)] = &cpu_6502::zero_page_indexed_mode_y;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDEXED_INDIRECT_MODE)] = &cpu_6502::indexed_indirect_mode;
-	m_addressing_functions[static_cast<uint8_t>(addressing_mode::INDIRECT_INDEXED_MODE)] = &cpu_6502::indirect_indexed_mode;
 
 	// start vector
 	set_pc(memory_read(0xfffc) | memory_read(0xfffd) << 8);
@@ -204,6 +396,39 @@ inline int16_t cpu_6502::absolute_y_mode()
 	return ((hi << 8) | lo) + m_yindex;
 }
 
+inline int16_t cpu_6502::absolute_x_check_boundary_mode()
+{
+	uint16_t save_pc = m_pc;
+	// get the new address
+	uint8_t lo = memory_read(m_pc++);
+	uint8_t hi = memory_read(m_pc++);
+	uint16_t addr = ((hi << 8) | lo) + m_xindex;
+	if ((addr ^ save_pc) >> 8) {
+		// we have crossed page boundary, so cycle count increases
+		// by one here
+		m_extra_cycles += 1;
+	}
+
+	return addr;
+}
+
+inline int16_t cpu_6502::absolute_y_check_boundary_mode()
+{
+	int16_t save_pc = m_pc;
+
+	// get the new address
+	uint8_t lo = memory_read(m_pc++);
+	uint8_t hi = memory_read(m_pc++);
+	uint16_t addr = ((hi << 8) | lo) + m_yindex;
+	if ((addr ^ save_pc) >> 8) {
+		// we have crossed page boundary, so cycle count increases
+		// by one here
+		m_extra_cycles += 1;
+	}
+
+	return addr;
+}
+
 inline int16_t cpu_6502::zero_page_indexed_mode()
 {
 	uint8_t lo = memory_read(m_pc++);
@@ -233,13 +458,37 @@ inline int16_t cpu_6502::indirect_indexed_mode()
 	return addr;
 }
 
+inline int16_t cpu_6502::indirect_indexed_check_boundary_mode()
+{
+	uint16_t save_pc = m_pc;
+
+	uint16_t addr_start = memory_read(m_pc++);
+	uint8_t lo = memory_read(addr_start);
+	uint8_t hi = memory_read(addr_start + 1);
+	uint16_t addr = ((hi << 8) | lo) + m_yindex;
+
+	// add extra cycle if page boundary crossed
+	if ((addr ^ save_pc) >> 8) {
+		m_extra_cycles++;
+	}
+	return addr;
+}
+
 inline void cpu_6502::branch_relative()
 {
+	uint16_t save_pc = m_pc;
 	uint8_t val = memory_read(m_pc-1);
 	m_pc += val;
 	if (val & 0x80) {
 		m_pc -= 0x100;
 	}
+
+	// one extra cycle when crossing page boundary
+	if ((save_pc ^ m_pc) >> 8) {
+		m_extra_cycles++;
+	}
+	// always extra cycle for branching
+	m_extra_cycles++;
 }
 
 //
@@ -247,16 +496,20 @@ inline void cpu_6502::branch_relative()
 //
 uint32_t cpu_6502::process_opcode()
 {
+	m_extra_cycles = 0;
+
 	// get the opcode at the program counter and the just figure out what
 	// to do
 	uint8_t opcode = memory_read(m_pc++);
 
 	// get addressing mode and then do appropriate work based on the mode
-	addressing_mode mode = m_opcodes[opcode].m_addressing_mode;
-	assert( mode != addressing_mode::NO_MODE );
-	uint16_t src = (this->*m_addressing_functions[static_cast<uint8_t>(mode)])();
+	addr_mode mode = m_opcodes[opcode].m_addr_mode;
+	assert(mode != addr_mode::NO_MODE);
+	assert(m_opcodes[opcode].m_cycle_count != 0);
+	assert(m_opcodes[opcode].m_addr_func != nullptr);
+	uint16_t src = (this->*m_opcodes[opcode].m_addr_func)();
 
-	uint32_t cycles = m_opcodes[opcode].m_cycle_count;
+	uint8_t cycles = m_opcodes[opcode].m_cycle_count;
 
 	// execute the actual opcode
 	switch(m_opcodes[opcode].m_mnemonic) {
@@ -300,13 +553,13 @@ uint32_t cpu_6502::process_opcode()
 	case 'ASL ':
 		{
 			uint8_t val, old_val;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				old_val = m_acc;
 			} else {
 				old_val = memory_read(src);
 			}
 			val = old_val << 1;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
 				memory_write(src, val);
@@ -551,14 +804,14 @@ uint32_t cpu_6502::process_opcode()
 	case 'LSR ':
 		{
 		uint8_t val;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
 				val = memory_read(src);
 			}
 			set_flag(register_bit::CARRY_BIT, val & 1);
 			val >>= 1;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
 				memory_write(src, val);
@@ -607,7 +860,7 @@ uint32_t cpu_6502::process_opcode()
 	case 'ROL ':
 		{
 			uint8_t val;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
 				val = memory_read(src);
@@ -618,7 +871,7 @@ uint32_t cpu_6502::process_opcode()
 			set_flag(register_bit::CARRY_BIT, carry_bit);
 			set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
 				memory_write(src, val);
@@ -628,7 +881,7 @@ uint32_t cpu_6502::process_opcode()
 	case 'ROR ':
 		{
 			uint8_t val;
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				val = m_acc;
 			} else {
 				val = memory_read(src);
@@ -639,7 +892,7 @@ uint32_t cpu_6502::process_opcode()
 			set_flag(register_bit::CARRY_BIT, carry_bit);
 			set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
 			set_flag(register_bit::ZERO_BIT, val == 0);
-			if (mode == addressing_mode::ACCUMULATOR_MODE) {
+			if (mode == addr_mode::ACCUMULATOR_MODE) {
 				m_acc = val;
 			} else {
 				memory_write(src, val);
@@ -772,6 +1025,6 @@ uint32_t cpu_6502::process_opcode()
 	}
 
 	// return the number of cycles that we executed
-	return cycles;
+	return cycles + m_extra_cycles;
 }
 

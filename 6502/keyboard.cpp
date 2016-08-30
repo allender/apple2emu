@@ -29,7 +29,7 @@ SOFTWARE.
 #include "keyboard.h"
 #include "video.h"
 #include "debugger/debugger.h"
-#include "ui/main_menu.h"
+#include "ui/interface.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
@@ -126,6 +126,10 @@ uint32_t keyboard_get_key()
 		key = '\b';
 	} else if (key == SDL_SCANCODE_ESCAPE) {
 		key = 0x9b;
+	} else if (key == SDL_SCANCODE_RIGHT) {
+		key = 0x95;
+	} else if (key == SDL_SCANCODE_LEFT) {
+		key = 0x88;
 	} else {
 		key = key_ascii_table[key];
 		if (key >= 'a' && key <= 'z') {
@@ -171,16 +175,7 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_main_menu();
 		}
 		if (scancode == SDL_SCANCODE_F2) {
-			ui_toggle_disk_menu();
-		}
-
-		// check for window resize
-		if ((scancode == SDL_SCANCODE_PERIOD) && (mods & KMOD_CTRL)) {
-			video_resize(true);
-			return;
-		} else if ((scancode == SDL_SCANCODE_COMMA) && (mods & KMOD_CTRL)) {
-			video_resize(false);
-			return;
+			ui_toggle_debug_menu();
 		}
 
 		// we should only be putting keys into the keyboard buffer that are printable

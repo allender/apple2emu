@@ -168,8 +168,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 		if (opcode->m_size > 1) {
 			uint32_t mem_value = -1;
 
-			cpu_6502::addressing_mode mode = opcode->m_addressing_mode;
-			if (mode == cpu_6502::addressing_mode::RELATIVE_MODE) {
+			cpu_6502::addr_mode mode = opcode->m_addr_mode;
+			if (mode == cpu_6502::addr_mode::RELATIVE_MODE) {
 				addressing_val = addr + memory_read(addr + 1) + 2;
 				if (memory_read(addr + 1) & 0x80) {
 					addressing_val -= 0x100;
@@ -179,17 +179,17 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			strcat(Debugger_disassembly_line, internal_buffer);
 
 			switch(mode) {
-			case cpu_6502::addressing_mode::ACCUMULATOR_MODE:
-			case cpu_6502::addressing_mode::IMMEDIATE_MODE:
-			case cpu_6502::addressing_mode::IMPLIED_MODE:
-			case cpu_6502::addressing_mode::INDIRECT_MODE:
-         case cpu_6502::addressing_mode::NO_MODE:
-         case cpu_6502::addressing_mode::NUM_ADDRESSING_MODES:
+			case cpu_6502::addr_mode::ACCUMULATOR_MODE:
+			case cpu_6502::addr_mode::IMMEDIATE_MODE:
+			case cpu_6502::addr_mode::IMPLIED_MODE:
+			case cpu_6502::addr_mode::INDIRECT_MODE:
+         case cpu_6502::addr_mode::NO_MODE:
+         case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
 				break;
 
 			// relative mode is relative to current PC.  figure out if we need to
 			// move forwards or backwards
-			case cpu_6502::addressing_mode::RELATIVE_MODE:
+			case cpu_6502::addr_mode::RELATIVE_MODE:
 				//if (addressing_val & 0x80) {
 				//	mem_value = cpu.get_pc() - (addressing_val & 0x80);
 				//} else {
@@ -197,8 +197,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				//}
 				break;
 
-			case cpu_6502::addressing_mode::ABSOLUTE_MODE:
-			case cpu_6502::addressing_mode::ZERO_PAGE_MODE:
+			case cpu_6502::addr_mode::ABSOLUTE_MODE:
+			case cpu_6502::addr_mode::ZERO_PAGE_MODE:
 				if (opcode->m_mnemonic != 'JSR ') {
 					mem_value = memory_read(addressing_val);
 					sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
@@ -211,8 +211,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				break;
 
 			// indexed and zero page indexed are the same
-			case cpu_6502::addressing_mode::X_INDEXED_MODE:
-			case cpu_6502::addressing_mode::ZERO_PAGE_INDEXED_MODE:
+			case cpu_6502::addr_mode::X_INDEXED_MODE:
+			case cpu_6502::addr_mode::ZP_INDEXED_MODE:
 				addressing_val += cpu.get_x();
 				mem_value = memory_read(addressing_val);
 				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
@@ -224,8 +224,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				break;
 
 			// same as x-indexed mode
-			case cpu_6502::addressing_mode::Y_INDEXED_MODE:
-			case cpu_6502::addressing_mode::ZERO_PAGE_INDEXED_MODE_Y:
+			case cpu_6502::addr_mode::Y_INDEXED_MODE:
+			case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
 				addressing_val += cpu.get_y();
 				mem_value = memory_read(addressing_val);
 				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
@@ -236,7 +236,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				}
 				break;
 
-			case cpu_6502::addressing_mode::INDEXED_INDIRECT_MODE:
+			case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
 				//addressing_val += cpu.get_x();
 				//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
 				//mem_value = mem[addressing_val];
@@ -248,7 +248,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				//}
 				break;
 
-			case cpu_6502::addressing_mode::INDIRECT_INDEXED_MODE:
+			case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
 				//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
 				//addressing_val += cpu.get_y();
 				//mem_value = mem[addressing_val];

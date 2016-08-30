@@ -36,9 +36,11 @@ SOFTWARE.
 #include "6502/video.h"
 #include "6502/disk.h"
 #include "6502/keyboard.h"
+#include "6502/joystick.h"
 #include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
+#include "ui/interface.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "apple2emu.h"
@@ -53,8 +55,11 @@ SOFTWARE.
 INITIALIZE_EASYLOGGINGPP
 
 static const double Render_time = 33;   // roughly 30 fps
+static SDL_sem *cpu_sem;
 
 const char *Disk_image_filename = nullptr;
+
+uint32_t Total_cycles, Total_cycles_this_frame;
 	
 cpu_6502 cpu;
 
@@ -101,6 +106,12 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	return true;
 }
 
+static uint32_t render_event_timer(uint32_t interval, void *param)
+{
+	SDL_SemPost(cpu_sem);
+	return interval;
+}
+
 bool dissemble_6502(const char *filename)
 {
 	return true;
@@ -113,14 +124,8 @@ void reset_machine()
 	debugger_init();
 	speaker_init();
 	keyboard_init();
+	joystick_init();
 	disk_init();
-
-	// load up disk images
-	const char *filename = disk_get_mounted_filename(1);
-	if (filename == nullptr) {
-		disk_insert(Disk_image_filename, 1);
-	}
-
 	video_init();
 }
 
@@ -131,6 +136,12 @@ int main(int argc, char* argv[])
 
 	// grab some needed command line options
 	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
+
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
 
 	// reset the machine
 	reset_machine();
@@ -171,14 +182,24 @@ int main(int argc, char* argv[])
 		fclose(fp);
 		memory_load_buffer(buffer, buffer_size, load_addr);
 		cpu.set_pc(prog_start);
-	} else {
 	}
 
 	bool quit = false;
-	uint32_t total_cycles = 0;
-	double last_time = SDL_GetTicks();
-	double processed_time = 0;
+	Total_cycles_this_frame = Total_cycles = 0;
+	cpu_sem = SDL_CreateSemaphore(0);
+	if (cpu_sem == nullptr) {
+		printf("Unable to create semaphore for CPU speed throttling: %s\n", SDL_GetError());
+		exit(-1);
+	}
 
+	// set up a timer for rendering
+	SDL_TimerID render_timer = SDL_AddTimer(16, render_event_timer, nullptr);
+	if (render_timer == 0) {
+		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	uint32_t cycles_per_frame = CYCLES_PER_FRAME;  // we can speed up machine by multiplier here
 	while (!quit) {
 
 		// process debugger (before opcode processing so that we can break on
@@ -186,31 +207,25 @@ int main(int argc, char* argv[])
 		debugger_process(cpu);
 
 		// process the next opcode
-		uint32_t cycles = cpu.process_opcode();
-		total_cycles += cycles;
+		while (true) {
+			uint32_t cycles = cpu.process_opcode();
+			Total_cycles_this_frame += cycles;
+			Total_cycles += cycles;
 
-		if (total_cycles > 17030) {
-			//video_render_frame(mem);
-			total_cycles -= 17030;
+			if (Total_cycles_this_frame > cycles_per_frame) {
+				ui_update_cycle_count();
+				// this is essentially number of cycles for one redraw cycle
+				// for TV/monitor.  Around 17030 cycles I believe
+				Total_cycles_this_frame -= cycles_per_frame;
+				SDL_SemWait(cpu_sem);
+				break;
+			}
 		}
 
-		// determine whether to render or not.  Calculate diff
-		// between last frame.
-		double cur_time = SDL_GetTicks();
-		double diff_time = cur_time - last_time;
-		last_time = cur_time;
-
-		bool should_render = false;
-		processed_time += diff_time;
-		while (processed_time > Render_time) {
-			should_render = true;
-			processed_time -= Render_time;
-		}
-
-		if (should_render == true) {
+		{
          SDL_Event evt;
 
-			if (SDL_PollEvent(&evt)) {
+			while (SDL_PollEvent(&evt)) {
 				ImGui_ImplSdl_ProcessEvent(&evt);
 				switch (evt.type) {
 				case SDL_KEYDOWN:
@@ -223,18 +238,26 @@ int main(int argc, char* argv[])
 						quit = true;
 					}
 					break;
+
+				case SDL_QUIT:
+					quit = true;
+					break;
 				}
 			}
 			video_render_frame();
 		}
-
 	}
+
+	SDL_DestroySemaphore(cpu_sem);
 
 	video_shutdown();
 	disk_shutdown();
 	keyboard_shutdown();
-   debugger_shutdown();
+	joystick_shutdown();
+	debugger_shutdown();
 	memory_shutdown();
+
+	SDL_Quit();
 
 	return 0;
 }

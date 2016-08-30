@@ -34,7 +34,7 @@ SOFTWARE.
 #include "6502/memory.h"
 #include "6502/video.h"
 #include "6502/font.h"
-#include "ui/main_menu.h"
+#include "ui/interface.h"
 
 // always render to default size - SDL can scale it up
 const static int Video_native_width = 280;
@@ -668,10 +668,6 @@ bool video_init()
 		Video_native_size.w = Video_native_width;
 		Video_native_size.h = Video_native_height;
 
-		if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0) {
-			printf("Error initializing SDL: %s\n", SDL_GetError());
-			return false;
-		}
 		if (video_create() == false) {
 			return false;
 		}
@@ -693,9 +689,11 @@ bool video_init()
 			Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 		}
 
+		video_set_mono_type(video_mono_types::MONO_WHITE);
+
+		// initialize UI here since we need the window handle for imgui
 		ui_init(Video_window);
 
-		video_set_mono_type(video_mono_types::MONO_WHITE);
 	}
 
 	for (auto i = 0x50; i <= 0x57 ; i++) {
@@ -707,6 +705,7 @@ bool video_init()
 
 void video_shutdown()
 {
+	ui_shutdown();
    // free the pixels used for the hires texture patterns
    for (auto i = 0; i < Num_hires_mono_patterns; i++) {
       delete Hires_mono_pixels[i];
@@ -716,7 +715,6 @@ void video_shutdown()
    }
 	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
-	SDL_Quit();
 }
 
 void video_render_frame()
@@ -789,17 +787,4 @@ void video_set_mono_type(video_mono_types type)
    Mono_color = Mono_colors[static_cast<uint8_t>(type)];
 }
 
-// called when window changes size - adjust scaling parameters
-// so that we still render properly
-void video_resize(bool scale_up)
-{
-	//if (scale_up == true) {
-	//	Video_scale_factor += 0.5f;
-	//} else {
-	//	Video_scale_factor -= 0.5f;
-	//}
-
-	//// create window and textures
-	//video_create();
-}
 

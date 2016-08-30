@@ -87,9 +87,23 @@ const uint8_t disk_image::m_read_translate_table[128] =
 	0x00,0xe4,0xe8,0xec,0xf0,0xf4,0xf8,0xfc,
 };
 
-const uint8_t disk_image::m_sector_map[16] =
+const uint8_t disk_image::m_sector_map[static_cast<uint8_t>(format_type::NUM_FORMATS)][16] =
 {
-	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04,0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,
+	0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04,0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F,  // DOS format
+	0x00,0x08,0x01,0x09,0x02,0x0A,0x03,0x0B,0x04,0x0C,0x05,0x0D,0x06,0x0E,0x07,0x0F,  // prodos format
+};
+
+// prodos block to physical sector
+const uint8_t disk_image::m_prodos_block_map[][2] =
+{
+	0x0, 0x2,
+	0x4, 0x6,
+	0x8, 0xa,
+	0xc, 0xe,
+	0x1, 0x3,
+	0x5, 0x7,
+	0x9, 0xb,
+	0xd, 0xf,
 };
 
 // destructor for a diskimage.  Make sure the
@@ -114,6 +128,23 @@ void disk_image::initialize_image()
 	if (m_buffer_size == 143360) {
 		m_image_type = image_type::DSK_IMAGE;
 		m_num_tracks = (uint8_t)(m_buffer_size / (m_total_sectors * m_sector_bytes));
+
+		// see if we can determine DOS or prodos format.  Let's assume dos and check
+		// for prodos.  See Beneath Apple ProDOS page 4-6.  Scan volume directory
+		// and see if we can find the volume blocks.  Starts at block 2 of the
+		// disk and contains backwards/forward pointers from there
+		disk_image::format_type format = format_type::DOS_FORMAT;
+		//for (auto i = 2; i < 6; i++) {
+		//	// get the starting physical sector for the block, then get the DOS sector
+		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
+		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos. 
+		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
+		//		format = format_type::DOS_FORMAT;
+		//		break;
+		//	}
+		//}
+
+		m_format = format;
 	}
  }
 
@@ -153,11 +184,12 @@ bool disk_image::load_image(const char *filename)
 		m_read_only = true;
 	}
 
-	// get all the information needed about this disk image
-	initialize_image();
 	m_filename = filename;
 	m_volume_num = 254;
 	m_image_dirty = false;
+
+	// get all the information needed about this disk image
+	initialize_image();
 	return true; 
 }
 
@@ -271,7 +303,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 			uint8_t *nib_data = (uint8_t *)alloca(344);
 
 			// map the sector (0-16) to the logical sector using the sector map.  Done for interleaving
-			uint8_t mapped_sector = m_sector_map[sector];
+			uint8_t mapped_sector = m_sector_map[static_cast<uint8_t>(m_format)][sector];
 			uint8_t *sector_ptr = &track_ptr[mapped_sector * m_sector_bytes];
 
 			memcpy(&nib_data[86], sector_ptr, 256);   // copy the track data into the allocated buffer
@@ -351,7 +383,7 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 
 		uint8_t encoded_sector = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
 		work_ptr += 2;
-		uint8_t mapped_sector = m_sector_map[encoded_sector];
+		uint8_t mapped_sector = m_sector_map[static_cast<uint8_t>(m_format)][encoded_sector];
 		uint8_t *sector_ptr = &track_ptr[mapped_sector * m_sector_bytes];
 
 		work_ptr += 2;  // skip past the checksum

@@ -178,15 +178,6 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_debug_menu();
 		}
 
-		// check for window resize
-		if ((scancode == SDL_SCANCODE_PERIOD) && (mods & KMOD_CTRL)) {
-			video_resize(true);
-			return;
-		} else if ((scancode == SDL_SCANCODE_COMMA) && (mods & KMOD_CTRL)) {
-			video_resize(false);
-			return;
-		}
-
 		// we should only be putting keys into the keyboard buffer that are printable
 		// (i.e. in the apple ][ character set), or control keys.
 		if (scancode < 256) {

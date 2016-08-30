@@ -735,17 +735,4 @@ void video_set_mono_type(video_mono_types type)
    Mono_color = Mono_colors[static_cast<uint8_t>(type)];
 }
 
-// called when window changes size - adjust scaling parameters
-// so that we still render properly
-void video_resize(bool scale_up)
-{
-	//if (scale_up == true) {
-	//	Video_scale_factor += 0.5f;
-	//} else {
-	//	Video_scale_factor -= 0.5f;
-	//}
-
-	//// create window and textures
-	//video_create();
-}
 

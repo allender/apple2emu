@@ -54,7 +54,6 @@ extern uint8_t Video_mode;
 bool video_init();
 void video_shutdown();
 void video_render_frame();
-void video_resize(bool scale_up = true);
 void video_set_mono_type(video_mono_types type);
 
 

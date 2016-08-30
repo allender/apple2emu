@@ -198,6 +198,7 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
+	uint32_t cycles_per_frame = CYCLES_PER_FRAME;  // we can speed up machine by multiplier here
 	while (!quit) {
 
 		// process debugger (before opcode processing so that we can break on
@@ -210,11 +211,11 @@ int main(int argc, char* argv[])
 			Total_cycles_this_frame += cycles;
 			Total_cycles += cycles;
 
-			if (Total_cycles_this_frame > CYCLES_PER_FRAME) {
+			if (Total_cycles_this_frame > cycles_per_frame) {
 				ui_update_cycle_count();
 				// this is essentially number of cycles for one redraw cycle
 				// for TV/monitor.  Around 17030 cycles I believe
-				Total_cycles_this_frame -= CYCLES_PER_FRAME;
+				Total_cycles_this_frame -= cycles_per_frame;
 				SDL_SemWait(cpu_sem);
 				break;
 			}
@@ -252,7 +253,7 @@ int main(int argc, char* argv[])
 	disk_shutdown();
 	keyboard_shutdown();
 	joystick_shutdown();
-   debugger_shutdown();
+	debugger_shutdown();
 	memory_shutdown();
 
 	SDL_Quit();

@@ -64,8 +64,8 @@ static uint8_t *Hires_mono_pixels[Num_hires_mono_patterns];
 // with left most bit set to white for when this is adjacent
 // to another pixel and a set with the right bit as white
 // when it is adjacent to another pixel
-static GLuint Hires_color_textures[Num_hires_color_patterns];
-static uint8_t *Hires_color_pixels[Num_hires_color_patterns];
+static GLuint Hires_color_textures[Num_hires_color_patterns * 4];
+static uint8_t *Hires_color_pixels[Num_hires_color_patterns * 4];
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
@@ -197,139 +197,92 @@ static bool video_create_hires_textures()
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-   // create the color patterns.  Create the standard pattern, then
-   // copy that pattern to the other two sets and just set the left or
-   // right most pixel to white.  Deal with first half (high bit off)
-   // then second half
-	glGenTextures(Num_hires_color_patterns, Hires_color_textures);
-   GLubyte *odd_color = Hires_green_color;
-   GLubyte *even_color = Hires_violet_color;
-   for (auto y = 0; y < Num_hires_color_patterns; y++) {
-      if (y == 128) {
-         odd_color = Hires_red_color;
-         even_color = Hires_blue_color;
+   // create the color patterns.  There are essentially four patterns
+   // that we have to worry about.  The color of hires pixels
+   // depends on it's neighbors.  Neighbors include pixels from
+   // the bytes that are next to the current byte (i.e. byte 0
+   // for the right edge of a neighboring pixel an byte 6 for
+   // the left edge of a neighboring pixel).  Create 4 sets
+   // of 256 textures that take into account the 4 different
+   // possible patterns for the neighboting pixels
+   // 0 - 255:     left neighbor off  right neighbor off
+   // 256 - 511:   left neighbor on   right neighbor off
+   // 512 - 767:   left neighbor off  right neighbor on
+   // 768 - 1023:  left_neighbor on   right neighbor on
+   glGenTextures(Num_hires_color_patterns * 4, Hires_color_textures);
+   uint32_t texture_index = 0;
+   for (auto i = 0; i < 4; i++ ) {
+      GLubyte *odd_color = Hires_green_color;
+      GLubyte *even_color = Hires_violet_color;
+
+      // previous bit will come from neighbor to the right
+      // of the current byte.  Next bit will be the bit to the
+      // right of the current bit, and will eventually
+      // extend to the left of the current byte to the neighbor
+      // to the left
+      uint8_t left_neighbor = (i & 1);
+      uint8_t right_neighbor = (i >> 1) & 1;
+      uint8_t prev_bit = left_neighbor;
+      uint8_t next_bit;
+
+      for (auto y = 0; y < Num_hires_color_patterns; y++) {
+         Hires_color_pixels[texture_index] = new uint8_t[3 * Hires_texture_width];
+         memset(Hires_color_pixels[texture_index], 0, 3 * Hires_texture_width);
+         uint8_t *src = Hires_color_pixels[texture_index];
+
+         // with the high bit of the byte set, we change
+         // colors
+         if (y == 128) {
+            odd_color = Hires_red_color;
+            even_color = Hires_blue_color;
+         }
+
+         // loop through 7 pixels 
+		   for (auto x = 0; x < Hires_texture_width - 1; x++) {
+            uint8_t cur_bit = (y >> x) & 1;
+            if (x < Hires_texture_width - 2)  {
+               next_bit = (y >> (x-1)) & 1;
+            } else {
+               next_bit = right_neighbor;
+            }
+
+            // if current bit is on and either the previous
+            // or next bit is on, then this is a white pixel
+            if (cur_bit) {
+               if (prev_bit || next_bit) {
+                  *src++ = 0xff;
+                  *src++ = 0xff;
+                  *src++ = 0xff;
+               } else {
+                  *src++ = x & 1 ? odd_color[0] : even_color[0];
+                  *src++ = x & 1 ? odd_color[1] : even_color[1];
+                  *src++ = x & 1 ? odd_color[2] : even_color[2];
+               }
+            } else {
+               if (prev_bit && next_bit) {
+                  *src++ = x & 1 ? odd_color[0] : even_color[0];
+                  *src++ = x & 1 ? odd_color[1] : even_color[1];
+                  *src++ = x & 1 ? odd_color[2] : even_color[2];
+               } else {
+                  src += 3;
+               }
+            }
+            prev_bit = cur_bit;
+         }
+
+         // create the texture
+         glBindTexture(GL_TEXTURE_2D, Hires_color_textures[texture_index]);
+         glPixelStorei(GL_PACK_ALIGNMENT, 1);
+         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_color_pixels[texture_index]);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+         glBindTexture(GL_TEXTURE_2D, 0);
+
+         texture_index++;
       }
-
-		Hires_color_pixels[y] = new uint8_t[3 * Hires_texture_width];
-		memset(Hires_color_pixels[y], 0, 3 * Hires_texture_width);
-		uint8_t *src = Hires_color_pixels[y];
-		for (auto x = 0; x < Hires_texture_width - 1; x += 2) {
-			uint8_t cur_bit = (y >> x) & 1;
-			uint8_t next_bit = (y >> (x + 1)) & 1;
-			if (cur_bit && next_bit) {
-				*src++ = 0xff;
-				*src++ = 0xff;
-				*src++ = 0xff;
-				*src++ = 0xff;
-				*src++ = 0xff;
-				*src++ = 0xff;
-			} else if (cur_bit && !next_bit) {
-				*src++ = odd_color[0];
-				*src++ = odd_color[1];
-				*src++ = odd_color[2];
-				*src++ = odd_color[0];
-				*src++ = odd_color[1];
-				*src++ = odd_color[2];
-			} else if (!cur_bit && next_bit) {
-				*src++ = even_color[0];
-				*src++ = even_color[1];
-				*src++ = even_color[2];
-				*src++ = even_color[0];
-				*src++ = even_color[1];
-				*src++ = even_color[2];
-			} else {
-				src += 6;
-			}
-			
-		}
-		// set all of the pixels in this byte to a color, and then
-		// we'll make pixels white or black where appropriate
-		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
-		//	if (y & 1) {
-		//		*src++ = odd_color[0];
-		//		*src++ = odd_color[1];
-		//		*src++ = odd_color[2];
-		//	} else {
-		//		*src++ = even_color[0];
-		//		*src++ = even_color[1];
-		//		*src++ = even_color[2];
-		//	}
-		//}
-		//// now reset pixels to white or black that are next to each other
-		//src = Hires_color_pixels[y];
-  //    uint8_t prev_bit = 0;
-		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
-  //       uint8_t cur_bit = (y>>x) & 1;
-		//	if (cur_bit && prev_bit) {
-		//		*src++ = 0xff;
-		//		*src++ = 0xff;
-		//		*src++ = 0xff;
-		//	} else if (!cur_bit && !prev_bit) {
-		//		*src++ = 0x0;
-		//		*src++ = 0x0;
-		//		*src++ = 0x0;
-		//	} else {
-		//		src += 3;
-		//	}
-
-		//	prev_bit = cur_bit;
-
-		//}
-
-		//for (auto x = 0; x < Hires_texture_width - 1; x++) {
-  //       uint8_t cur_bit = (y>>x) & 1;
-  //       // get the next bit in byte to determine if we have two colors
-  //       // next to each other
-  //       if (x < 6) {
-  //          next_bit = (y>>(x+1)) & 1;
-  //       } else {
-  //          next_bit = 0;
-  //       }
-  //       if ((prev_bit && cur_bit) || (cur_bit && next_bit)) {
-		//		*src++ = 0xff;
-		//		*src++ = 0xff;
-		//		*src++ = 0xff;
-  //       } else if (cur_bit) {
-  //          if (x & 1) {
-  //             *src++ = odd_color[0];
-  //             *src++ = odd_color[1];
-  //             *src++ = odd_color[2];
-  //          } else {
-  //             *src++ = even_color[0];
-  //             *src++ = even_color[1];
-  //             *src++ = even_color[2];
-  //          }
-		//	} else {
-		//		// current bit is black.  If prev bit black or next bit black, then
-		//		// this bit is black.  Otherwise it's the color
-		//		if (!prev_bit || !next_bit) {
-		//			src += 3;
-		//		} else {
-		//			if (x & 1) {
-		//				*src++ = even_color[0];
-		//				*src++ = even_color[1];
-		//				*src++ = even_color[2];
-		//			} else {
-		//				*src++ = odd_color[0];
-		//				*src++ = odd_color[1];
-		//				*src++ = odd_color[2];
-		//			}
-		//		}
-		//	}
-  //       prev_bit = cur_bit;
-		//}
-
-		// create the texture
-		glBindTexture(GL_TEXTURE_2D, Hires_color_textures[y]);
-		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_color_pixels[y]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glBindTexture(GL_TEXTURE_2D, 0);
    }
-
 
 	return true;
 }
@@ -486,8 +439,11 @@ static void video_render_hires_mode()
 			y_pixel = y * 8;
 			for (int b = 0; b < 8; b++) {
 				x_pixel = x * 7;
-				uint8_t byte = memory_read(offset + (1024 * b) + x);
-				if (false && byte) {
+            uint32_t memory_loc = offset + (1024 * b) + x;
+				uint8_t byte = memory_read(memory_loc);
+            uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc + 1) : 0) >> 6) & 1;
+            uint8_t right_neighbor = (x < 39 ? memory_read(memory_loc - 1) : 0) & 1;
+				if (true && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);
@@ -499,7 +455,11 @@ static void video_render_hires_mode()
 						glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 1);
 					glEnd();
 				} else if (byte) {
-					glBindTexture(GL_TEXTURE_2D, Hires_color_textures[byte]);
+               // need to determine neighboring colors (i.e. left and
+               // right edge) in order to determine which pixel
+               // pattern to use
+               uint32_t offset = Num_hires_color_patterns * (left_neighbor << 1 | right_neighbor);
+					glBindTexture(GL_TEXTURE_2D, Hires_color_textures[byte + offset]);
 					glColor3f(1.0f, 1.0f, 1.0f);
 					glBegin(GL_QUADS);
 						glTexCoord2f(0.0f, 0.0f); glVertex2i(x_pixel, y_pixel);
@@ -751,6 +711,9 @@ void video_shutdown()
    for (auto i = 0; i < Num_hires_mono_patterns; i++) {
       delete Hires_mono_pixels[i];
    }
+   for (auto i = 0; i < Num_hires_color_patterns * 4; i++ ) {
+      delete Hires_color_pixels[i];
+   }
 	SDL_GL_DeleteContext(Video_context);
 	SDL_DestroyWindow(Video_window);
 	SDL_Quit();
@@ -782,6 +745,20 @@ void video_render_frame()
 	} else if (Video_mode & VIDEO_MODE_HIRES) {
 		video_render_hires_mode();
 	}
+
+#if 0
+   for (auto j = 0; j < 4; j++ ) {
+      for (auto i = 0; i < 128; i++) {
+         glBindTexture(GL_TEXTURE_2D, Hires_color_textures[(j * 256) + i]);
+         glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f); glVertex2i(0 + (j * 16), i);
+            glTexCoord2f(1.0f, 0.0f); glVertex2i(8 + (j * 16), i);
+            glTexCoord2f(1.0f, 1.0f); glVertex2i(8 + (j * 16), i+1);
+            glTexCoord2f(0.0f, 1.0f); glVertex2i(0 + (j * 16), i+1);
+         glEnd();
+      }
+   }
+#endif
 
 	// back to main framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

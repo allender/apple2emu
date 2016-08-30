@@ -38,3 +38,4 @@ SOFTWARE.
 
 bool path_utils_change_ext(std::string &new_filename, const std::string &old_filename, const std::string &ext);
 void path_utils_get_filename(std::string &full_path, std::string &filename);
+void path_utils_get_filename(const char *full_path, std::string &filename);

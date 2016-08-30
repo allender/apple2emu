@@ -124,6 +124,8 @@ uint32_t keyboard_get_key()
 		key = '\r';
 	} else if (key == SDL_SCANCODE_BACKSPACE) {
 		key = '\b';
+	} else if (key == SDL_SCANCODE_ESCAPE) {
+		key = 0x9b;
 	} else {
 		key = key_ascii_table[key];
 		if (key >= 'a' && key <= 'z') {

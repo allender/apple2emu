@@ -37,16 +37,17 @@ SOFTWARE.
 bool Show_main_menu = false;
 bool Show_debug_menu = false;
 
-static const int Line_length = 256;
+static const int32_t Line_length = 256;
 static const char *Settings_filename = "settings.txt";
 
 // settings to be stored
 static bool Auto_start = false;
-static int Video_color_type = static_cast<int>(video_mono_types::MONO_WHITE);
+static int32_t Video_color_type = static_cast<int>(video_mono_types::MONO_WHITE);
+static int32_t Emulator_speed = 1;
 
-static const int Cycles_array_size = 64;
-static int Cycles_per_frame[Cycles_array_size];
-static int Current_cycles_array_entry = 0;
+static const uint32_t Cycles_array_size = 64;
+static uint32_t Cycles_per_frame[Cycles_array_size];
+static uint32_t Current_cycles_array_entry = 0;
 
 // inserts disk image into the given disk drive
 static void ui_insert_disk(const char *disk_filename, int slot)
@@ -71,7 +72,7 @@ static void ui_load_settings()
 		char *ptr = fgets(line, Line_length, fp);
 		if (ptr != nullptr) {
 			char setting[Line_length], value[Line_length];
-			int num_scanned = fscanf(fp, "%s = %s\n", setting, value);
+			int num_scanned = sscanf(line, "%s = %s\n", setting, value);
 			if (num_scanned == 2) {
 				if (!stricmp(setting, "auto_start")) {
 					int i_val = strtol(value, nullptr, 10);
@@ -83,6 +84,9 @@ static void ui_load_settings()
 				} else if (!stricmp(setting, "video")) {
 					Video_color_type = (uint8_t)strtol(value, nullptr, 10);
 					video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
+				} else if (!stricmp(setting, "speed")) {
+					Emulator_speed = (int)strtol(value, nullptr, 10);
+					set_emulator_speed(Emulator_speed);
 				}
 			}
 			
@@ -103,6 +107,7 @@ static void ui_save_settings()
 	fprintf(fp, "disk1 = %s\n", disk_get_mounted_filename(1));
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
+	fprintf(fp, "speed = %d\n", Emulator_speed);
 
 	fclose(fp);
 }
@@ -169,6 +174,13 @@ static void ui_show_video_output_menu()
 	video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
 }
 
+static void ui_show_speed_menu()
+{
+	if (ImGui::SliderInt("Emulator Speed", &Emulator_speed, 1, 10) == true) {
+		set_emulator_speed(Emulator_speed);
+	}
+}
+
 static void ui_show_main_menu()
 {
 	ImGui::Begin("Options");
@@ -177,6 +189,8 @@ static void ui_show_main_menu()
 	ui_show_video_output_menu();
 	ImGui::Separator();
 	ui_show_disk_menu();
+	ImGui::Separator();
+	ui_show_speed_menu();
 	ImGui::End();
 }
 

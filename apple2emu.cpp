@@ -56,6 +56,7 @@ INITIALIZE_EASYLOGGINGPP
 
 static const double Render_time = 33;   // roughly 30 fps
 static SDL_sem *cpu_sem;
+static uint32_t Speed_multiplier = 1;
 
 const char *Disk_image_filename = nullptr;
 
@@ -129,6 +130,11 @@ void reset_machine()
 	video_init();
 }
 
+void set_emulator_speed(uint32_t speed)
+{
+	Speed_multiplier = speed;
+}
+
 int main(int argc, char* argv[])
 {
 	// configure logging before anything else
@@ -199,8 +205,8 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-	uint32_t cycles_per_frame = CYCLES_PER_FRAME;  // we can speed up machine by multiplier here
 	while (!quit) {
+		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 
 		// process debugger (before opcode processing so that we can break on
 		// specific addresses properly

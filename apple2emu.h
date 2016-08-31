@@ -48,3 +48,4 @@ extern uint32_t Total_cycles;
 extern uint32_t Total_cycles_this_frame;
 
 void reset_machine();
+void set_emulator_speed(uint32_t speed);

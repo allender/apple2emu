@@ -49,7 +49,7 @@ static SDL_Rect Video_window_size;
 // information about internally built textures
 const int Num_lores_colors = 16;
 const int Num_hires_mono_patterns = 128;
-const int Num_hires_color_patterns = (256 * 3);
+const int Num_hires_color_patterns = 256;
 const int Hires_texture_width = 8;
 
 // textures and pixel storage for mono mode.  There
@@ -97,22 +97,22 @@ static GLfloat *Mono_color;
 // for values.  Good enough for a start
 static GLubyte Lores_colors[Num_lores_colors][3] = 
 {
-   { 0x00, 0x00, 0x00 },                 // black
-   { 0xe3, 0x1e, 0x60 },                 // red
-   { 0x96, 0x4e, 0xbd },                 // dark blue
-   { 0xff, 0x44, 0xfd },                 // purple
-   { 0x00, 0xa3, 0x96 },                 // dark green
+	{ 0x00, 0x00, 0x00 },                 // black
+	{ 0xe3, 0x1e, 0x60 },                 // red
+	{ 0x96, 0x4e, 0xbd },                 // dark blue
+	{ 0xff, 0x44, 0xfd },                 // purple
+	{ 0x00, 0xa3, 0x96 },                 // dark green
 	{ 0x9c, 0x9c, 0x9c },                 // gray
-   { 0x14, 0xcf, 0xfd },                 // medium blue
-   { 0xd0, 0xce, 0xff },                 // light blue
-   { 0x60, 0x72, 0x03 },                 // brown
-   { 0xff, 0x6a, 0x32 },                 // orange
-   { 0x9c, 0x9c, 0x9c },                 // gray
-   { 0xff, 0xa0, 0xd0 },                 // pink
-   { 0x14, 0xf5, 0x3c },                 // light green
-   { 0xd0, 0xdd, 0x8d },                 // yellow
+	{ 0x14, 0xcf, 0xfd },                 // medium blue
+	{ 0xd0, 0xce, 0xff },                 // light blue
+	{ 0x60, 0x72, 0x03 },                 // brown
+	{ 0xff, 0x6a, 0x32 },                 // orange
+	{ 0x9c, 0x9c, 0x9c },                 // gray
+	{ 0xff, 0xa0, 0xd0 },                 // pink
+	{ 0x14, 0xf5, 0x3c },                 // light green
+	{ 0xd0, 0xdd, 0x8d },                 // yellow
 	{ 0x72, 0xff, 0xd0 },                 // aqua
-   { 0xff, 0xff, 0xff },                 // white
+	{ 0xff, 0xff, 0xff },                 // white
 };
 
 static GLubyte Hires_blue_color[3] = { 20, 207, 253 };
@@ -222,10 +222,11 @@ static bool video_create_hires_textures()
       // to the left
       uint8_t left_neighbor = (i & 1);
       uint8_t right_neighbor = (i >> 1) & 1;
-      uint8_t prev_bit = left_neighbor;
+	  
+      for (auto y = 0; y < Num_hires_color_patterns; y++) {
+		uint8_t prev_bit = left_neighbor;
       uint8_t next_bit;
 
-      for (auto y = 0; y < Num_hires_color_patterns; y++) {
          Hires_color_pixels[texture_index] = new uint8_t[3 * Hires_texture_width];
          memset(Hires_color_pixels[texture_index], 0, 3 * Hires_texture_width);
          uint8_t *src = Hires_color_pixels[texture_index];
@@ -237,38 +238,46 @@ static bool video_create_hires_textures()
             even_color = Hires_blue_color;
          }
 
-         // loop through 7 pixels 
-		   for (auto x = 0; x < Hires_texture_width - 1; x++) {
-            uint8_t cur_bit = (y >> x) & 1;
-            if (x < Hires_texture_width - 2)  {
-               next_bit = (y >> (x-1)) & 1;
-            } else {
-               next_bit = right_neighbor;
-            }
+		// loop through 7 pixels 
+		 int color[7];
+		for (auto x = 0; x < Hires_texture_width - 1; x++) {
+			uint8_t cur_bit = (y >> x) & 1;
+			if (x < Hires_texture_width - 2)  {
+			   next_bit = (y >> (x + 1)) & 1;
+			} else {
+			   next_bit = right_neighbor;
+			}
 
-            // if current bit is on and either the previous
-            // or next bit is on, then this is a white pixel
-            if (cur_bit) {
-               if (prev_bit || next_bit) {
-                  *src++ = 0xff;
-                  *src++ = 0xff;
-                  *src++ = 0xff;
-               } else {
-                  *src++ = x & 1 ? odd_color[0] : even_color[0];
-                  *src++ = x & 1 ? odd_color[1] : even_color[1];
-                  *src++ = x & 1 ? odd_color[2] : even_color[2];
-               }
-            } else {
-               if (prev_bit && next_bit) {
-                  *src++ = x & 1 ? odd_color[0] : even_color[0];
-                  *src++ = x & 1 ? odd_color[1] : even_color[1];
-                  *src++ = x & 1 ? odd_color[2] : even_color[2];
-               } else {
-                  src += 3;
-               }
-            }
-            prev_bit = cur_bit;
-         }
+			// if current bit is on and either the previous
+			// or next bit is on, then this is a white pixel
+			if (cur_bit) {
+			   if (prev_bit || next_bit) {
+				  *src++ = 0xff;
+				  *src++ = 0xff;
+				  *src++ = 0xff;
+				  color[x] = 1;
+			   } else {
+				  *src++ = x & 1 ? odd_color[0] : even_color[0];
+				  *src++ = x & 1 ? odd_color[1] : even_color[1];
+				  *src++ = x & 1 ? odd_color[2] : even_color[2];
+				  color[x] = 2;
+			   }
+			} else {
+			   if (prev_bit && next_bit) {
+				  *src++ = x & 1 ? even_color[0] : odd_color[0];
+				  *src++ = x & 1 ? even_color[1] : odd_color[1];
+				  *src++ = x & 1 ? even_color[2] : odd_color[2];
+				  color[x] = 2;
+			   } else {
+				  src += 3;
+				  color[x] = 0;
+			   }
+			}
+			prev_bit = cur_bit;
+		}
+
+		  SDL_Log("%d %d%d%d%d%d%d%d %d %d%d%d%d%d%d%d", left_neighbor, (y>>6) & 1, (y>>5) & 1, (y>>4) & 1,
+			 (y>>3) & 1, (y>>2)&1, (y>>1)&1, y&1, right_neighbor, color[6], color[5], color[4], color[3], color[2], color[1], color[0]);
 
          // create the texture
          glBindTexture(GL_TEXTURE_2D, Hires_color_textures[texture_index]);
@@ -441,9 +450,9 @@ static void video_render_hires_mode()
 				x_pixel = x * 7;
             uint32_t memory_loc = offset + (1024 * b) + x;
 				uint8_t byte = memory_read(memory_loc);
-            uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc + 1) : 0) >> 6) & 1;
-            uint8_t right_neighbor = (x < 39 ? memory_read(memory_loc - 1) : 0) & 1;
-				if (true && byte) {
+            uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc - 1) : 0) >> 6) & 1;
+            uint8_t right_neighbor = (x < 39 ? memory_read(memory_loc + 1) : 0) & 1;
+				if (false && byte) {
 					// color mode
 					byte &= 0x7f;
 					glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[byte]);

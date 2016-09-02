@@ -42,7 +42,7 @@ static const char *Settings_filename = "settings.txt";
 
 // settings to be stored
 static bool Auto_start = false;
-static int32_t Video_color_type = static_cast<int>(video_mono_types::MONO_WHITE);
+static int32_t Video_color_type = static_cast<int>(video_display_types::MONO_WHITE);
 static int32_t Emulator_speed = 1;
 
 static const uint32_t Cycles_array_size = 64;
@@ -83,7 +83,7 @@ static void ui_load_settings()
 					ui_insert_disk(value, 2);
 				} else if (!stricmp(setting, "video")) {
 					Video_color_type = (uint8_t)strtol(value, nullptr, 10);
-					video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
+					video_set_mono_type(static_cast<video_display_types>(Video_color_type));
 				} else if (!stricmp(setting, "speed")) {
 					Emulator_speed = (int)strtol(value, nullptr, 10);
 					set_emulator_speed(Emulator_speed);
@@ -165,13 +165,14 @@ static void ui_show_disk_menu()
 static void ui_show_video_output_menu()
 {
 	ImGui::Text("Video Output Options:");
-	ImGui::RadioButton("White", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_WHITE));
+	ImGui::RadioButton("White", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_WHITE));
 	ImGui::SameLine();
-	ImGui::RadioButton("Amber", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_AMBER));
+	ImGui::RadioButton("Amber", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_AMBER));
 	ImGui::SameLine();
-	ImGui::RadioButton("Green", &Video_color_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
-	//ImGui::RadioButton("Color", &mono_type, static_cast<uint8_t>(video_mono_types::MONO_GREEN));
-	video_set_mono_type(static_cast<video_mono_types>(Video_color_type));
+	ImGui::RadioButton("Green", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_GREEN));
+	ImGui::SameLine();
+	ImGui::RadioButton("Color", &Video_color_type, static_cast<uint8_t>(video_display_types::COLOR));
+	video_set_mono_type(static_cast<video_display_types>(Video_color_type));
 }
 
 static void ui_show_speed_menu()

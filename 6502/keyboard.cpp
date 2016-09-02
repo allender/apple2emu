@@ -178,6 +178,11 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_debug_menu();
 		}
 
+		if (scancode == SDL_SCANCODE_F9) {
+			extern bool Debug_show_bitmap;
+			Debug_show_bitmap = !Debug_show_bitmap;
+		}
+
 		// we should only be putting keys into the keyboard buffer that are printable
 		// (i.e. in the apple ][ character set), or control keys.
 		if (scancode < 256) {

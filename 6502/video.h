@@ -39,11 +39,12 @@ SOFTWARE.
 #define VIDEO_MODE_HIRES   (1 << 3)
 
 // display types (mono)
-enum class video_mono_types : uint8_t {
+enum class video_display_types : uint8_t {
    MONO_WHITE = 0,
    MONO_AMBER,
    MONO_GREEN,
-   NUM_MONO_TYPES,
+	NUM_MONO_TYPES,
+	COLOR,
 };
 
 
@@ -54,6 +55,6 @@ extern uint8_t Video_mode;
 bool video_init();
 void video_shutdown();
 void video_render_frame();
-void video_set_mono_type(video_mono_types type);
+void video_set_mono_type(video_display_types type);
 
 

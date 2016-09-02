@@ -118,6 +118,9 @@ static GLubyte Lores_colors[Num_lores_colors][3] =
 	{ 0xff, 0xff, 0xff },                 // white
 };
 
+// commented out colors from http://mrob.com/pub/xapple2/colors.html
+//
+// current colors from AppleWin.  Using their colors as they look better I think
 static GLubyte Hires_colors[4][3] = {
 	//{ 255, 68, 253 },     // violet
 	//{ 20, 245, 60 },      // green
@@ -128,10 +131,6 @@ static GLubyte Hires_colors[4][3] = {
 	{ 24, 115, 228 },     // blue
 	{ 247, 64, 30 },      // orange
 };
-//SETFRAMECOLOR(HGR_BLUE, 24, 115, 229); // HCOLOR=6 BLUE    3000: 81 00 D5 AA // 0x00,0x80,0xFF -> Linards Tweaked 0x0D,0xA1,0xFF
-//SETFRAMECOLOR(HGR_ORANGE, 247, 64, 30); // HCOLOR=5 ORANGE  2C00: 82 00 AA D5 // 0xF0,0x50,0x00 -> Linards Tweaked 0xF2,0x5E,0x00 
-//SETFRAMECOLOR(HGR_GREEN, 27, 211, 79); // HCOLOR=1 GREEN   2400: 02 00 2A 55 // 0x20,0xC0,0x00 -> Linards Tweaked 0x38,0xCB,0x00
-//SETFRAMECOLOR(HGR_VIOLET, 227, 20, 255); // HCOLOR=2 VIOLET  2800: 01 00 55 2A // 0xA0,0x00,0xFF -> Linards Tweaked 0xC7,0x34,0xFF
 
 static char character_conv[] = {
 

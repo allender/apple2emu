@@ -29,9 +29,6 @@ SOFTWARE.
 
 #include "SDL.h"
 
-#define MAX_TEXT_LINES   24
-#define MAX_TEXT_COLUMNS 40
-
 // video modes
 #define VIDEO_MODE_TEXT    (1 << 0)
 #define VIDEO_MODE_MIXED   (1 << 1)

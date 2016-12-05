@@ -37,9 +37,9 @@ SOFTWARE.
 
 // display types (mono)
 enum class video_display_types : uint8_t {
-   MONO_WHITE = 0,
-   MONO_AMBER,
-   MONO_GREEN,
+	MONO_WHITE = 0,
+	MONO_AMBER,
+	MONO_GREEN,
 	NUM_MONO_TYPES,
 	COLOR,
 };

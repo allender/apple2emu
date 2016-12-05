@@ -86,7 +86,7 @@ void disk_drive::readwrite()
 #if defined(LOG_DISK)
 		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)Current_drive->m_current_track << "  read";
 #endif
-	 	m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
+		m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
 		m_track_dirty = false;
 		m_current_byte = 0;
 	}
@@ -96,9 +96,10 @@ void disk_drive::readwrite()
 		m_data_register = m_track_data[m_current_byte];
 #if defined(LOG_DISK)
 		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
-std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
+			std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
 #endif
-	} else {
+	}
+	else {
 		// when writing, here we will just apply the byte to the track
 		// data.  It will get written when we change tracks or eject
 		// the disk
@@ -160,7 +161,8 @@ bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
 	if (slot == 1) {
 		drive_1.insert_disk(disk_image_filename);
-	} else {
+	}
+	else {
 		drive_2.insert_disk(disk_image_filename);
 	}
 	return true;
@@ -186,7 +188,8 @@ uint8_t read_handler(uint16_t addr)
 
 			if (addr & 1) {
 				Current_drive->m_phase_status |= (1 << phase);
-			} else {
+			}
+			else {
 				Current_drive->m_phase_status &= ~(1 << phase);
 			}
 
@@ -236,7 +239,8 @@ uint8_t read_handler(uint16_t addr)
 		// pick a specific drive
 		if (((addr & 0xf) - 0xa) == 0) {
 			Current_drive = &drive_1;
-		} else {
+		}
+		else {
 			Current_drive = &drive_2;
 		}
 		//LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
@@ -245,7 +249,7 @@ uint8_t read_handler(uint16_t addr)
 	case 0xc:
 		Current_drive->readwrite();
 		break;
-		
+
 	case 0xd:
 		// check write-protect status. If the drive is write protected,
 		// we would or a high bit into the data register as this bit
@@ -253,7 +257,8 @@ uint8_t read_handler(uint16_t addr)
 		// the high bit forces the QA bit low which enables writing
 		if (Current_drive->m_disk_image->read_only() == true) {
 			Current_drive->m_data_register |= 0x80;
-		} else {
+		}
+		else {
 			Current_drive->m_data_register &= 0x7f;
 		}
 		break;
@@ -269,7 +274,8 @@ uint8_t read_handler(uint16_t addr)
 
 	if (!(addr & 0x1)) {
 		return Current_drive->m_data_register;
-	} else {
+	}
+	else {
 		return 0;
 	}
 
@@ -305,7 +311,8 @@ const char *disk_get_mounted_filename(const uint32_t slot)
 {
 	if (slot == 1) {
 		return drive_1.get_mounted_filename();
-	} else if (slot == 2) {
+	}
+	else if (slot == 2) {
 		return drive_2.get_mounted_filename();
 	}
 	return nullptr;

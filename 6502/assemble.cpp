@@ -90,7 +90,7 @@ static bool is_comment(char *line)
 		p++;
 	}
 	// empty line or we have found comment character
-	if ( (*p == '\0') || (*p == ';') ) {
+	if ((*p == '\0') || (*p == ';')) {
 		return true;
 	}
 	return false;
@@ -115,8 +115,8 @@ static void get_line_components(char *line, const char *&label_str, const char *
 		while (isalnum(*p) || (*p == ':')) {
 			p++;
 		}
-		if (*(p-1) == ':') {
-			*(p-1) = '\0';
+		if (*(p - 1) == ':') {
+			*(p - 1) = '\0';
 		}
 		*p++ = '\0';
 	}
@@ -129,7 +129,7 @@ static void get_line_components(char *line, const char *&label_str, const char *
 		p++;
 	}
 	opcode_str = p;
-	for ( auto i = 0; i < 3; i++ ) {
+	for (auto i = 0; i < 3; i++) {
 		toupper(*p++);
 	}
 	*p++ = '\0';
@@ -168,7 +168,8 @@ static record_type parse_line(char *line)
 	if (label_str != nullptr) {
 		if (validate_label(label_str)) {
 			add_label_to_symtable(label_str);
-		} else {
+		}
+		else {
 			// invalid label
 		}
 		if (opcode_str == nullptr) {
@@ -185,7 +186,8 @@ static record_type parse_line(char *line)
 	if (addressing_str[0] == '#') {
 		// #$c0  -- Immediate
 		mode = cpu_6502::addr_mode::IMMEDIATE_MODE;
-	} else if (addressing_str[0] == '(') {
+	}
+	else if (addressing_str[0] == '(') {
 		// indirect modes
 		// ($c000) -- indirect
 		// ($c0,X) -- Indexed indirect
@@ -204,7 +206,8 @@ static record_type parse_line(char *line)
 		if (*p == '\0') {
 			mode = cpu_6502::addr_mode::INDIRECT_MODE;
 		}
-	} else if (addressing_str[0] == '$') {
+	}
+	else if (addressing_str[0] == '$') {
 		// $c000 -- Absolute
 		// $c0   -- Zero Page
 		// $c0   -- Relative (which is the same a zero page - need to be careful when picking the mode)
@@ -221,27 +224,32 @@ static record_type parse_line(char *line)
 		if (*p == '\0') {
 			if (size == 2) {
 				mode = cpu_6502::addr_mode::ZERO_PAGE_MODE;
-			} else if (size == 4) {
+			}
+			else if (size == 4) {
 				mode = cpu_6502::addr_mode::ABSOLUTE_MODE;
 			}
-		} else {
+		}
+		else {
 			// we hit a comma.  SKip past that and eat white space
 			p++;
 			while (isspace(*p) && (*p != '\0')) {
 				p++;
 			}
-			if ((*p == 'x') || (*p == 'X') ) {
+			if ((*p == 'x') || (*p == 'X')) {
 				if (size == 2) {
-				} else if (size == 4) {
+				}
+				else if (size == 4) {
 					mode = cpu_6502::addr_mode::X_INDEXED_MODE;
 				}
-			} else if ((*p == 'y') || (*p == 'Y') ) { 
+			}
+			else if ((*p == 'y') || (*p == 'Y')) {
 				if (size == 4) {
 					mode = cpu_6502::addr_mode::Y_INDEXED_MODE;
 				}
 			}
 		}
-	} else {
+	}
+	else {
 		// this is a label.  Validate the label.  don't add to symbol table as
 		// that only need to be done when label is at specific address, not
 		// referencing an address
@@ -252,11 +260,11 @@ static record_type parse_line(char *line)
 
 	// find the addressing mode and opcode in the list and get the number of
 	// bytes needed
-	for (auto i = 0; i < 256; i++ ) {
+	for (auto i = 0; i < 256; i++) {
 		if (cpu_6502::m_opcodes[i].m_mnemonic == opcode) {
 			if ((mode == cpu_6502::addr_mode::NO_MODE) ||
-				 (cpu_6502::m_opcodes[i].m_addr_mode == mode) ||
-				 ((cpu_6502::m_opcodes[i].m_addr_mode == cpu_6502::addr_mode::RELATIVE_MODE) && (mode == cpu_6502::addr_mode::ZERO_PAGE_MODE))) {
+				(cpu_6502::m_opcodes[i].m_addr_mode == mode) ||
+				((cpu_6502::m_opcodes[i].m_addr_mode == cpu_6502::addr_mode::RELATIVE_MODE) && (mode == cpu_6502::addr_mode::ZERO_PAGE_MODE))) {
 				Parsed_opcode = i;
 				break;
 			}
@@ -295,17 +303,19 @@ static uint16_t encode_word(const char *p)
 static uint16_t encode_word_or_label(const char *p)
 {
 	if (*p == '$') {
-		return static_cast<uint16_t>(strtol(p+1, nullptr, 16));
+		return static_cast<uint16_t>(strtol(p + 1, nullptr, 16));
 	}
 
 	if (validate_label(p) == true) {
 		auto entry = Symbol_table.find(p);
 		if (entry != Symbol_table.end()) {
 			return static_cast<uint16_t>(entry->second.m_location);
-		} else {
+		}
+		else {
 			// unable to find label in symbol table
 		}
-	} else {
+	}
+	else {
 		// unable to find label
 	}
 	return 0;
@@ -315,7 +325,7 @@ static uint16_t encode_word_or_label(const char *p)
 static uint8_t encode_relative_address(const char *p, uint16_t pc)
 {
 	if (*p == '$') {
-		return static_cast<uint8_t>(strtol(p+1, nullptr, 16));
+		return static_cast<uint8_t>(strtol(p + 1, nullptr, 16));
 	}
 
 	if (validate_label(p) == true) {
@@ -324,13 +334,16 @@ static uint8_t encode_relative_address(const char *p, uint16_t pc)
 			uint16_t diff = entry->second.m_location - (pc + 2);
 			if ((pc > SCHAR_MAX) || (pc < SCHAR_MIN)) {
 				// out of bounds
-			} else {
+			}
+			else {
 				return static_cast<uint8_t>(diff);
 			}
-		} else {
+		}
+		else {
 			// unable to find label in symbol table
 		}
-	} else {
+	}
+	else {
 		// unable to find label
 	}
 	return 0;
@@ -350,10 +363,10 @@ static uint8_t encode_instruction(uint8_t *buffer, uint8_t opcode, char *source_
 	const char *label_str, *opcode_str, *addressing_str;
 	get_line_components(source_line, label_str, opcode_str, addressing_str);
 
-	switch(addr_mode) {
+	switch (addr_mode) {
 	case cpu_6502::addr_mode::IMMEDIATE_MODE:
 	case cpu_6502::addr_mode::ZERO_PAGE_MODE:
-		buffer[loc++] = encode_byte(addressing_str+1);
+		buffer[loc++] = encode_byte(addressing_str + 1);
 		break;
 
 	case cpu_6502::addr_mode::RELATIVE_MODE:
@@ -378,7 +391,7 @@ static uint8_t encode_instruction(uint8_t *buffer, uint8_t opcode, char *source_
 		break;
 
 	case cpu_6502::addr_mode::INDIRECT_MODE:
-		addr = encode_word(addressing_str+1);
+		addr = encode_word(addressing_str + 1);
 		memcpy(&buffer[loc], &addr, sizeof(addr));
 		loc += 2;
 		break;
@@ -387,7 +400,7 @@ static uint8_t encode_instruction(uint8_t *buffer, uint8_t opcode, char *source_
 		break;
 	case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
 	case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
-		buffer[loc++] = encode_byte(addressing_str+1);
+		buffer[loc++] = encode_byte(addressing_str + 1);
 		break;
 	default:
 		break;
@@ -467,10 +480,10 @@ bool assemble_6502(const std::string &input_filename)
 			pc += buffer_size;
 		}
 	}
-	
+
 	// close files and done
 	fclose(intermediate_fp);
 	fclose(output_fp);
-	
+
 	return true;
 }

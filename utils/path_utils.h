@@ -25,7 +25,7 @@ SOFTWARE.
 
 */
 
-/* 
+/*
  * Header file for path manipulation functions
 */
 

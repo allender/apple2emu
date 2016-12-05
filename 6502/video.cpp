@@ -90,7 +90,7 @@ uint16_t       Video_secondary_text_map[Num_vertical_cells];
 uint16_t       Video_hires_map[Num_vertical_cells];
 uint16_t       Video_hires_secondary_map[Num_vertical_cells];
 
-static GLfloat Mono_colors[static_cast< uint8_t >(video_display_types::NUM_MONO_TYPES)][3] =
+static GLfloat Mono_colors[static_cast<uint8_t>(video_display_types::NUM_MONO_TYPES)][3] =
 {
 	{ 1.0f, 1.0f, 1.0f },
 	{ 1.0f, 0.5f, 0.0f },
@@ -197,7 +197,8 @@ static bool video_create_hires_textures()
 				*src++ = 0xff;
 				*src++ = 0xff;
 				*src++ = 0xff;
-			} else {
+			}
+			else {
 				src += 3;
 			}
 		}
@@ -267,7 +268,8 @@ static bool video_create_hires_textures()
 					uint8_t cur_bit = (pattern >> x) & 1;
 					if (x < Hires_texture_width - 2) {
 						next_bit = (pattern >> (x + 1)) & 1;
-					} else {
+					}
+					else {
 						next_bit = right_neighbor;
 					}
 
@@ -278,18 +280,22 @@ static bool video_create_hires_textures()
 							pixel[0] = 0xff;
 							pixel[1] = 0xff;
 							pixel[2] = 0xff;
-						} else {
+						}
+						else {
 							// check column position of current bit
 							if (x & 1) {
 								memcpy(pixel, odd_color, 3);
-							} else {
+							}
+							else {
 								memcpy(pixel, even_color, 3);
 							}
 						}
-					} else if (prev_bit && next_bit) {
-						if (((x>0)?(x-1):(x+1)) & 1) {
+					}
+					else if (prev_bit && next_bit) {
+						if (((x > 0) ? (x - 1) : (x + 1)) & 1) {
 							memcpy(pixel, odd_color, 3);
-						} else {
+						}
+						else {
 							memcpy(pixel, even_color, 3);
 						}
 					}
@@ -325,13 +331,14 @@ static void video_render_screen(std::function<void(int, int)> render_func, std::
 				render_func(x, y);
 			}
 		}
-	} else {
+	}
+	else {
 		for (auto y = 0; y < Num_vertical_cells_mixed; y++) {
 			for (auto x = 0; x < Num_horizontal_cells; x++) {
 				render_func(x, y);
 			}
 		}
-		
+
 		for (auto y = Num_vertical_cells_mixed; y < Num_vertical_cells; y++) {
 			for (auto x = 0; x < Num_horizontal_cells; x++) {
 				text_func(x, y);
@@ -350,7 +357,8 @@ static void video_render()
 	text_addr_map = primary ? Video_primary_text_map : Video_secondary_text_map;
 	if (!(Video_mode & VIDEO_MODE_HIRES)) {
 		gr_addr_map = primary ? Video_primary_text_map : Video_secondary_text_map;  // m_screen_map[row] + col;
-	} else if (Video_mode & VIDEO_MODE_HIRES) {
+	}
+	else if (Video_mode & VIDEO_MODE_HIRES) {
 		gr_addr_map = primary ? Video_hires_map : Video_hires_secondary_map;
 	}
 
@@ -364,10 +372,12 @@ static void video_render()
 		// get normal or inverse font
 		if (c <= 0x3f) {
 			cur_font = &Video_inverse_font;
-		} else if ((c <= 0x7f) && (Video_flash == true)) {
+		}
+		else if ((c <= 0x7f) && (Video_flash == true)) {
 			// set inverse if flashing is true
 			cur_font = &Video_inverse_font;
-		} else {
+		}
+		else {
 			cur_font = &Video_font;
 		}
 
@@ -453,7 +463,7 @@ static void video_render()
 			if (byte) {
 				float u, v;
 
-				uint32_t column =  ((odd&1) ? 4 : 0) + (left_neighbor * 2 + right_neighbor);
+				uint32_t column = ((odd & 1) ? 4 : 0) + (left_neighbor * 2 + right_neighbor);
 				u = (column * 8.0f) / (float)Hires_color_texture_width;
 				v = byte / (float)Num_hires_color_patterns;
 				glBindTexture(GL_TEXTURE_2D, Hires_color_texture);
@@ -472,13 +482,16 @@ static void video_render()
 	std::function<void(int, int)> func;
 	if (Video_mode & VIDEO_MODE_TEXT) {
 		func = render_text_cell;
-	} else if (!(Video_mode & VIDEO_MODE_HIRES)) {
+	}
+	else if (!(Video_mode & VIDEO_MODE_HIRES)) {
 		func = render_lores_cell;
-	} else if (Video_mode & VIDEO_MODE_HIRES) {
+	}
+	else if (Video_mode & VIDEO_MODE_HIRES) {
 
 		if (Video_display_mode != video_display_types::COLOR) {
 			func = render_mono_hires_cell;
-		} else {
+		}
+		else {
 			func = render_color_hires_cell;
 		}
 	}
@@ -559,8 +572,8 @@ bool video_create()
 	// set the rect for the window itself
 	Video_window_size.x = 0;
 	Video_window_size.y = 0;
-	Video_window_size.w = ( int )(Video_scale_factor * Video_native_size.w);
-	Video_window_size.h = ( int )(Video_scale_factor * Video_native_size.h);
+	Video_window_size.w = (int)(Video_scale_factor * Video_native_size.w);
+	Video_window_size.h = (int)(Video_scale_factor * Video_native_size.h);
 
 	// create SDL window
 	if (Video_window != nullptr) {
@@ -578,7 +591,7 @@ bool video_create()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	sdl_window_flags |= SDL_WINDOW_OPENGL;
 
-	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, ( int )(Video_native_size.w * Video_scale_factor), ( int )(Video_native_size.h * Video_scale_factor), sdl_window_flags);
+	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)(Video_native_size.w * Video_scale_factor), (int)(Video_native_size.h * Video_scale_factor), sdl_window_flags);
 	if (Video_window == nullptr) {
 		printf("Unable to create SDL window: %s\n", SDL_GetError());
 		return false;
@@ -701,7 +714,7 @@ void video_render_frame()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0.0f, ( float )Video_native_width, ( float )Video_native_height, 0.0f, 0.0f, 1.0f);
+	glOrtho(0.0f, (float)Video_native_width, (float)Video_native_height, 0.0f, 0.0f, 1.0f);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -748,6 +761,6 @@ void video_render_frame()
 void video_set_mono_type(video_display_types type)
 {
 	Video_display_mode = type;
-	Mono_color = Mono_colors[static_cast< uint8_t >(type)];
+	Mono_color = Mono_colors[static_cast<uint8_t>(type)];
 }
 

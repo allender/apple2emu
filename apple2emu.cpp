@@ -61,7 +61,7 @@ static uint32_t Speed_multiplier = 1;
 const char *Disk_image_filename = nullptr;
 
 uint32_t Total_cycles, Total_cycles_this_frame;
-	
+
 cpu_6502 cpu;
 
 static void configure_logging()
@@ -88,7 +88,7 @@ static char *get_cmdline_option(char **start, char **end, const std::string &sho
 	if (iter == end) {
 		iter = std::find(start, end, long_option);
 	}
-	if ((iter != end) && (iter++ != end) ) {
+	if ((iter != end) && (iter++ != end)) {
 		return *iter;
 	}
 
@@ -120,7 +120,7 @@ bool dissemble_6502(const char *filename)
 
 void reset_machine()
 {
-   memory_init();
+	memory_init();
 	cpu.init();
 	debugger_init();
 	speaker_init();
@@ -141,10 +141,10 @@ int main(int argc, char* argv[])
 	configure_logging();
 
 	// grab some needed command line options
-	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
+	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");  // will always go to drive one for now
 
 	// initialize SDL before everything else
-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER) != 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());
 		return -1;
 	}
@@ -155,18 +155,18 @@ int main(int argc, char* argv[])
 	uint16_t prog_start = 0x600;
 	uint16_t load_addr = 0x0;
 
-	const char *prog_start_string = get_cmdline_option(argv, argv+argc, "-p", "--pc");
+	const char *prog_start_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (prog_start_string != nullptr) {
 		prog_start = (uint16_t)strtol(prog_start_string, nullptr, 16);
 	}
 
-	const char *load_addr_string = get_cmdline_option(argv, argv+argc, "-b", "--base");
+	const char *load_addr_string = get_cmdline_option(argv, argv + argc, "-b", "--base");
 	if (load_addr_string != nullptr) {
 		load_addr = (uint16_t)strtol(load_addr_string, nullptr, 16);
 	}
 
 	const char *binary_file = nullptr;
-	binary_file = get_cmdline_option(argv, argv+argc, "-b", "--binary");
+	binary_file = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 	if (binary_file != nullptr) {
 		FILE *fp = fopen(binary_file, "rb");
 		if (fp == nullptr) {
@@ -205,6 +205,11 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
+	// if we are not automatically starting up, then put up splash screen
+	// and UI and wait for a boot
+	if () {
+	}
+
 	while (!quit) {
 		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 
@@ -229,7 +234,7 @@ int main(int argc, char* argv[])
 		}
 
 		{
-         SDL_Event evt;
+			SDL_Event evt;
 
 			while (SDL_PollEvent(&evt)) {
 				ImGui_ImplSdl_ProcessEvent(&evt);

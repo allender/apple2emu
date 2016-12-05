@@ -102,7 +102,7 @@ static const char *addressing_format_string[] = {
 static void debugger_get_short_status(cpu_6502 &cpu)
 {
 	uint8_t status = cpu.get_status();
-	sprintf(Debugger_status_line, "%02x %02X %02X %04X %c%c%c%c%c%c%c%c", cpu.get_acc(), cpu.get_x(), cpu.get_y(), cpu.get_sp() + 0x100, 
+	sprintf(Debugger_status_line, "%02x %02X %02X %04X %c%c%c%c%c%c%c%c", cpu.get_acc(), cpu.get_x(), cpu.get_y(), cpu.get_sp() + 0x100,
 		(status >> 7) & 1 ? 'N' : '.',
 		(status >> 6) & 1 ? 'V' : '.',
 		(status >> 5) & 1 ? 'R' : '.',
@@ -139,14 +139,16 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 	if (opcode->m_mnemonic == '    ') {
 		// invalid opcode.  just print ?? and continue
 		strcpy(Debugger_disassembly_line, "???");
-	} else {
+	}
+	else {
 		sprintf(internal_buffer, "%04X:", addr);
 		strcat(Debugger_disassembly_line, internal_buffer);
 
 		for (uint8_t j = 0; j < 3; j++) {
 			if (j < opcode->m_size) {
 				sprintf(internal_buffer, "%02X ", memory_read(addr + j));
-			} else {
+			}
+			else {
 				sprintf(internal_buffer, "   ");
 			}
 			strcat(Debugger_disassembly_line, internal_buffer);
@@ -162,7 +164,8 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 		uint16_t addressing_val;
 		if (opcode->m_size == 2) {
 			addressing_val = memory_read(addr + 1);
-		} else if (opcode->m_size == 3) {
+		}
+		else if (opcode->m_size == 3) {
 			addressing_val = (memory_read(addr + 2) << 8) | memory_read(addr + 1);
 		}
 		if (opcode->m_size > 1) {
@@ -178,17 +181,17 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			sprintf(internal_buffer, addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
 			strcat(Debugger_disassembly_line, internal_buffer);
 
-			switch(mode) {
+			switch (mode) {
 			case cpu_6502::addr_mode::ACCUMULATOR_MODE:
 			case cpu_6502::addr_mode::IMMEDIATE_MODE:
 			case cpu_6502::addr_mode::IMPLIED_MODE:
 			case cpu_6502::addr_mode::INDIRECT_MODE:
-         case cpu_6502::addr_mode::NO_MODE:
-         case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
+			case cpu_6502::addr_mode::NO_MODE:
+			case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
 				break;
 
-			// relative mode is relative to current PC.  figure out if we need to
-			// move forwards or backwards
+				// relative mode is relative to current PC.  figure out if we need to
+				// move forwards or backwards
 			case cpu_6502::addr_mode::RELATIVE_MODE:
 				//if (addressing_val & 0x80) {
 				//	mem_value = cpu.get_pc() - (addressing_val & 0x80);
@@ -210,7 +213,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				}
 				break;
 
-			// indexed and zero page indexed are the same
+				// indexed and zero page indexed are the same
 			case cpu_6502::addr_mode::X_INDEXED_MODE:
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE:
 				addressing_val += cpu.get_x();
@@ -223,7 +226,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 				}
 				break;
 
-			// same as x-indexed mode
+				// same as x-indexed mode
 			case cpu_6502::addr_mode::Y_INDEXED_MODE:
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
 				addressing_val += cpu.get_y();
@@ -313,10 +316,10 @@ static void debugger_display_memory()
 	wclear(Debugger_memory_window);
 	box(Debugger_memory_window, 0, 0);
 	uint32_t addr = Debugger_memory_display_address;
-	for (uint32_t i = 0; i < Debugger_memory_num_lines-2; i++) {
-		mvwprintw(Debugger_memory_window, i+1, 2, "%04X: ", addr);
+	for (uint32_t i = 0; i < Debugger_memory_num_lines - 2; i++) {
+		mvwprintw(Debugger_memory_window, i + 1, 2, "%04X: ", addr);
 		for (uint32_t j = 0; j < Debugger_memory_display_bytes; j++) {
-			wprintw(Debugger_memory_window, "%02x ", memory_read(addr+j));
+			wprintw(Debugger_memory_window, "%02x ", memory_read(addr + j));
 		}
 		wprintw(Debugger_memory_window, "  ");
 
@@ -340,7 +343,7 @@ static void debugger_display_registers(cpu_6502 &cpu)
 	mvwprintw(Debugger_register_window, row++, 2, "SP = $%04X", cpu.get_sp() + 0x100);
 
 	auto status = cpu.get_status();
-	mvwprintw(Debugger_register_window, ++row, 2, "Status = %c%c%c%c%c%c%c%c", 
+	mvwprintw(Debugger_register_window, ++row, 2, "Status = %c%c%c%c%c%c%c%c",
 		(status >> 7) & 1 ? 'S' : 's',
 		(status >> 6) & 1 ? 'V' : 'v',
 		(status >> 5) & 1 ? '1' : '0',
@@ -369,8 +372,8 @@ static void debugger_display_disasm(cpu_6502 &cpu)
 				wattron(Debugger_disasm_window, A_BOLD);
 			}
 		}
-		mvwprintw(Debugger_disasm_window, row++, 2,"%s", Debugger_disassembly_line);
-		wattroff(Debugger_disasm_window, A_REVERSE|A_BOLD);
+		mvwprintw(Debugger_disasm_window, row++, 2, "%s", Debugger_disassembly_line);
+		wattroff(Debugger_disasm_window, A_REVERSE | A_BOLD);
 		addr += size;
 	}
 	wrefresh(Debugger_disasm_window);
@@ -385,7 +388,7 @@ static void debugger_display_breakpoints()
 	for (auto i = 0; i < Debugger_num_breakpoints; i++) {
 		wmove(Debugger_breakpoint_window, i + 1, 1);
 		wprintw(Debugger_breakpoint_window, "%-3d", i);
-		switch(Debugger_breakpoints[i].m_type) {
+		switch (Debugger_breakpoints[i].m_type) {
 		case breakpoint_type::BREAKPOINT:
 			wprintw(Debugger_breakpoint_window, "%-5s", "Bp");
 			break;
@@ -398,10 +401,10 @@ static void debugger_display_breakpoints()
 			wprintw(Debugger_breakpoint_window, "%-5s", "Wwp");
 			break;
 
-      case breakpoint_type::INVALID:
-         break;
+		case breakpoint_type::INVALID:
+			break;
 		}
-		
+
 		wprintw(Debugger_breakpoint_window, "$%-6x", Debugger_breakpoints[i].m_addr);
 		wprintw(Debugger_breakpoint_window, "%s", Debugger_breakpoints[i].m_enabled == true ? "1" : "0");
 
@@ -422,7 +425,8 @@ static void debugger_display_status()
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Text");
 		wattroff(Debugger_status_window, A_REVERSE);
-	} else {
+	}
+	else {
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Graphics");
 		wattroff(Debugger_status_window, A_REVERSE);
@@ -435,7 +439,8 @@ static void debugger_display_status()
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Mixed");
 		wattroff(Debugger_status_window, A_REVERSE);
-	} else {
+	}
+	else {
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Not Mixed");
 		wattroff(Debugger_status_window, A_REVERSE);
@@ -448,7 +453,8 @@ static void debugger_display_status()
 		waddstr(Debugger_status_window, "Primary");
 		wattroff(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "/Secondary");
-	} else {
+	}
+	else {
 		waddstr(Debugger_status_window, "Primary/");
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Secondary");
@@ -461,7 +467,8 @@ static void debugger_display_status()
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Hires");
 		wattroff(Debugger_status_window, A_REVERSE);
-	} else {
+	}
+	else {
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Lores");
 		wattroff(Debugger_status_window, A_REVERSE);
@@ -504,24 +511,28 @@ static void debugger_process_commands(cpu_6502 &cpu)
 		if (!stricmp(token, "s") || !stricmp(token, "step")) {
 			break;
 
-		// continue
-		} else if (!stricmp(token, "c") || !stricmp(token, "cont")) {
+			// continue
+		}
+		else if (!stricmp(token, "c") || !stricmp(token, "cont")) {
 			Debugger_stopped = false;
 			break;
-		
 
-		// create a breakpoint
-		} else if (!stricmp(token, "b") || !stricmp(token, "break") ||
-				!stricmp(token, "rw") || !stricmp(token, "rwatch") ||
-				!stricmp(token, "ww") || !stricmp(token, "wwatch") ) {
+
+			// create a breakpoint
+		}
+		else if (!stricmp(token, "b") || !stricmp(token, "break") ||
+			!stricmp(token, "rw") || !stricmp(token, "rwatch") ||
+			!stricmp(token, "ww") || !stricmp(token, "wwatch")) {
 			// breakpoint at an address
 			breakpoint_type bp_type = breakpoint_type::INVALID;
 
 			if (token[0] == 'b') {
 				bp_type = breakpoint_type::BREAKPOINT;
-			} else if (token[0] == 'r') {
+			}
+			else if (token[0] == 'r') {
 				bp_type = breakpoint_type::RWATCHPOINT;
-			} else if (token[0] == 'w') {
+			}
+			else if (token[0] == 'w') {
 				bp_type = breakpoint_type::WWATCHPOINT;
 			}
 			assert(bp_type != breakpoint_type::INVALID);
@@ -530,13 +541,14 @@ static void debugger_process_commands(cpu_6502 &cpu)
 				token = strtok(nullptr, " ");
 				if (token != nullptr) {
 					uint32_t address = strtol(token, nullptr, 16);
-					if (address > 0xffff) { 
+					if (address > 0xffff) {
 						printw("Address %x must be in range 0-0xffff\n", address);
-					} else {
+					}
+					else {
 						Debugger_breakpoints[Debugger_num_breakpoints].m_type = bp_type;
 						Debugger_breakpoints[Debugger_num_breakpoints].m_addr = address;
-                  Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true;
-                  Debugger_num_breakpoints++;
+						Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true;
+						Debugger_num_breakpoints++;
 					}
 				}
 			}
@@ -554,7 +566,8 @@ static void debugger_process_commands(cpu_6502 &cpu)
 				for (auto i = 0; i < Debugger_num_breakpoints; i++) {
 					Debugger_breakpoints[i].m_enabled = enable;
 				}
-			} else {
+			}
+			else {
 				int i = atoi(token);
 				if (i >= 0 && i < Debugger_num_breakpoints) {
 					Debugger_breakpoints[i].m_enabled = enable;
@@ -568,7 +581,8 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			if (token == nullptr) {
 				// delete all  breakpoints
 				Debugger_num_breakpoints = 0;
-			} else {
+			}
+			else {
 				int i = atoi(token);
 				if (i >= 0 && i < Debugger_num_breakpoints) {
 					for (auto j = i + 1; j < Debugger_num_breakpoints; j++) {
@@ -587,7 +601,8 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			token = strtok(nullptr, " ");
 			if (token == nullptr) {
 				addr = cpu.get_pc();
-			} else {
+			}
+			else {
 				addr = strtol(token, nullptr, 16);
 			}
 			debugger_disassemble(cpu, addr);
@@ -601,11 +616,11 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			}
 		}
 
-      // quit
-      else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
-         debugger_shutdown();  // clears out curses changes to console
-         exit(-1);
-      }
+		// quit
+		else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
+			debugger_shutdown();  // clears out curses changes to console
+			exit(-1);
+		}
 
 		// stop/start trace
 		else if (!stricmp(token, "trace")) {
@@ -613,7 +628,8 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			Debugger_trace = !Debugger_trace;
 			if (Debugger_trace == true) {
 				debugger_start_trace();
-			} else {
+			}
+			else {
 				debugger_stop_trace();
 			}
 
@@ -640,7 +656,7 @@ void debugger_exit()
 
 void debugger_shutdown()
 {
-   endwin();
+	endwin();
 }
 
 void debugger_init()
@@ -694,7 +710,7 @@ void debugger_process(cpu_6502 &cpu)
 					break;
 				case breakpoint_type::RWATCHPOINT:
 				case breakpoint_type::WWATCHPOINT:
-            case breakpoint_type::INVALID:
+				case breakpoint_type::INVALID:
 					break;
 				}
 			}

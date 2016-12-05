@@ -76,20 +76,24 @@ static void ui_load_settings()
 			if (num_scanned == 2) {
 				if (!stricmp(setting, "auto_start")) {
 					int i_val = strtol(value, nullptr, 10);
-					Auto_start = i_val?true:false;
-				} else if (!stricmp(setting, "disk1")) {
+					Auto_start = i_val ? true : false;
+				}
+				else if (!stricmp(setting, "disk1")) {
 					ui_insert_disk(value, 1);
-				} else if (!stricmp(setting, "disk2")) {
+				}
+				else if (!stricmp(setting, "disk2")) {
 					ui_insert_disk(value, 2);
-				} else if (!stricmp(setting, "video")) {
+				}
+				else if (!stricmp(setting, "video")) {
 					Video_color_type = (uint8_t)strtol(value, nullptr, 10);
 					video_set_mono_type(static_cast<video_display_types>(Video_color_type));
-				} else if (!stricmp(setting, "speed")) {
+				}
+				else if (!stricmp(setting, "speed")) {
 					Emulator_speed = (int)strtol(value, nullptr, 10);
 					set_emulator_speed(Emulator_speed);
 				}
 			}
-			
+
 		}
 	}
 

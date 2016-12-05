@@ -63,7 +63,7 @@ public:
 		NUM_ADDRESSING_MODES
 	};
 
-	typedef int16_t (cpu_6502::*addr_func)(void);
+	typedef int16_t(cpu_6502::*addr_func)(void);
 
 	typedef struct {
 		uint32_t    m_mnemonic;
@@ -77,7 +77,7 @@ public:
 	*  Table for all opcodes and their relevant data
 	*/
 	static opcode_info m_opcodes[256];
-	
+
 public:
 	cpu_6502() { }
 	void init();
@@ -85,12 +85,12 @@ public:
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
 	// needed for debugger
-	uint16_t get_pc()     { return m_pc; }
-	uint8_t  get_acc()    { return m_acc;  }
-	uint8_t  get_x()      { return m_xindex;  }
-	uint8_t  get_y()      { return m_yindex;  }
-	uint8_t  get_sp()     { return m_sp;  }
-	uint8_t  get_status() { return m_status_register;  }
+	uint16_t get_pc() { return m_pc; }
+	uint8_t  get_acc() { return m_acc; }
+	uint8_t  get_x() { return m_xindex; }
+	uint8_t  get_y() { return m_yindex; }
+	uint8_t  get_sp() { return m_sp; }
+	uint8_t  get_status() { return m_status_register; }
 
 private:
 	uint16_t         m_pc;
@@ -101,7 +101,7 @@ private:
 	uint8_t          m_status_register;
 	uint8_t          m_extra_cycles;
 
-	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1<<static_cast<uint8_t>(bit))) | (!!val<<static_cast<uint8_t>(bit)); }
+	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1 << static_cast<uint8_t>(bit))) | (!!val << static_cast<uint8_t>(bit)); }
 	uint8_t get_flag(register_bit bit) { return (m_status_register >> static_cast<uint8_t>(bit)) & 0x1; }
 
 	// addressing functions

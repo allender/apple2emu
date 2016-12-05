@@ -48,7 +48,7 @@ public:
 	uint32_t    m_current_byte;
 
 public:
-	disk_drive():m_disk_image(nullptr) {} 
+	disk_drive() :m_disk_image(nullptr) {}
 	void init(bool warm_init);
 	void readwrite();
 	void set_new_track(uint8_t new_track);

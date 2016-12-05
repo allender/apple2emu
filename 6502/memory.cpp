@@ -56,7 +56,7 @@ static uint8_t Memory_card_state;
 // to hold the pointer and whether or not the page is
 // write protected
 class memory_page {
-	
+
 private:
 	bool m_write_protected;
 	uint8_t *m_ptr;
@@ -155,7 +155,7 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	addr = addr & 0xff;
 	switch (addr) {
 
-	// cases for bank 2
+		// cases for bank 2
 	case 0x80:
 		Memory_card_state |= RAM_CARD_READ;
 		Memory_card_state |= RAM_CARD_BANK2;
@@ -168,7 +168,8 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		if (last_access) {
 			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
-		} else {
+		}
+		else {
 			last_access = 1;
 		}
 		break;
@@ -184,11 +185,12 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		if (last_access) {
 			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
-		} else {
+		}
+		else {
 			last_access = 1;
 		}
 
-	// cases for bank 1
+		// cases for bank 1
 	case 0x88:
 		Memory_card_state |= RAM_CARD_READ;
 		Memory_card_state &= ~RAM_CARD_BANK2;
@@ -201,7 +203,8 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		if (last_access) {
 			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
-		} else {
+		}
+		else {
 			last_access = 1;
 		}
 		break;
@@ -217,7 +220,8 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		if (last_access) {
 			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
-		} else {
+		}
+		else {
 			last_access = 1;
 		}
 	}
@@ -225,9 +229,10 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	// set write protect on ramcard pages if necessary
 	for (auto i = 0xd0; i < 0x100; i++) {
 		if (Memory_card_state & RAM_CARD_BANK2) {
-			Memory_bank2_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT?true:false);
-		} else {
-			Memory_bank1_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT?true:false);
+			Memory_bank2_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
+		}
+		else {
+			Memory_bank1_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
 		}
 	}
 
@@ -235,10 +240,12 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	if (Memory_card_state & RAM_CARD_READ) {
 		if (Memory_card_state & RAM_CARD_BANK2) {
 			Memory_current_page_set = Memory_bank2_pages;
-		} else {
+		}
+		else {
 			Memory_current_page_set = Memory_bank1_pages;
 		}
-	} else {
+	}
+	else {
 		Memory_current_page_set = Memory_pages;
 	}
 
@@ -257,9 +264,10 @@ uint8_t memory_read(const uint16_t addr)
 	// look for memory mapped I/O locations
 	if ((addr & 0xff00) == 0xc000) {
 		uint8_t mapped_addr = addr & 0xff;
-		if (m_c000_handlers[mapped_addr].m_read_handler != nullptr ) {
+		if (m_c000_handlers[mapped_addr].m_read_handler != nullptr) {
 			return m_c000_handlers[mapped_addr].m_read_handler(addr);
-		} else {
+		}
+		else {
 			LOG(INFO) << "Reading from $" << std::setbase(16) << addr << " and there is no read handler.";
 		}
 	}
@@ -278,10 +286,11 @@ void memory_write(const uint16_t addr, uint8_t val)
 
 	if ((addr & 0xff00) == 0xc000) {
 		uint8_t mapped_addr = addr & 0xff;
-		if (m_c000_handlers[mapped_addr].m_write_handler != nullptr ) {
+		if (m_c000_handlers[mapped_addr].m_write_handler != nullptr) {
 			m_c000_handlers[mapped_addr].m_write_handler(addr, val);
 			return;
-		} else {
+		}
+		else {
 			LOG(INFO) << "Writing $" << std::setbase(16) << std::setw(2) << val << " to $" << std::setbase(16) << addr << " and there is no write handler";
 		}
 	}
@@ -296,23 +305,23 @@ void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_funct
 }
 
 // register handlers for the I/O slots
-void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function )
+void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function)
 {
 	assert((slot >= 0) && (slot <= MAX_SLOTS));
 	uint8_t addr = 0x80 + (slot << 4);
-	
+
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same 
 	// handler as we will deal with all slot operations in the same function
 	for (auto i = 0; i <= 0xf; i++) {
-		m_c000_handlers[addr+i].m_read_handler = read_function;
-		m_c000_handlers[addr+i].m_write_handler = write_function;
+		m_c000_handlers[addr + i].m_read_handler = read_function;
+		m_c000_handlers[addr + i].m_write_handler = write_function;
 	}
 }
 
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
 {
-   memcpy(&(Memory_buffer[location]), buffer, size);
-   return true;
+	memcpy(&(Memory_buffer[location]), buffer, size);
+	return true;
 }
 
 // initliaze the memory subsystem
@@ -334,10 +343,10 @@ void memory_init()
 		memset(Memory_extended_buffer, 0, MEMORY_SIZE);
 	}
 
-   // initialize memory with "random" pattern.  there was long discussion
-   // in applewin github issues tracker related to what to do about
-   // memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
-   memory_initialize();
+	// initialize memory with "random" pattern.  there was long discussion
+	// in applewin github issues tracker related to what to do about
+	// memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
+	memory_initialize();
 
 	// set up pointers for memory paging.  pointer to each 256 byte page.  Set
 	// up write protect for ROM area
@@ -378,7 +387,7 @@ void memory_init()
 
 	// register handlers for keyboard.   There is only a read handler here
 	// since we need to read memory to get a key back from the system
-	for (auto i = 0; i < 0xf; i++ ) {
+	for (auto i = 0; i < 0xf; i++) {
 		memory_register_c000_handler(0x00, keyboard_read_handler, nullptr);
 	}
 
@@ -391,8 +400,8 @@ void memory_init()
 
 void memory_shutdown()
 {
-   if (Memory_buffer != nullptr) {
-      delete [] Memory_buffer;
-   }
+	if (Memory_buffer != nullptr) {
+		delete[] Memory_buffer;
+	}
 }
 

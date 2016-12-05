@@ -110,7 +110,7 @@ disk_image::~disk_image()
 	// save the image if we have written to it
 	save_image();
 	if (m_raw_buffer != nullptr) {
-		delete [] m_raw_buffer;
+		delete[] m_raw_buffer;
 	}
 }
 
@@ -143,7 +143,7 @@ void disk_image::initialize_image()
 
 		m_format = format;
 	}
- }
+}
 
 
 void disk_image::init()
@@ -187,7 +187,7 @@ bool disk_image::load_image(const char *filename)
 
 	// get all the information needed about this disk image
 	initialize_image();
-	return true; 
+	return true;
 }
 
 // save a disk image (if needed).  This will write out the entire disk
@@ -315,7 +315,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 				val = val | (((sector_ptr[offset] & 0x1) << 1) | ((sector_ptr[offset] & 0x2) >> 1)) << 2;
 				nib_data[offset++] = val;
 			}
-			
+
 			// not sure why we have to do this
 			nib_data[offset - 1] &= 0x3f;
 			nib_data[offset - 2] &= 0x3f;

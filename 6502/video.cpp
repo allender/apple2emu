@@ -31,6 +31,7 @@ SOFTWARE.
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "SDL_image.h"
+#include "apple2emu.h"
 #include "6502/memory.h"
 #include "6502/video.h"
 #include "6502/font.h"
@@ -49,6 +50,9 @@ const int Video_cell_height = Video_native_height / 24;
 static int Video_scale_factor = 4;
 static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
+
+static SDL_Surface *Splash_screen_surface;
+static GLuint Splash_screen_texture;
 
 // information about internally built textures
 const int Num_lores_colors = 16;
@@ -580,7 +584,8 @@ bool video_create()
 		SDL_DestroyWindow(Video_window);
 	}
 
-	// set attributes for GL
+	// set attributes for GL:w
+
 	uint32_t sdl_window_flags = SDL_WINDOW_RESIZABLE;
 	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -646,6 +651,8 @@ bool video_create()
 // intialize the SDL system
 bool video_init()
 {
+	IMG_Init(IMG_INIT_JPG);
+
 	if (Video_window == nullptr) {
 		Video_native_size.x = 0;
 		Video_native_size.y = 0;
@@ -674,12 +681,31 @@ bool video_init()
 		}
 
 		video_set_mono_type(video_display_types::MONO_WHITE);
-
-		// initialize UI here since we need the window handle for imgui
-		ui_init(Video_window);
-
 	}
 
+	// create the splash screen
+	// load up the interface screen if needed
+	if (Splash_screen_surface != nullptr) {
+		SDL_FreeSurface(Splash_screen_surface);
+	}
+
+	Splash_screen_surface = IMG_Load("splash.jpg");
+	if (Splash_screen_surface == nullptr) {
+		printf("Unable to load splash screen: %s\n", SDL_GetError());
+	}
+
+	int pixel_type = SDL_PIXELTYPE(Splash_screen_surface->format->format);
+	int order = SDL_PIXELORDER(Splash_screen_surface->format->format);
+
+	glGenTextures(1, &Splash_screen_texture);
+	glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
+
+	// set up the memory handlers
 	for (auto i = 0x50; i <= 0x57; i++) {
 		memory_register_c000_handler(i, video_read_handler, video_write_handler);
 	}
@@ -690,6 +716,12 @@ bool video_init()
 void video_shutdown()
 {
 	ui_shutdown();
+
+	// free the splash screen
+	if (Splash_screen_surface != nullptr) {
+		SDL_FreeSurface(Splash_screen_surface);
+	}
+
 	// free the pixels used for the hires texture patterns
 	for (auto i = 0; i < Num_hires_mono_patterns; i++) {
 		delete Hires_mono_pixels[i];
@@ -720,13 +752,27 @@ void video_render_frame()
 	glLoadIdentity();
 	glEnable(GL_TEXTURE_2D);
 
-	video_render();
+	if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+		video_render();
+	} else {
+		// blit splash screen
+		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, Video_native_height);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_native_width, Video_native_height);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_native_width, 0);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
+		glEnd();
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 
 	// back to main framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+
 
 	if (Video_display_mode != video_display_types::COLOR) {
 		glColor3fv(Mono_color);

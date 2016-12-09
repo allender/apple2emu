@@ -25,6 +25,8 @@ SOFTWARE.
 
 */
 
+#include <string>
+#include <fstream>
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "interface.h"
@@ -34,16 +36,16 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "nfd.h"
 
-bool Show_main_menu = false;
-bool Show_debug_menu = false;
+static bool Show_main_menu = false;
+static bool Show_debug_menu = false;
+static bool Menu_open_at_start = false;
+static bool Imgui_initialized = false;
 
 static const int32_t Line_length = 256;
 static const char *Settings_filename = "settings.txt";
 
 // settings to be stored
-static bool Auto_start = false;
 static int32_t Video_color_type = static_cast<int>(video_display_types::MONO_WHITE);
-static int32_t Emulator_speed = 1;
 
 static const uint32_t Cycles_array_size = 64;
 static uint32_t Cycles_per_frame[Cycles_array_size];
@@ -63,41 +65,42 @@ static void ui_insert_disk(const char *disk_filename, int slot)
 
 static void ui_load_settings()
 {
-	char line[Line_length];
-	FILE *fp = fopen(Settings_filename, "rt");
-	if (fp == nullptr) {
-		return;
-	}
-	while (!feof(fp)) {
-		char *ptr = fgets(line, Line_length, fp);
-		if (ptr != nullptr) {
-			char setting[Line_length], value[Line_length];
-			int num_scanned = sscanf(line, "%s = %s\n", setting, value);
-			if (num_scanned == 2) {
-				if (!stricmp(setting, "auto_start")) {
-					int i_val = strtol(value, nullptr, 10);
-					Auto_start = i_val ? true : false;
-				}
-				else if (!stricmp(setting, "disk1")) {
-					ui_insert_disk(value, 1);
-				}
-				else if (!stricmp(setting, "disk2")) {
-					ui_insert_disk(value, 2);
-				}
-				else if (!stricmp(setting, "video")) {
-					Video_color_type = (uint8_t)strtol(value, nullptr, 10);
-					video_set_mono_type(static_cast<video_display_types>(Video_color_type));
-				}
-				else if (!stricmp(setting, "speed")) {
-					Emulator_speed = (int)strtol(value, nullptr, 10);
-					set_emulator_speed(Emulator_speed);
-				}
-			}
+	std::ifstream infile(Settings_filename);
+	std::string line;
 
+	while(std::getline(infile, line)) {
+		int pos = line.find('=');
+		if (pos > 0) {
+			std::string setting = line.substr(0, pos - 1);
+			std::string value = line.substr(pos + 1);
+			while (value[0] == ' ') {
+				value.erase(0, 1);
+			}
+			
+			if (setting == "auto_start") {
+				int i_val = strtol(value.c_str(), nullptr, 10);
+				Auto_start = i_val ? true : false;
+			}
+			else if (setting == "open_at_start") {
+				int i_val = strtol(value.c_str(), nullptr, 10);
+				Menu_open_at_start = i_val ? true : false;
+				Show_main_menu = Menu_open_at_start;
+			}
+			else if (setting == "disk1") {
+				ui_insert_disk(value.c_str(), 1);
+			}
+			else if (setting == "disk2") {
+				ui_insert_disk(value.c_str(), 2);
+			}
+			else if (setting == "video") {
+				Video_color_type = (uint8_t)strtol(value.c_str(), nullptr, 10);
+				video_set_mono_type(static_cast<video_display_types>(Video_color_type));
+			}
+			else if (setting == "speed") {
+				Speed_multiplier = (int)strtol(value.c_str(), nullptr, 10);
+			}
 		}
 	}
-
-	fclose(fp);
 }
 
 static void ui_save_settings()
@@ -108,23 +111,30 @@ static void ui_save_settings()
 		return;
 	}
 	fprintf(fp, "auto_start = %d\n", Auto_start == true ? 1 : 0);
+	fprintf(fp, "open_at_start = %d\n", Menu_open_at_start == true ? 1 : 0);
 	fprintf(fp, "disk1 = %s\n", disk_get_mounted_filename(1));
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
-	fprintf(fp, "speed = %d\n", Emulator_speed);
+	fprintf(fp, "speed = %d\n", Speed_multiplier);
 
 	fclose(fp);
 }
-
 
 static void ui_show_general_options()
 {
 	ImGui::Text("General Options:");
 	ImGui::Checkbox("Auto Start", &Auto_start);
 	ImGui::SameLine(200);
-	if (ImGui::Button("Reboot")) {
-		reset_machine();
+	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
+		if (ImGui::Button("Start")) {
+			Emulator_state = emulator_state::EMULATOR_STARTED;
+		}
+	} else {
+		if (ImGui::Button("Reboot")) {
+			reset_machine();
+		}
 	}
+	ImGui::Checkbox("Open Menu on startup", &Menu_open_at_start);
 }
 
 static void ui_get_disk_image(uint8_t slot_num)
@@ -181,8 +191,7 @@ static void ui_show_video_output_menu()
 
 static void ui_show_speed_menu()
 {
-	if (ImGui::SliderInt("Emulator Speed", &Emulator_speed, 1, 10) == true) {
-		set_emulator_speed(Emulator_speed);
+	if (ImGui::SliderInt("Emulator Speed", (int *)&Speed_multiplier, 1, 10) == true) {
 	}
 }
 
@@ -223,11 +232,9 @@ static void ui_show_debug_menu()
 	ImGui::End();
 }
 
-void ui_init(SDL_Window *window)
+void ui_init()
 {
-	ImGui_ImplSdl_Init(window);
 	ui_load_settings();
-
 	for (auto i = 0; i < Cycles_array_size; i++) {
 		Cycles_per_frame[i] = 0;
 	}
@@ -236,11 +243,18 @@ void ui_init(SDL_Window *window)
 void ui_shutdown()
 {
 	ImGui_ImplSdl_Shutdown();
+	Imgui_initialized = false;
 	ui_save_settings();
 }
 
 void ui_do_frame(SDL_Window *window)
 {
+	// initlialize imgui if it has not been initialized yet
+	if (Imgui_initialized == false) {
+		ImGui_ImplSdl_Init(window);
+		Imgui_initialized = true;
+	}
+
 	ImGui_ImplSdl_NewFrame(window);
 	if (Show_main_menu) {
 		ui_show_main_menu();
@@ -269,3 +283,4 @@ void ui_update_cycle_count()
 	Cycles_per_frame[Current_cycles_array_entry] = Total_cycles_this_frame;
 	Current_cycles_array_entry = (Current_cycles_array_entry + 1) % Cycles_array_size;
 }
+

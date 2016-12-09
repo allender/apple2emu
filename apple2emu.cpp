@@ -56,7 +56,11 @@ INITIALIZE_EASYLOGGINGPP
 
 static const double Render_time = 33;   // roughly 30 fps
 static SDL_sem *cpu_sem;
-static uint32_t Speed_multiplier = 1;
+
+// globals used to control emulator
+uint32_t Speed_multiplier = 1;
+bool Auto_start = false;
+emulator_state Emulator_state = emulator_state::SPLASH_SCREEN;
 
 const char *Disk_image_filename = nullptr;
 
@@ -120,6 +124,7 @@ bool dissemble_6502(const char *filename)
 
 void reset_machine()
 {
+	ui_init();
 	memory_init();
 	cpu.init();
 	debugger_init();
@@ -128,11 +133,6 @@ void reset_machine()
 	joystick_init();
 	disk_init();
 	video_init();
-}
-
-void set_emulator_speed(uint32_t speed)
-{
-	Speed_multiplier = speed;
 }
 
 int main(int argc, char* argv[])
@@ -149,8 +149,10 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	// reset the machine
 	reset_machine();
+	if (Auto_start == true) {
+		Emulator_state = emulator_state::EMULATOR_STARTED;
+	}
 
 	uint16_t prog_start = 0x600;
 	uint16_t load_addr = 0x0;
@@ -204,12 +206,7 @@ int main(int argc, char* argv[])
 		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
 		exit(-1);
 	}
-
-	// if we are not automatically starting up, then put up splash screen
-	// and UI and wait for a boot
-	if () {
-	}
-
+	
 	while (!quit) {
 		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 
@@ -218,18 +215,20 @@ int main(int argc, char* argv[])
 		debugger_process(cpu);
 
 		// process the next opcode
-		while (true) {
-			uint32_t cycles = cpu.process_opcode();
-			Total_cycles_this_frame += cycles;
-			Total_cycles += cycles;
+		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+			while (true) {
+				uint32_t cycles = cpu.process_opcode();
+				Total_cycles_this_frame += cycles;
+				Total_cycles += cycles;
 
-			if (Total_cycles_this_frame > cycles_per_frame) {
-				ui_update_cycle_count();
-				// this is essentially number of cycles for one redraw cycle
-				// for TV/monitor.  Around 17030 cycles I believe
-				Total_cycles_this_frame -= cycles_per_frame;
-				SDL_SemWait(cpu_sem);
-				break;
+				if (Total_cycles_this_frame > cycles_per_frame) {
+					ui_update_cycle_count();
+					// this is essentially number of cycles for one redraw cycle
+					// for TV/monitor.  Around 17030 cycles I believe
+					Total_cycles_this_frame -= cycles_per_frame;
+					SDL_SemWait(cpu_sem);
+					break;
+				}
 			}
 		}
 

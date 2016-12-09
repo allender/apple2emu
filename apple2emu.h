@@ -27,6 +27,11 @@ SOFTWARE.
 
 #pragma once
 
+enum class emulator_state : uint8_t {
+	SPLASH_SCREEN,
+	EMULATOR_STARTED,
+};
+
 // constants for machine speeds
 const double CLOCK_14M = 14318181.8181;
 
@@ -47,5 +52,9 @@ const uint32_t CYCLES_PER_FRAME = VERT_STATE_COUNTER * HORZ_STATE_COUNTER;
 extern uint32_t Total_cycles;
 extern uint32_t Total_cycles_this_frame;
 
+// globals for controlling the emulator.  Tied into interface
+extern uint32_t Speed_multiplier;
+extern bool Auto_start;
+extern emulator_state Emulator_state;
+
 void reset_machine();
-void set_emulator_speed(uint32_t speed);

@@ -27,7 +27,7 @@ SOFTWARE.
 
 #include "SDL.h"
 
-void ui_init(SDL_Window *window);
+void ui_init();
 void ui_shutdown();
 void ui_do_frame(SDL_Window *window);
 void ui_toggle_main_menu();

@@ -32,6 +32,16 @@ enum class emulator_state : uint8_t {
 	EMULATOR_STARTED,
 };
 
+enum class emulator_type: uint8_t {
+	APPLE2 = 0,
+	APPLE2_PLUS,
+	APPLE2E,
+
+	NUM_EMULATOR_TYPES,
+};
+
+extern const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)];
+
 // constants for machine speeds
 const double CLOCK_14M = 14318181.8181;
 
@@ -56,5 +66,6 @@ extern uint32_t Total_cycles_this_frame;
 extern uint32_t Speed_multiplier;
 extern bool Auto_start;
 extern emulator_state Emulator_state;
+extern emulator_type Emulator_type;
 
 void reset_machine();

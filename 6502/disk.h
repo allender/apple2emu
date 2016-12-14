@@ -53,6 +53,7 @@ public:
 	void readwrite();
 	void set_new_track(uint8_t new_track);
 	bool insert_disk(const char *filename);
+	void eject_disk();
 	uint8_t get_num_tracks();
 	const char *get_mounted_filename();
 
@@ -61,5 +62,6 @@ public:
 void disk_init();
 void disk_shutdown();
 bool disk_insert(const char *disk_image_filename, const uint32_t slot);
+void disk_eject(const uint32_t slot);
 const char *disk_get_mounted_filename(const uint32_t slot);
 

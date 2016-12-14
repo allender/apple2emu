@@ -81,6 +81,10 @@ static void ui_load_settings()
 				int i_val = strtol(value.c_str(), nullptr, 10);
 				Auto_start = i_val ? true : false;
 			}
+			else if (setting == "emulator_type") {
+				int i_val = strtol(value.c_str(), nullptr, 10);
+				Emulator_type = static_cast<emulator_type>(i_val);
+			}
 			else if (setting == "open_at_start") {
 				int i_val = strtol(value.c_str(), nullptr, 10);
 				Menu_open_at_start = i_val ? true : false;
@@ -111,6 +115,7 @@ static void ui_save_settings()
 		return;
 	}
 	fprintf(fp, "auto_start = %d\n", Auto_start == true ? 1 : 0);
+	fprintf(fp, "emulator_type = %d\n", static_cast<uint8_t>(Emulator_type));
 	fprintf(fp, "open_at_start = %d\n", Menu_open_at_start == true ? 1 : 0);
 	fprintf(fp, "disk1 = %s\n", disk_get_mounted_filename(1));
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
@@ -132,7 +137,22 @@ static void ui_show_general_options()
 	} else {
 		if (ImGui::Button("Reboot")) {
 			reset_machine();
+			Show_main_menu = true;
 		}
+	}
+	ImGui::Separator();
+
+	static int type = static_cast<uint8_t>(Emulator_type);
+	int old_type = type;
+	ImGui::ListBox("Emulation Type", &type, Emulator_names, static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES));
+
+	// if the emulator type changed, then reset the machine (if we haven't
+	// started yet.  Otherwise tell user that we need to reset machine
+	// for this change to take effect
+	if (old_type != type && Emulator_state == emulator_state::SPLASH_SCREEN) {
+		Emulator_type = static_cast<emulator_type>(type);
+		reset_machine();
+	} else {
 	}
 	ImGui::Checkbox("Open Menu on startup", &Menu_open_at_start);
 }
@@ -163,6 +183,10 @@ static void ui_show_disk_menu()
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(1);
 	}
+	ImGui::SameLine();
+	if (ImGui::Button("Eject")) {
+		disk_eject(1);
+	}
 	ImGui::Spacing();
 
 	ImGui::Text("Slot 6, Disk 2:");
@@ -173,6 +197,10 @@ static void ui_show_disk_menu()
 	ImGui::SameLine();
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(2);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Eject")) {
+		disk_eject(2);
 	}
 }
 
@@ -234,7 +262,14 @@ static void ui_show_debug_menu()
 
 void ui_init()
 {
-	ui_load_settings();
+	static bool settings_loaded = false;
+
+	// only load settings when we first start
+	// the emulator
+	if (settings_loaded == false) {
+		ui_load_settings();
+		settings_loaded = true;
+	}
 	for (auto i = 0; i < Cycles_array_size; i++) {
 		Cycles_per_frame[i] = 0;
 	}

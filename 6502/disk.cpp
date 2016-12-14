@@ -129,15 +129,22 @@ void disk_drive::set_new_track(const uint8_t track)
 
 bool disk_drive::insert_disk(const char *filename)
 {
-	if (m_disk_image != nullptr) {
-		delete m_disk_image;
-		m_disk_image = nullptr;
-	}
-	init(true);
+	eject_disk();
+
 	m_disk_image = new disk_image();
 	m_disk_image->init();
 	m_disk_image->load_image(filename);
 	return true;
+}
+
+void disk_drive::eject_disk()
+{
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+		m_disk_image = nullptr;
+	}
+
+	init(true);
 }
 
 const char *disk_drive::get_mounted_filename()
@@ -166,6 +173,15 @@ bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 		drive_2.insert_disk(disk_image_filename);
 	}
 	return true;
+}
+
+void disk_eject(const uint32_t slot)
+{
+	if (slot == 1) {
+		drive_1.eject_disk();
+	} else {
+		drive_2.eject_disk();
+	}
 }
 
 uint8_t read_handler(uint16_t addr)

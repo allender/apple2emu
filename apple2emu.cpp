@@ -54,6 +54,12 @@ SOFTWARE.
 
 INITIALIZE_EASYLOGGINGPP
 
+const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)] = {
+	"Apple ][",
+	"Apple ][+",
+	"Apple ][e",
+};
+
 static const double Render_time = 33;   // roughly 30 fps
 static SDL_sem *cpu_sem;
 
@@ -61,6 +67,7 @@ static SDL_sem *cpu_sem;
 uint32_t Speed_multiplier = 1;
 bool Auto_start = false;
 emulator_state Emulator_state = emulator_state::SPLASH_SCREEN;
+emulator_type Emulator_type = emulator_type::APPLE2;
 
 const char *Disk_image_filename = nullptr;
 

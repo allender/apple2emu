@@ -28,6 +28,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <iomanip>
 #include <cassert>
+#include "apple2emu.h"
 #include "memory.h"
 #include "video.h"
 #include "curses.h"
@@ -116,8 +117,12 @@ static bool memory_load_from_filename(const char *filename, uint16_t location)
 // type of machine we are trying to initialize
 static void memory_load_rom_images()
 {
-	// for now are are al just apple][ +
-	memory_load_from_filename("roms/apple2_plus.rom", 0xd000);
+	if (Emulator_type == emulator_type::APPLE2) {
+		memory_load_from_filename("roms/apple2.rom", 0xd000);
+	}
+	else if (Emulator_type == emulator_type::APPLE2_PLUS) {
+		memory_load_from_filename("roms/apple2_plus.rom", 0xd000);
+	}
 	memory_load_from_filename("roms/disk2.rom", 0xc600);
 }
 
@@ -327,21 +332,22 @@ bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
 // initliaze the memory subsystem
 void memory_init()
 {
-	// init might get called on machine reset - so do some things only once
 	if (Memory_buffer == nullptr) {
 		Memory_buffer = new uint8_t[MEMORY_SIZE];
-		memset(Memory_buffer, 0, MEMORY_SIZE);
-
-		// load rom images based on the type of machine we are starting
-		memory_load_rom_images();
 	}
+
+	memset(Memory_buffer, 0, MEMORY_SIZE);
+
+	// load rom images based on the type of machine we are starting
+	memory_load_rom_images();
 
 	// same for the extended memory buffer.  We'll just allocate the
 	// entire 64k because really, why not
 	if (Memory_extended_buffer == nullptr) {
 		Memory_extended_buffer = new uint8_t[MEMORY_SIZE];
-		memset(Memory_extended_buffer, 0, MEMORY_SIZE);
 	}
+
+	memset(Memory_extended_buffer, 0, MEMORY_SIZE);
 
 	// initialize memory with "random" pattern.  there was long discussion
 	// in applewin github issues tracker related to what to do about
@@ -402,6 +408,10 @@ void memory_shutdown()
 {
 	if (Memory_buffer != nullptr) {
 		delete[] Memory_buffer;
+	}
+
+	if (Memory_extended_buffer != nullptr) {
+		delete[] Memory_extended_buffer;
 	}
 }
 

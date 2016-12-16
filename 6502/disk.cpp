@@ -43,11 +43,40 @@ SOFTWARE.
 
 //#define LOG_DISK
 
+class disk_drive {
+private:
+	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
+	uint32_t     m_track_size;       // size of the sector data
+
+public:
+	disk_image* m_disk_image;       // holds information about the disk image
+	bool        m_motor_on;
+	bool        m_write_mode;
+	bool        m_track_dirty;
+	uint8_t     m_phase_status;
+	uint8_t     m_half_track_count;
+	uint8_t     m_current_track;
+	uint8_t     m_data_register;    // data register from controller which holds bytes to/from disk
+	uint32_t    m_current_byte;
+
+public:
+	disk_drive() :m_disk_image(nullptr) {}
+	void init(bool warm_init);
+	void readwrite();
+	void set_new_track(uint8_t new_track);
+	bool insert_disk(const char *filename);
+	void eject_disk();
+	uint8_t get_num_tracks();
+	const char *get_mounted_filename();
+};
+
+
 // I NEED TO FIGURE OUT WHAT THIS DEFINE WORKS
 #define NIBBLES_PER_TRACK 0x1A00
 
-static disk_drive drive_1;
-static disk_drive drive_2;
+static const int Max_drives = 2;
+
+static disk_drive Disk_drives[Max_drives];
 static disk_drive *Current_drive;
 
 void disk_drive::init(bool warm_init)
@@ -166,22 +195,13 @@ uint8_t disk_drive::get_num_tracks()
 // inserts a disk image into the given slot
 bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
-	if (slot == 1) {
-		drive_1.insert_disk(disk_image_filename);
-	}
-	else {
-		drive_2.insert_disk(disk_image_filename);
-	}
+	Disk_drives[slot - 1].insert_disk(disk_image_filename);
 	return true;
 }
 
 void disk_eject(const uint32_t slot)
 {
-	if (slot == 1) {
-		drive_1.eject_disk();
-	} else {
-		drive_2.eject_disk();
-	}
+	Disk_drives[slot - 1].eject_disk();
 }
 
 uint8_t read_handler(uint16_t addr)
@@ -254,10 +274,10 @@ uint8_t read_handler(uint16_t addr)
 	case 0xb:
 		// pick a specific drive
 		if (((addr & 0xf) - 0xa) == 0) {
-			Current_drive = &drive_1;
+			Current_drive = &Disk_drives[0];
 		}
 		else {
-			Current_drive = &drive_2;
+			Current_drive = &Disk_drives[1];
 		}
 		//LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
 		break;
@@ -307,29 +327,23 @@ void write_handler(uint16_t addr, uint8_t val)
 void disk_init()
 {
 	memory_register_slot_handler(6, read_handler, write_handler);
-	drive_1.init(false);
-	drive_2.init(false);
-	Current_drive = &drive_1;
+	for (int i = 0; i < Max_drives; i++) {
+		Disk_drives[i].init(false);
+	}
+	Current_drive = &Disk_drives[0];
 }
 
 void disk_shutdown()
 {
-	if (drive_1.m_disk_image != nullptr) {
-		delete drive_1.m_disk_image;
-	}
-	if (drive_2.m_disk_image != nullptr) {
-		delete drive_2.m_disk_image;
+	for (int i = 0; i < Max_drives; i++) {
+		if (Disk_drives[i].m_disk_image != nullptr) {
+			delete Disk_drives[i].m_disk_image;
+		}
 	}
 }
 
 // return the filename of the mounted disk in the given slot
 const char *disk_get_mounted_filename(const uint32_t slot)
 {
-	if (slot == 1) {
-		return drive_1.get_mounted_filename();
-	}
-	else if (slot == 2) {
-		return drive_2.get_mounted_filename();
-	}
-	return nullptr;
+	return Disk_drives[slot - 1].get_mounted_filename();
 }

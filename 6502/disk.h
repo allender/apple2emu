@@ -31,34 +31,6 @@ SOFTWARE.
 #include "disk_image.h"
 #include "utils/path_utils.h"
 
-class disk_drive {
-private:
-	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
-	uint32_t     m_track_size;       // size of the sector data
-
-public:
-	disk_image* m_disk_image;       // holds information about the disk image
-	bool        m_motor_on;
-	bool        m_write_mode;
-	bool        m_track_dirty;
-	uint8_t     m_phase_status;
-	uint8_t     m_half_track_count;
-	uint8_t     m_current_track;
-	uint8_t     m_data_register;    // data register from controller which holds bytes to/from disk
-	uint32_t    m_current_byte;
-
-public:
-	disk_drive() :m_disk_image(nullptr) {}
-	void init(bool warm_init);
-	void readwrite();
-	void set_new_track(uint8_t new_track);
-	bool insert_disk(const char *filename);
-	void eject_disk();
-	uint8_t get_num_tracks();
-	const char *get_mounted_filename();
-
-};
-
 void disk_init();
 void disk_shutdown();
 bool disk_insert(const char *disk_image_filename, const uint32_t slot);

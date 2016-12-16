@@ -140,6 +140,7 @@ static void ui_show_general_options()
 			Show_main_menu = true;
 		}
 	}
+	ImGui::Checkbox("Open Menu on startup", &Menu_open_at_start);
 	ImGui::Separator();
 
 	static int type = static_cast<uint8_t>(Emulator_type);
@@ -154,7 +155,6 @@ static void ui_show_general_options()
 		reset_machine();
 	} else {
 	}
-	ImGui::Checkbox("Open Menu on startup", &Menu_open_at_start);
 }
 
 static void ui_get_disk_image(uint8_t slot_num)
@@ -219,13 +219,13 @@ static void ui_show_video_output_menu()
 
 static void ui_show_speed_menu()
 {
-	if (ImGui::SliderInt("Emulator Speed", (int *)&Speed_multiplier, 1, 10) == true) {
+	if (ImGui::SliderInt("Emulator Speed", (int *)&Speed_multiplier, 1, 100) == true) {
 	}
 }
 
 static void ui_show_main_menu()
 {
-	ImGui::Begin("Options");
+	ImGui::Begin("Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_ShowBorders);
 	ui_show_general_options();
 	ImGui::Separator();
 	ui_show_video_output_menu();
@@ -287,6 +287,10 @@ void ui_do_frame(SDL_Window *window)
 	// initlialize imgui if it has not been initialized yet
 	if (Imgui_initialized == false) {
 		ImGui_ImplSdl_Init(window);
+
+		// maybe use apple 2 font here
+		//ImGuiIO& io = ImGui::GetIO();
+		//io.Fonts->AddFontFromFileTTF("printchar21.ttf", 8.0f);
 		Imgui_initialized = true;
 	}
 
@@ -298,7 +302,10 @@ void ui_do_frame(SDL_Window *window)
 		ui_show_debug_menu();
 	}
 	//ImGui::ShowTestWindow();
-	ImGui::Render();
+
+	if (Show_main_menu || Show_debug_menu) {
+		ImGui::Render();
+	}
 }
 
 void ui_toggle_main_menu()

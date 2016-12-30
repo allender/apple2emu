@@ -39,15 +39,23 @@ SOFTWARE.
 #define MEMORY_SIZE (64 * 1024 * 1024)
 #define MAX_SLOTS 7
 
-// defines for ram expansion card usage
+// defines for memory status (RAM card, 0xc000 usage, etc)
 #define RAM_CARD_READ           (1 << 0)
 #define RAM_CARD_BANK2          (1 << 1)
 #define RAM_CARD_WRITE_PROTECT  (1 << 2)
+#define RAM_SLOTCX_ROM          (1 << 3)
+#define RAM_SLOTC3_ROM          (1 << 4)
+
+// iie roms are 16k in size.  c000 to cfff can have different
+// functions depending on iie soft switches
+static const int APPLE2E_ROM_SIZE = 0x4000;
+static const int C000_ROM_SIZE = 0x1000;
 
 // memory buffers.  First buffer is for main memory.  Extended buffer
 // is for additional memory (language cards, etc)
 static uint8_t *Memory_buffer = nullptr;
 static uint8_t *Memory_extended_buffer = nullptr;
+static uint8_t *Memory_default_c000_buffer = nullptr;
 
 static slot_handlers  m_c000_handlers[256];
 static uint8_t last_key = 0;
@@ -107,6 +115,15 @@ static bool memory_load_from_filename(const char *filename, uint16_t location)
 	uint32_t buffer_size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 
+	// if we are loading a iie rom, then we need to store off the lower
+	// 4k into another buffer for use when certain soft switches
+	// are used
+	if (buffer_size == APPLE2E_ROM_SIZE) {
+		fread(Memory_default_c000_buffer, 1, 0x1000, fp);
+		location += 0x1000;
+		buffer_size -= 0x1000;
+	}
+
 	// allocate the memory buffer
 	fread(&Memory_buffer[location], 1, buffer_size, fp);
 	fclose(fp);
@@ -122,6 +139,8 @@ static void memory_load_rom_images()
 	}
 	else if (Emulator_type == emulator_type::APPLE2_PLUS) {
 		memory_load_from_filename("roms/apple2_plus.rom", 0xd000);
+	} else if (Emulator_type == emulator_type::APPLE2E) {
+		memory_load_from_filename("roms/apple2e.rom", 0xc000);
 	}
 	memory_load_from_filename("roms/disk2.rom", 0xc600);
 }
@@ -148,10 +167,13 @@ static void memory_initialize()
 }
 
 // Read/write handler for the memory expansion card in SLOT 0.  A 16K
-// card for the apple ii and ii plus.  The informat here was
+// card for the apple ii and ii plus.  The information here was
 // mainly obtained from the following document:
 //
 // http://apple2online.com/web_documents/microsoft_ramcard_-_manual.pdf
+//
+// also this is the appleiie memory format.  Can be found in the Apple2e
+// reference manual (chapter 4)
 //
 static uint8_t memory_expansion_read_handler(uint16_t addr)
 {
@@ -332,11 +354,19 @@ bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
 // initliaze the memory subsystem
 void memory_init()
 {
+	// main memory buffer - 64k
 	if (Memory_buffer == nullptr) {
 		Memory_buffer = new uint8_t[MEMORY_SIZE];
 	}
-
 	memset(Memory_buffer, 0, MEMORY_SIZE);
+
+	// memory for c000-cfff rom (used in apple2e).  Holds
+	// the c000-cfff rom from the rom images which gets
+	// used depending on soft switches
+	if (Memory_default_c000_buffer == nullptr) {
+		Memory_default_c000_buffer = new uint8_t[C000_ROM_SIZE];
+	}
+	memset(Memory_default_c000_buffer, 0, C000_ROM_SIZE);
 
 	// load rom images based on the type of machine we are starting
 	memory_load_rom_images();
@@ -361,7 +391,8 @@ void memory_init()
 		Memory_bank1_pages[i].init(&Memory_buffer[i * 256], false);
 		Memory_bank2_pages[i].init(&Memory_buffer[i * 256], false);
 	}
-	// this is the ROM area when now using a memory bank
+
+	// this is the ROM area when not using a memory bank
 	for (auto i = 0xd0; i < 0x100; i++) {
 		Memory_pages[i].init(&Memory_buffer[i * 256], true);
 		Memory_bank1_pages[i].init(&Memory_buffer[i * 256], true);
@@ -383,7 +414,7 @@ void memory_init()
 	}
 
 	Memory_card_state = 0;
-	Memory_card_state = RAM_CARD_BANK2;
+	Memory_card_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM;
 	Memory_current_page_set = Memory_pages;
 
 	for (auto i = 0; i < 256; i++) {

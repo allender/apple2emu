@@ -47,7 +47,7 @@ const static int Video_native_height = 192;
 const int Video_cell_width = Video_native_width / 40;
 const int Video_cell_height = Video_native_height / 24;
 
-static int Video_scale_factor = 2;
+static int Video_scale_factor = 3;
 static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
 

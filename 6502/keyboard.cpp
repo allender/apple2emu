@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #include "SDL.h"
+#include "apple2emu.h"
 #include "keyboard.h"
 #include "video.h"
 #include "debugger/debugger.h"
@@ -140,7 +141,7 @@ uint32_t keyboard_get_key()
 	}
 	else {
 		key = key_ascii_table[key];
-		if (key >= 'a' && key <= 'z') {
+		if (Emulator_type != emulator_type::APPLE2E && key >= 'a' && key <= 'z') {
 			key -= 32;
 		}
 	}

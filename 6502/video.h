@@ -29,9 +29,6 @@ SOFTWARE.
 
 #include "SDL.h"
 
-#define MAX_TEXT_LINES   24
-#define MAX_TEXT_COLUMNS 40
-
 // video modes
 #define VIDEO_MODE_TEXT    (1 << 0)
 #define VIDEO_MODE_MIXED   (1 << 1)
@@ -39,11 +36,12 @@ SOFTWARE.
 #define VIDEO_MODE_HIRES   (1 << 3)
 
 // display types (mono)
-enum class video_mono_types : uint8_t {
-   MONO_WHITE = 0,
-   MONO_AMBER,
-   MONO_GREEN,
-   NUM_MONO_TYPES,
+enum class video_display_types : uint8_t {
+	MONO_WHITE = 0,
+	MONO_AMBER,
+	MONO_GREEN,
+	NUM_MONO_TYPES,
+	COLOR,
 };
 
 
@@ -53,8 +51,8 @@ extern uint8_t Video_mode;
 
 bool video_init();
 void video_shutdown();
+void video_show_splash();
 void video_render_frame();
-void video_resize(bool scale_up = true);
-void video_set_mono_type(video_mono_types type);
+void video_set_mono_type(video_display_types type);
 
 

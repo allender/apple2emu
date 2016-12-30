@@ -79,15 +79,15 @@
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeaderFile>precompiled.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>precompiled.h</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)cpu;$(ProjectDir)..\SDL2-2.0.4\include;$(ProjectDir)..\SDL2_image-2.0.1\include;$(ProjectDir)..\easyloggingpp\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)cpu;$(ProjectDir)..\glew-1.13.0\include;$(ProjectDir)..\SDL2-2.0.4\include;$(ProjectDir)..\SDL2_image-2.0.1\include;$(ProjectDir)..\easyloggingpp\src;$(ProjectDir)nativefiledialog\src;$(ProjectDir)nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>panel.lib;pdcurses.lib;SDL2main.lib;SDL2.lib;SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir);D:\projects\SDL2-2.0.4\lib\x86;D:\projects\SDL2_image-2.0.1\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>panel.lib;pdcurses.lib;SDL2main.lib;SDL2.lib;SDL2_image.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir);$(ProjectDir)..\SDL2-2.0.4\lib\x86;$(ProjectDir)..\SDL2_image-2.0.1\lib\x86;$(ProjectDir)..\glew-1.13.0\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -110,6 +110,9 @@
     </ClCompile>
     <ClCompile Include="6502\font.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="6502\joystick.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="6502\keyboard.cpp">
@@ -136,13 +139,27 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">precompiled.h</ForcedIncludeFiles>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui_impl_sdl.cpp" />
-    <ClCompile Include="nativefiledialog\src\nfd_common.cpp" />
-    <ClCompile Include="nativefiledialog\src\nfd_win.cpp" />
-    <ClCompile Include="ui\main_menu.cpp" />
+    <ClCompile Include="imgui\imgui.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_demo.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_draw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_impl_sdl.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="nativefiledialog\src\nfd_common.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="ui\interface.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="utils\path_utils.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -158,6 +175,7 @@
     <ClInclude Include="6502\disk.h" />
     <ClInclude Include="6502\disk_image.h" />
     <ClInclude Include="6502\font.h" />
+    <ClInclude Include="6502\joystick.h" />
     <ClInclude Include="6502\keyboard.h" />
     <ClInclude Include="6502\memory.h" />
     <ClInclude Include="6502\speaker.h" />
@@ -175,7 +193,7 @@
     <ClInclude Include="nativefiledialog\src\include\nfd.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />
     <ClInclude Include="precompiled.h" />
-    <ClInclude Include="ui\main_menu.h" />
+    <ClInclude Include="ui\interface.h" />
     <ClInclude Include="utils\path_utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -45,7 +45,7 @@ public:
 		SIGN_BIT,
 	};
 
-	enum class addressing_mode : uint8_t {
+	enum class addr_mode : uint8_t {
 		NO_MODE = 0,
 		ACCUMULATOR_MODE,
 		IMMEDIATE_MODE,
@@ -56,27 +56,28 @@ public:
 		INDIRECT_MODE,
 		X_INDEXED_MODE,
 		Y_INDEXED_MODE,
-		ZERO_PAGE_INDEXED_MODE,
-		ZERO_PAGE_INDEXED_MODE_Y,
+		ZP_INDEXED_MODE,
+		ZP_INDEXED_MODE_Y,
 		INDEXED_INDIRECT_MODE,
 		INDIRECT_INDEXED_MODE,
 		NUM_ADDRESSING_MODES
 	};
 
-	typedef int16_t (cpu_6502::*addressing_function)(void);
+	typedef int16_t(cpu_6502::*addr_func)(void);
 
 	typedef struct {
-		uint32_t          m_mnemonic;
-		uint8_t           m_size;
-		uint8_t           m_cycle_count;
-		addressing_mode   m_addressing_mode;
+		uint32_t    m_mnemonic;
+		uint8_t     m_size;
+		uint8_t     m_cycle_count;
+		addr_mode   m_addr_mode;
+		addr_func   m_addr_func;
 	} opcode_info;
 
 	/*
 	*  Table for all opcodes and their relevant data
 	*/
 	static opcode_info m_opcodes[256];
-	
+
 public:
 	cpu_6502() { }
 	void init();
@@ -84,12 +85,12 @@ public:
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
 	// needed for debugger
-	uint16_t get_pc()     { return m_pc; }
-	uint8_t  get_acc()    { return m_acc;  }
-	uint8_t  get_x()      { return m_xindex;  }
-	uint8_t  get_y()      { return m_yindex;  }
-	uint8_t  get_sp()     { return m_sp;  }
-	uint8_t  get_status() { return m_status_register;  }
+	uint16_t get_pc() { return m_pc; }
+	uint8_t  get_acc() { return m_acc; }
+	uint8_t  get_x() { return m_xindex; }
+	uint8_t  get_y() { return m_yindex; }
+	uint8_t  get_sp() { return m_sp; }
+	uint8_t  get_status() { return m_status_register; }
 
 private:
 	uint16_t         m_pc;
@@ -98,10 +99,9 @@ private:
 	uint8_t          m_xindex;
 	uint8_t          m_yindex;
 	uint8_t          m_status_register;
+	uint8_t          m_extra_cycles;
 
-	addressing_function m_addressing_functions[static_cast<uint8_t>(addressing_mode::NUM_ADDRESSING_MODES)];
-
-	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1<<static_cast<uint8_t>(bit))) | (!!val<<static_cast<uint8_t>(bit)); }
+	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1 << static_cast<uint8_t>(bit))) | (!!val << static_cast<uint8_t>(bit)); }
 	uint8_t get_flag(register_bit bit) { return (m_status_register >> static_cast<uint8_t>(bit)) & 0x1; }
 
 	// addressing functions
@@ -117,10 +117,13 @@ private:
 	// indexed memory
 	int16_t absolute_x_mode();
 	int16_t absolute_y_mode();
+	int16_t absolute_x_check_boundary_mode();
+	int16_t absolute_y_check_boundary_mode();
 	int16_t zero_page_indexed_mode();
 	int16_t zero_page_indexed_mode_y();
 	int16_t indexed_indirect_mode();
 	int16_t indirect_indexed_mode();
+	int16_t indirect_indexed_check_boundary_mode();
 
 	void branch_relative();
 };

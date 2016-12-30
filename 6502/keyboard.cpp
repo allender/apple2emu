@@ -26,10 +26,11 @@ SOFTWARE.
 */
 
 #include "SDL.h"
+#include "apple2emu.h"
 #include "keyboard.h"
 #include "video.h"
 #include "debugger/debugger.h"
-#include "ui/main_menu.h"
+#include "ui/interface.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
@@ -41,7 +42,7 @@ uint32_t key_buffer[Keybuffer_size];
 
 // SDL scancode to ascii values
 uint8_t key_ascii_table[256] =
-{  0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',   // 0x00 - 0x0f
+{ 0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',   // 0x00 - 0x0f
  'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',   // 0x10 - 0x1f
  '3', '4', '5', '6', '7', '8', '9', '0',   0,   0,   0,   0, ' ', '-', '=', '[',   // 0x20 - 0x2f
  ']', '\\',  0, ';', '\'', '`', ',', '.', '/',  0,   0,   0,   0,   0,   0,   0,   // 0x30 - 0x3f
@@ -62,7 +63,7 @@ uint8_t key_ascii_table[256] =
 
 // SDL scancode to shifted ascii values
 uint8_t key_shifted_ascii_table[256] =
-{  0,   0,   0,   0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',   // 0x00 - 0x0f
+{ 0,   0,   0,   0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',   // 0x00 - 0x0f
  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@',   // 0x10 - 0x1f
  '#', '$', '%', '^', '&', '*', '(', ')',   0,   0,   0,   0, ' ', '_', '+', '{',   // 0x20 - 0x2f
  '}', '|',   0, ':', '\"', '~', '<', '>', '?',  0,   0,   0,   0,   0,   0,   0,   // 0x30 - 0x3f
@@ -112,23 +113,35 @@ uint32_t keyboard_get_key()
 	if (key & KEY_SHIFT) {
 		key &= 0xff;
 		key = key_shifted_ascii_table[key];
-	} else if (key & KEY_CTRL) {
+	}
+	else if (key & KEY_CTRL) {
 		// send ctrl-A through ctrl-Z
 		key &= 0xff;
 		if ((key >= SDL_SCANCODE_A) && (key <= SDL_SCANCODE_Z)) {
 			key = key - SDL_SCANCODE_A + 1;
-		} else {
+		}
+		else {
 			key = 0;
 		}
-	} else if (key == SDL_SCANCODE_RETURN) {
+	}
+	else if (key == SDL_SCANCODE_RETURN) {
 		key = '\r';
-	} else if (key == SDL_SCANCODE_BACKSPACE) {
+	}
+	else if (key == SDL_SCANCODE_BACKSPACE) {
 		key = '\b';
-	} else if (key == SDL_SCANCODE_ESCAPE) {
+	}
+	else if (key == SDL_SCANCODE_ESCAPE) {
 		key = 0x9b;
-	} else {
+	}
+	else if (key == SDL_SCANCODE_RIGHT) {
+		key = 0x95;
+	}
+	else if (key == SDL_SCANCODE_LEFT) {
+		key = 0x88;
+	}
+	else {
 		key = key_ascii_table[key];
-		if (key >= 'a' && key <= 'z') {
+		if (Emulator_type != emulator_type::APPLE2E && key >= 'a' && key <= 'z') {
 			key -= 32;
 		}
 	}
@@ -171,16 +184,12 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_main_menu();
 		}
 		if (scancode == SDL_SCANCODE_F2) {
-			ui_toggle_disk_menu();
+			ui_toggle_debug_menu();
 		}
 
-		// check for window resize
-		if ((scancode == SDL_SCANCODE_PERIOD) && (mods & KMOD_CTRL)) {
-			video_resize(true);
-			return;
-		} else if ((scancode == SDL_SCANCODE_COMMA) && (mods & KMOD_CTRL)) {
-			video_resize(false);
-			return;
+		if (scancode == SDL_SCANCODE_F9) {
+			extern bool Debug_show_bitmap;
+			Debug_show_bitmap = !Debug_show_bitmap;
 		}
 
 		// we should only be putting keys into the keyboard buffer that are printable
@@ -191,7 +200,8 @@ void keyboard_handle_event(SDL_Event &evt)
 			}
 			if (mods & KMOD_SHIFT) {
 				scancode |= KEY_SHIFT;
-			} else if (mods & KMOD_CTRL) {
+			}
+			else if (mods & KMOD_CTRL) {
 				scancode |= KEY_CTRL;
 			}
 			keyboard_insert_key(scancode);

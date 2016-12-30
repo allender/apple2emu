@@ -25,17 +25,11 @@ SOFTWARE.
 
 */
 
-/*
- * Header file for path manipulation functions
-*/
+#include "SDL.h"
 
-#include <stdlib.h>
-
-#if defined(_WIN32) || defined(_WIN64)
-#define PATH_MAX_LENGTH _MAX_PATH
-#else
-#endif
-
-bool path_utils_change_ext(std::string &new_filename, const std::string &old_filename, const std::string &ext);
-void path_utils_get_filename(std::string &full_path, std::string &filename);
-void path_utils_get_filename(const char *full_path, std::string &filename);
+void ui_init();
+void ui_shutdown();
+void ui_do_frame(SDL_Window *window);
+void ui_toggle_main_menu();
+void ui_toggle_debug_menu();
+void ui_update_cycle_count();

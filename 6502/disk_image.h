@@ -31,6 +31,8 @@ SOFTWARE.
 
 #pragma once
 
+#include <string>
+
 class disk_image
 {
 

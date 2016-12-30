@@ -47,14 +47,17 @@
     <ClCompile Include="imgui\imgui_impl_sdl.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="ui\main_menu.cpp">
-      <Filter>ui</Filter>
-    </ClCompile>
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <Filter>nativefiledialog</Filter>
     </ClCompile>
     <ClCompile Include="nativefiledialog\src\nfd_common.cpp">
       <Filter>nativefiledialog</Filter>
+    </ClCompile>
+    <ClCompile Include="6502\joystick.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\interface.cpp">
+      <Filter>ui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -116,9 +119,6 @@
     <ClInclude Include="imgui\imgui_impl_sdl.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="ui\main_menu.h">
-      <Filter>ui</Filter>
-    </ClInclude>
     <ClInclude Include="apple2emu.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h">
       <Filter>nativefiledialog</Filter>
@@ -128,6 +128,12 @@
     </ClInclude>
     <ClInclude Include="nativefiledialog\src\common.h">
       <Filter>nativefiledialog</Filter>
+    </ClInclude>
+    <ClInclude Include="6502\joystick.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\interface.h">
+      <Filter>ui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -35,8 +35,8 @@ typedef std::function<void(uint16_t, uint8_t)> slot_io_write_function;
 
 // information for slot handlers/soft switches
 struct slot_handlers {
-   slot_io_read_function    m_read_handler;
-   slot_io_write_function   m_write_handler;
+	slot_io_read_function    m_read_handler;
+	slot_io_write_function   m_write_handler;
 };
 
 void memory_init();
@@ -45,6 +45,6 @@ bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location);
 uint8_t memory_read(uint16_t addr);
 void memory_write(uint16_t addr, uint8_t val);
 void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function);
-void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function );
+void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function);
 
 #endif  // MEMORY_H

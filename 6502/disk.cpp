@@ -43,11 +43,40 @@ SOFTWARE.
 
 //#define LOG_DISK
 
+class disk_drive {
+private:
+	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
+	uint32_t     m_track_size;       // size of the sector data
+
+public:
+	disk_image* m_disk_image;       // holds information about the disk image
+	bool        m_motor_on;
+	bool        m_write_mode;
+	bool        m_track_dirty;
+	uint8_t     m_phase_status;
+	uint8_t     m_half_track_count;
+	uint8_t     m_current_track;
+	uint8_t     m_data_register;    // data register from controller which holds bytes to/from disk
+	uint32_t    m_current_byte;
+
+public:
+	disk_drive() :m_disk_image(nullptr) {}
+	void init(bool warm_init);
+	void readwrite();
+	void set_new_track(uint8_t new_track);
+	bool insert_disk(const char *filename);
+	void eject_disk();
+	uint8_t get_num_tracks();
+	const char *get_mounted_filename();
+};
+
+
 // I NEED TO FIGURE OUT WHAT THIS DEFINE WORKS
 #define NIBBLES_PER_TRACK 0x1A00
 
-static disk_drive drive_1;
-static disk_drive drive_2;
+static const int Max_drives = 2;
+
+static disk_drive Disk_drives[Max_drives];
 static disk_drive *Current_drive;
 
 void disk_drive::init(bool warm_init)
@@ -59,9 +88,6 @@ void disk_drive::init(bool warm_init)
 	m_current_byte = 0;
 	if (m_track_data != nullptr) {
 		delete[] m_track_data;
-	}
-	if (m_disk_image != nullptr) {
-		delete m_disk_image;
 	}
 	m_track_data = nullptr;
 	m_track_size = 0;
@@ -89,7 +115,7 @@ void disk_drive::readwrite()
 #if defined(LOG_DISK)
 		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)Current_drive->m_current_track << "  read";
 #endif
-	 	m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
+		m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
 		m_track_dirty = false;
 		m_current_byte = 0;
 	}
@@ -99,9 +125,10 @@ void disk_drive::readwrite()
 		m_data_register = m_track_data[m_current_byte];
 #if defined(LOG_DISK)
 		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
-std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
+			std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
 #endif
-	} else {
+	}
+	else {
 		// when writing, here we will just apply the byte to the track
 		// data.  It will get written when we change tracks or eject
 		// the disk
@@ -131,15 +158,22 @@ void disk_drive::set_new_track(const uint8_t track)
 
 bool disk_drive::insert_disk(const char *filename)
 {
-	if (m_disk_image != nullptr) {
-		delete m_disk_image;
-		m_disk_image = nullptr;
-	}
-	init(true);
+	eject_disk();
+
 	m_disk_image = new disk_image();
 	m_disk_image->init();
 	m_disk_image->load_image(filename);
 	return true;
+}
+
+void disk_drive::eject_disk()
+{
+	if (m_disk_image != nullptr) {
+		delete m_disk_image;
+		m_disk_image = nullptr;
+	}
+
+	init(true);
 }
 
 const char *disk_drive::get_mounted_filename()
@@ -161,12 +195,13 @@ uint8_t disk_drive::get_num_tracks()
 // inserts a disk image into the given slot
 bool disk_insert(const char *disk_image_filename, const uint32_t slot)
 {
-	if (slot == 1) {
-		drive_1.insert_disk(disk_image_filename);
-	} else {
-		drive_2.insert_disk(disk_image_filename);
-	}
+	Disk_drives[slot - 1].insert_disk(disk_image_filename);
 	return true;
+}
+
+void disk_eject(const uint32_t slot)
+{
+	Disk_drives[slot - 1].eject_disk();
 }
 
 uint8_t read_handler(uint16_t addr)
@@ -189,7 +224,8 @@ uint8_t read_handler(uint16_t addr)
 
 			if (addr & 1) {
 				Current_drive->m_phase_status |= (1 << phase);
-			} else {
+			}
+			else {
 				Current_drive->m_phase_status &= ~(1 << phase);
 			}
 
@@ -238,9 +274,10 @@ uint8_t read_handler(uint16_t addr)
 	case 0xb:
 		// pick a specific drive
 		if (((addr & 0xf) - 0xa) == 0) {
-			Current_drive = &drive_1;
-		} else {
-			Current_drive = &drive_2;
+			Current_drive = &Disk_drives[0];
+		}
+		else {
+			Current_drive = &Disk_drives[1];
 		}
 		//LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
 		break;
@@ -248,7 +285,7 @@ uint8_t read_handler(uint16_t addr)
 	case 0xc:
 		Current_drive->readwrite();
 		break;
-		
+
 	case 0xd:
 		// check write-protect status. If the drive is write protected,
 		// we would or a high bit into the data register as this bit
@@ -256,7 +293,8 @@ uint8_t read_handler(uint16_t addr)
 		// the high bit forces the QA bit low which enables writing
 		if (Current_drive->m_disk_image->read_only() == true) {
 			Current_drive->m_data_register |= 0x80;
-		} else {
+		}
+		else {
 			Current_drive->m_data_register &= 0x7f;
 		}
 		break;
@@ -272,7 +310,8 @@ uint8_t read_handler(uint16_t addr)
 
 	if (!(addr & 0x1)) {
 		return Current_drive->m_data_register;
-	} else {
+	}
+	else {
 		return 0;
 	}
 
@@ -288,28 +327,23 @@ void write_handler(uint16_t addr, uint8_t val)
 void disk_init()
 {
 	memory_register_slot_handler(6, read_handler, write_handler);
-	drive_1.init(false);
-	drive_2.init(false);
-	Current_drive = &drive_1;
+	for (int i = 0; i < Max_drives; i++) {
+		Disk_drives[i].init(false);
+	}
+	Current_drive = &Disk_drives[0];
 }
 
 void disk_shutdown()
 {
-	if (drive_1.m_disk_image != nullptr) {
-		delete drive_1.m_disk_image;
-	}
-	if (drive_2.m_disk_image != nullptr) {
-		delete drive_2.m_disk_image;
+	for (int i = 0; i < Max_drives; i++) {
+		if (Disk_drives[i].m_disk_image != nullptr) {
+			delete Disk_drives[i].m_disk_image;
+		}
 	}
 }
 
 // return the filename of the mounted disk in the given slot
 const char *disk_get_mounted_filename(const uint32_t slot)
 {
-	if (slot == 1) {
-		return drive_1.get_mounted_filename();
-	} else if (slot == 2) {
-		return drive_2.get_mounted_filename();
-	}
-	return nullptr;
+	return Disk_drives[slot - 1].get_mounted_filename();
 }

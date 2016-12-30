@@ -36,12 +36,15 @@ SOFTWARE.
 #include "6502/video.h"
 #include "6502/disk.h"
 #include "6502/keyboard.h"
+#include "6502/joystick.h"
 #include "6502/speaker.h"
 #include "debugger/debugger.h"
 #include "utils/path_utils.h"
+#include "ui/interface.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "apple2emu.h"
+#include "easylogging++.h"
 
 #include "SDL.h"
 
@@ -51,10 +54,25 @@ SOFTWARE.
 
 INITIALIZE_EASYLOGGINGPP
 
+const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)] = {
+	"Apple ][",
+	"Apple ][+",
+	"Apple ][e",
+};
+
 static const double Render_time = 33;   // roughly 30 fps
+static SDL_sem *cpu_sem;
+
+// globals used to control emulator
+uint32_t Speed_multiplier = 1;
+bool Auto_start = false;
+emulator_state Emulator_state = emulator_state::SPLASH_SCREEN;
+emulator_type Emulator_type = emulator_type::APPLE2;
 
 const char *Disk_image_filename = nullptr;
-	
+
+uint32_t Total_cycles, Total_cycles_this_frame;
+
 cpu_6502 cpu;
 
 static void configure_logging()
@@ -81,7 +99,7 @@ static char *get_cmdline_option(char **start, char **end, const std::string &sho
 	if (iter == end) {
 		iter = std::find(start, end, long_option);
 	}
-	if ((iter != end) && (iter++ != end) ) {
+	if ((iter != end) && (iter++ != end)) {
 		return *iter;
 	}
 
@@ -100,6 +118,12 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	return true;
 }
 
+static uint32_t render_event_timer(uint32_t interval, void *param)
+{
+	SDL_SemPost(cpu_sem);
+	return interval;
+}
+
 bool dissemble_6502(const char *filename)
 {
 	return true;
@@ -107,19 +131,14 @@ bool dissemble_6502(const char *filename)
 
 void reset_machine()
 {
-   memory_init();
+	ui_init();
+	memory_init();
 	cpu.init();
 	debugger_init();
 	speaker_init();
 	keyboard_init();
+	joystick_init();
 	disk_init();
-
-	// load up disk images
-	const char *filename = disk_get_mounted_filename(1);
-	if (filename == nullptr) {
-		disk_insert(Disk_image_filename, 1);
-	}
-
 	video_init();
 }
 
@@ -129,26 +148,34 @@ int main(int argc, char* argv[])
 	configure_logging();
 
 	// grab some needed command line options
-	Disk_image_filename = get_cmdline_option(argv, argv+argc, "-d", "--disk");  // will always go to drive one for now
+	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");  // will always go to drive one for now
 
-	// reset the machine
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
+
 	reset_machine();
+	if (Auto_start == true) {
+		Emulator_state = emulator_state::EMULATOR_STARTED;
+	}
 
 	uint16_t prog_start = 0x600;
 	uint16_t load_addr = 0x0;
 
-	const char *prog_start_string = get_cmdline_option(argv, argv+argc, "-p", "--pc");
+	const char *prog_start_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (prog_start_string != nullptr) {
 		prog_start = (uint16_t)strtol(prog_start_string, nullptr, 16);
 	}
 
-	const char *load_addr_string = get_cmdline_option(argv, argv+argc, "-b", "--base");
+	const char *load_addr_string = get_cmdline_option(argv, argv + argc, "-b", "--base");
 	if (load_addr_string != nullptr) {
 		load_addr = (uint16_t)strtol(load_addr_string, nullptr, 16);
 	}
 
 	const char *binary_file = nullptr;
-	binary_file = get_cmdline_option(argv, argv+argc, "-b", "--binary");
+	binary_file = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 	if (binary_file != nullptr) {
 		FILE *fp = fopen(binary_file, "rb");
 		if (fp == nullptr) {
@@ -170,46 +197,52 @@ int main(int argc, char* argv[])
 		fclose(fp);
 		memory_load_buffer(buffer, buffer_size, load_addr);
 		cpu.set_pc(prog_start);
-	} else {
 	}
 
 	bool quit = false;
-	uint32_t total_cycles = 0;
-	double last_time = SDL_GetTicks();
-	double processed_time = 0;
+	Total_cycles_this_frame = Total_cycles = 0;
+	cpu_sem = SDL_CreateSemaphore(0);
+	if (cpu_sem == nullptr) {
+		printf("Unable to create semaphore for CPU speed throttling: %s\n", SDL_GetError());
+		exit(-1);
+	}
 
+	// set up a timer for rendering
+	SDL_TimerID render_timer = SDL_AddTimer(16, render_event_timer, nullptr);
+	if (render_timer == 0) {
+		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
+		exit(-1);
+	}
+	
 	while (!quit) {
+		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 
 		// process debugger (before opcode processing so that we can break on
 		// specific addresses properly
 		debugger_process(cpu);
 
 		// process the next opcode
-		uint32_t cycles = cpu.process_opcode();
-		total_cycles += cycles;
+		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+			while (true) {
+				uint32_t cycles = cpu.process_opcode();
+				Total_cycles_this_frame += cycles;
+				Total_cycles += cycles;
 
-		if (total_cycles > 17030) {
-			//video_render_frame(mem);
-			total_cycles -= 17030;
+				if (Total_cycles_this_frame > cycles_per_frame) {
+					ui_update_cycle_count();
+					// this is essentially number of cycles for one redraw cycle
+					// for TV/monitor.  Around 17030 cycles I believe
+					Total_cycles_this_frame -= cycles_per_frame;
+					SDL_SemWait(cpu_sem);
+					break;
+				}
+			}
 		}
 
-		// determine whether to render or not.  Calculate diff
-		// between last frame.
-		double cur_time = SDL_GetTicks();
-		double diff_time = cur_time - last_time;
-		last_time = cur_time;
+		{
+			SDL_Event evt;
 
-		bool should_render = false;
-		processed_time += diff_time;
-		while (processed_time > Render_time) {
-			should_render = true;
-			processed_time -= Render_time;
-		}
-
-		if (should_render == true) {
-         SDL_Event evt;
-
-			if (SDL_PollEvent(&evt)) {
+			while (SDL_PollEvent(&evt)) {
 				ImGui_ImplSdl_ProcessEvent(&evt);
 				switch (evt.type) {
 				case SDL_KEYDOWN:
@@ -222,6 +255,7 @@ int main(int argc, char* argv[])
 						quit = true;
 					}
 					break;
+
 				case SDL_QUIT:
 					quit = true;
 					break;
@@ -229,14 +263,18 @@ int main(int argc, char* argv[])
 			}
 			video_render_frame();
 		}
-
 	}
+
+	SDL_DestroySemaphore(cpu_sem);
 
 	video_shutdown();
 	disk_shutdown();
 	keyboard_shutdown();
-   debugger_shutdown();
+	joystick_shutdown();
+	debugger_shutdown();
 	memory_shutdown();
+
+	SDL_Quit();
 
 	return 0;
 }

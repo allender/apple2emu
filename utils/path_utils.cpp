@@ -28,7 +28,7 @@ SOFTWARE.
 #include <string>
 #include "path_utils.h"
 
-/* 
+/*
  *  function to change the extension of the given path
 */
 bool path_utils_change_ext(std::string &new_filename, const std::string &old_filename, const std::string &ext)
@@ -43,8 +43,8 @@ bool path_utils_change_ext(std::string &new_filename, const std::string &old_fil
 		new_filename.push_back('.');
 	}
 	new_filename.append(ext);
-	
-	return true;	
+
+	return true;
 }
 
 void path_utils_get_filename(std::string &full_path, std::string &filename)
@@ -74,7 +74,7 @@ void path_utils_get_filename(std::string &full_path, std::string &filename)
 void path_utils_get_filename(const char *full_path, std::string &filename) {
 	filename = "";
 	if (full_path != nullptr) {
-      std::string tmp_string(full_path);
+		std::string tmp_string(full_path);
 		path_utils_get_filename(tmp_string, filename);
 	}
 }

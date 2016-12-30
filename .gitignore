@@ -236,3 +236,7 @@ apple2emu
 imgui.ini
 
 tags
+/settings.txt
+/.editorconfig
+/CurrentSettings.vssettings
+/apple2emu.vssettings

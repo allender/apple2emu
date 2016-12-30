@@ -25,10 +25,7 @@ SOFTWARE.
 
 */
 
-#include "SDL.h"
+#pragma once
 
-void ui_init(SDL_Window *window);
-void ui_shutdown();
-void ui_do_frame(SDL_Window *window);
-void ui_toggle_main_menu();
-void ui_toggle_disk_menu();
+void joystick_init();
+void joystick_shutdown();

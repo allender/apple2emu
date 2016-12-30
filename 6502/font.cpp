@@ -81,7 +81,7 @@ bool font::load(const char *filename)
 	for (auto i = 0; i < 128; i++) {
 		uint32_t character_row = i / chars_per_row;
 		uint32_t character_col = i - character_row * chars_per_row;
-	
+
 		m_char_u[i] = character_col * m_header.m_cell_u;
 		m_char_v[i] = character_row * m_header.m_cell_v;
 	}

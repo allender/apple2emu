@@ -38,9 +38,6 @@ SOFTWARE.
 #define ELPP_DEFAULT_LOG_FILE "logs/apple2emu.log"
 #endif
 
-//#define ELPP_STACKTRACE_ON_CRASH
-//#include "easylogging++.h"
-
 #define USE_SDL
 
 #if defined(LITTLE_ENDIAN)

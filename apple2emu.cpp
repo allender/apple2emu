@@ -30,6 +30,7 @@ SOFTWARE.
 #include <algorithm>
 #include <string>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "6502/cpu.h"
 #include "6502/assemble.h"
@@ -44,7 +45,6 @@ SOFTWARE.
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "apple2emu.h"
-#include "easylogging++.h"
 
 #include "SDL.h"
 
@@ -52,7 +52,7 @@ SOFTWARE.
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
 #endif
 
-INITIALIZE_EASYLOGGINGPP
+//INITIALIZE_EASYLOGGINGPP
 
 const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)] = {
 	"Apple ][",
@@ -77,19 +77,19 @@ cpu_6502 cpu;
 
 static void configure_logging()
 {
-	el::Configurations conf;
+	//el::Configurations conf;
 
-	conf.setToDefault();
-	conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
-	conf.set(el::Level::Global, el::ConfigurationType::LogFileTruncate, "true");
-	conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
-	conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
-	el::Loggers::reconfigureLogger("default", conf);
+	//conf.setToDefault();
+	//conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
+	//conf.set(el::Level::Global, el::ConfigurationType::LogFileTruncate, "true");
+	//conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
+	//conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
+	//el::Loggers::reconfigureLogger("default", conf);
 
-	// set some options on the logger
-	el::Loggers::addFlag(el::LoggingFlag::ImmediateFlush);
-	el::Loggers::addFlag(el::LoggingFlag::NewLineForContainer);
-	el::Loggers::addFlag(el::LoggingFlag::ColoredTerminalOutput);
+	//// set some options on the logger
+	//el::Loggers::addFlag(el::LoggingFlag::ImmediateFlush);
+	//el::Loggers::addFlag(el::LoggingFlag::NewLineForContainer);
+	//el::Loggers::addFlag(el::LoggingFlag::ColoredTerminalOutput);
 }
 
 
@@ -265,6 +265,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
+   SDL_RemoveTimer(render_timer);
 	SDL_DestroySemaphore(cpu_sem);
 
 	video_shutdown();

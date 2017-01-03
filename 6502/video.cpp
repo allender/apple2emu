@@ -613,7 +613,10 @@ bool video_create()
 		return false;
 	}
 	glewExperimental = GL_TRUE;
-	glewInit();
+	GLenum err = glewInit();
+   if (err != GLEW_OK) {
+      printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
+   }
 
 	// framebuffer and render to texture
 	glGenFramebuffers(1, &Video_framebuffer);
@@ -693,9 +696,10 @@ bool video_init()
 	if (Splash_screen_surface == nullptr) {
 		printf("Unable to load splash screen: %s\n", SDL_GetError());
 	}
-
-	int pixel_type = SDL_PIXELTYPE(Splash_screen_surface->format->format);
-	int order = SDL_PIXELORDER(Splash_screen_surface->format->format);
+   int mode = GL_RGB;
+   if (Splash_screen_surface->format->BytesPerPixel == 4) {
+      mode = GL_RGBA;
+   }
 
 	glGenTextures(1, &Splash_screen_texture);
 	glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
@@ -703,7 +707,7 @@ bool video_init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, mode, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
 
 	// set up the memory handlers
 	for (auto i = 0x50; i <= 0x57; i++) {
@@ -772,7 +776,6 @@ void video_render_frame()
 	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-
 
 	if (Video_display_mode != video_display_types::COLOR) {
 		glColor3fv(Mono_color);

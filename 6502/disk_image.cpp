@@ -30,7 +30,10 @@ SOFTWARE.
 //
 
 #include <stdio.h>
+#if defined(_WINDOWS)
 #include <io.h>
+#else
+#endif
 #include <assert.h>
 #include "disk_image.h"
 

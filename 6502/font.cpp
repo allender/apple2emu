@@ -47,6 +47,10 @@ bool font::load(const char *filename)
 		printf("Unable to load image %s: %s\n", filename, IMG_GetError());
 		return false;
 	}
+   int mode = GL_RGB;
+   if (m_surface->format->BytesPerPixel == 4) {
+      mode = GL_RGBA;
+   }
 
 	// load the pixels into a GL texture
 	glGenTextures(1, &m_texture_id);
@@ -55,7 +59,7 @@ bool font::load(const char *filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_surface->w, m_surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, m_surface->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_surface->w, m_surface->h, 0, mode, GL_UNSIGNED_BYTE, m_surface->pixels);
 
 	// set up font information on cells and locations for characters
 	m_header.m_font_width = m_surface->w;

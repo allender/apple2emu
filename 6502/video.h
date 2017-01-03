@@ -45,7 +45,6 @@ enum class video_display_types : uint8_t {
 };
 
 
-extern SDL_Window *Video_window;
 extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
 

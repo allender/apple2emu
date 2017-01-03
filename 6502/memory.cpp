@@ -34,9 +34,11 @@ SOFTWARE.
 #include "curses.h"
 #include "debugger/debugger.h"
 #include "6502/keyboard.h"
-#include "easylogging++.h"
 
 #define MEMORY_SIZE (64 * 1024 * 1024)
+#define MEMORY_BANK_SIZE  (4 * 1024)
+#define MEMORY_EXTENDED_SIZE  (12 * 1024)
+
 #define MAX_SLOTS 7
 
 // defines for memory status (RAM card, 0xc000 usage, etc)
@@ -50,12 +52,6 @@ SOFTWARE.
 // functions depending on iie soft switches
 static const int APPLE2E_ROM_SIZE = 0x4000;
 static const int C000_ROM_SIZE = 0x1000;
-
-// memory buffers.  First buffer is for main memory.  Extended buffer
-// is for additional memory (language cards, etc)
-static uint8_t *Memory_buffer = nullptr;
-static uint8_t *Memory_extended_buffer = nullptr;
-static uint8_t *Memory_default_c000_buffer = nullptr;
 
 static slot_handlers  m_c000_handlers[256];
 static uint8_t last_key = 0;
@@ -76,12 +72,37 @@ public:
 	bool write_protected() { return m_write_protected; }
 	void set_write_protected(bool write_protected) { m_write_protected = write_protected; }
 	uint8_t * get_ptr() { return m_ptr; }
+   void set_ptr(uint8_t *ptr) { m_ptr = ptr; }
 };
 
-memory_page Memory_pages[256];        // there are 256 pages of 256 bytes each page for total of 64k
-memory_page Memory_bank1_pages[256];  // includes the same lower 48K plus bank1 and extended RAM
-memory_page Memory_bank2_pages[256];  // includes the same lower 48K plus bank2 and extended RAM
-memory_page *Memory_current_page_set; // current bank being used
+// definitions for memory paging.  There will be one set of memory_page(s)
+// for the emulator and the pointers for those pages will be changed
+// depending on how memory is configured with the soft switches
+
+// main definition of memory pages for the emulator
+memory_page Memory_main_pages[256];    // 256 pages of 256 bytes/page for 64k
+memory_page Memory_bank1_pages[48];    // 48 pages in bank 1
+memory_page Memory_bank2_pages[48];    // 48 pages in bank 2
+
+memory_page *Memory_read_pages[256];   // point to pages which can be read
+memory_page *Memory_write_pages[256];  // point to pages which can be written
+
+// Below are the definitions for the memory buffers.  These buffers
+// will contain the memory for the various paging setups that can
+// happen in the emulator.  Code will use the addresses within these
+// buffers to set up the memory page pointers appropriately
+
+// main buffer of 64k.
+static uint8_t *Memory_buffer = nullptr;
+
+// two buffers for 4k ram (bank1 and bank2)
+static uint8_t *Memory_bank1_buffer = nullptr;
+static uint8_t *Memory_bank2_buffer = nullptr;
+
+// one 12k buffer for extended ram 
+static uint8_t *Memory_extended_buffer = nullptr;
+
+static uint8_t *Memory_default_c000_buffer = nullptr;
 
 static uint8_t keyboard_read_handler(uint16_t addr)
 {
@@ -159,8 +180,18 @@ static void memory_initialize()
 	for (auto i = 0; i < 0xc000; i += 4) {
 		Memory_buffer[i] = 0xff;
 		Memory_buffer[i + 1] = 0xff;
+   }
 
-		// same with extended buffer
+	// same with bank  buffers
+   for (auto i = 0; i < MEMORY_BANK_SIZE; i += 4) {
+		Memory_bank1_buffer[i] = 0xff;
+		Memory_bank1_buffer[i + 1] = 0xff;
+		Memory_bank2_buffer[i] = 0xff;
+		Memory_bank2_buffer[i + 1] = 0xff;
+	}
+
+	// same with extended buffer
+   for (auto i = 0; i < MEMORY_EXTENDED_SIZE; i += 4) {
 		Memory_extended_buffer[i] = 0xff;
 		Memory_extended_buffer[i + 1] = 0xff;
 	}
@@ -253,8 +284,9 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		}
 	}
 
-	// set write protect on ramcard pages if necessary
-	for (auto i = 0xd0; i < 0x100; i++) {
+	// set write protect on ramcard pages if necessary.  There are a
+   // total of 48 pages
+	for (auto i = 0; i < 48; i++) {
 		if (Memory_card_state & RAM_CARD_BANK2) {
 			Memory_bank2_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
 		}
@@ -266,14 +298,23 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	// set the current set of pages being used
 	if (Memory_card_state & RAM_CARD_READ) {
 		if (Memory_card_state & RAM_CARD_BANK2) {
-			Memory_current_page_set = Memory_bank2_pages;
+         for (auto i = 0xd0; i < 0x100; i++) {
+            Memory_read_pages[i] = &Memory_bank2_pages[i - 0xd0];
+            Memory_write_pages[i] = &Memory_bank2_pages[i - 0xd0];
+         }
 		}
 		else {
-			Memory_current_page_set = Memory_bank1_pages;
+         for (auto i = 0xd0; i < 0x100; i++ ) {
+            Memory_read_pages[i] = &Memory_bank1_pages[i - 0xd0];
+            Memory_write_pages[i] = &Memory_bank1_pages[i - 0xd0];
+         }
 		}
 	}
 	else {
-		Memory_current_page_set = Memory_pages;
+      for (auto i = 0xd0; i < 0x100; i++) {
+         Memory_read_pages[i] = &Memory_main_pages[i];
+         Memory_write_pages[i] = &Memory_main_pages[i];
+      }
 	}
 
 	return 0;
@@ -295,10 +336,10 @@ uint8_t memory_read(const uint16_t addr)
 			return m_c000_handlers[mapped_addr].m_read_handler(addr);
 		}
 		else {
-			LOG(INFO) << "Reading from $" << std::setbase(16) << addr << " and there is no read handler.";
+			//LOG(INFO) << "Reading from $" << std::setbase(16) << addr << " and there is no read handler.";
 		}
 	}
-	return *(Memory_current_page_set[page].get_ptr() + (addr & 0xff));
+	return *(Memory_read_pages[page]->get_ptr() + (addr & 0xff));
 }
 
 // function to write value to memory.  Trapped here in order to
@@ -307,7 +348,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 {
 	uint8_t page = (addr / 256);
 
-	if (Memory_current_page_set[page].write_protected()) {
+	if (Memory_write_pages[page]->write_protected()) {
 		return;
 	}
 
@@ -318,11 +359,11 @@ void memory_write(const uint16_t addr, uint8_t val)
 			return;
 		}
 		else {
-			LOG(INFO) << "Writing $" << std::setbase(16) << std::setw(2) << val << " to $" << std::setbase(16) << addr << " and there is no write handler";
+			//LOG(INFO) << "Writing $" << std::setbase(16) << std::setw(2) << val << " to $" << std::setbase(16) << addr << " and there is no write handler";
 		}
 	}
 
-	*(Memory_current_page_set[page].get_ptr() + (addr & 0xff)) = val;
+	*(Memory_write_pages[page]->get_ptr() + (addr & 0xff)) = val;
 }
 
 void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function)
@@ -373,49 +414,61 @@ void memory_init()
 
 	// same for the extended memory buffer.  We'll just allocate the
 	// entire 64k because really, why not
-	if (Memory_extended_buffer == nullptr) {
-		Memory_extended_buffer = new uint8_t[MEMORY_SIZE];
+	if (Memory_bank1_buffer == nullptr) {
+		Memory_bank1_buffer = new uint8_t[MEMORY_BANK_SIZE];
 	}
+   if (Memory_bank2_buffer == nullptr) {
+      Memory_bank2_buffer = new uint8_t[MEMORY_BANK_SIZE];
+   }
+   memset(Memory_bank1_buffer, 0, MEMORY_BANK_SIZE);
+   memset(Memory_bank2_buffer, 0, MEMORY_BANK_SIZE);
 
-	memset(Memory_extended_buffer, 0, MEMORY_SIZE);
+   // This is the 12k buffer that is active for either bank
+   // 1 or bank 2
+   if (Memory_extended_buffer == nullptr) {
+      Memory_extended_buffer = new uint8_t[MEMORY_EXTENDED_SIZE];
+   }
+	memset(Memory_extended_buffer, 0, MEMORY_EXTENDED_SIZE);
 
 	// initialize memory with "random" pattern.  there was long discussion
 	// in applewin github issues tracker related to what to do about
 	// memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
 	memory_initialize();
 
-	// set up pointers for memory paging.  pointer to each 256 byte page.  Set
-	// up write protect for ROM area
+   // main memory area page pointers.  This is not write
+   // protected
 	for (auto i = 0; i < 0xd0; i++) {
-		Memory_pages[i].init(&Memory_buffer[i * 256], false);
-		Memory_bank1_pages[i].init(&Memory_buffer[i * 256], false);
-		Memory_bank2_pages[i].init(&Memory_buffer[i * 256], false);
+		Memory_main_pages[i].init(&Memory_buffer[i * 256], false);
 	}
 
-	// this is the ROM area when not using a memory bank
+   // ROM area.  This is write protected
 	for (auto i = 0xd0; i < 0x100; i++) {
-		Memory_pages[i].init(&Memory_buffer[i * 256], true);
-		Memory_bank1_pages[i].init(&Memory_buffer[i * 256], true);
-		Memory_bank2_pages[i].init(&Memory_buffer[i * 256], true);
+		Memory_main_pages[i].init(&Memory_buffer[i * 256], true);
 	}
 
-	// set up pointers for ramcard pages
-	for (auto i = 0xd0; i < 0xe0; i++) {
-		uint32_t addr = (i - 0xd0) * 0x100;
-		Memory_bank1_pages[i].init(&Memory_extended_buffer[addr], true);
-		Memory_bank2_pages[i].init(&Memory_extended_buffer[0x1000 + addr], true);
-	}
-	// final 12k, the page pointers are the same.  Offset 8k into extended memory
-	// buffer because we have 2 4k pages before that
-	for (auto i = 0xe0; i < 0x100; i++) {
-		uint32_t addr = (i - 0xe0) * 0x100;
-		Memory_bank1_pages[i].init(&Memory_extended_buffer[0x2000 + addr], true);
-		Memory_bank2_pages[i].init(&Memory_extended_buffer[0x2000 + addr], true);
-	}
+   // set up pointers for ramcard pages
+   for (auto i = 0; i < 16; i++) {
+      uint32_t addr = i * 256;
+      Memory_bank1_pages[i].init(&Memory_bank1_buffer[addr], true);
+      Memory_bank2_pages[i].init(&Memory_bank2_buffer[addr], true);
+   }
+   // final 12k, the page pointers are the same.  Offset 8k into extended memory
+   // buffer because we have 2 4k pages before that
+   for (auto i = 0; i < 32; i++) {
+      uint32_t addr = i * 256;
+      Memory_bank1_pages[i + 16].init(&Memory_extended_buffer[addr], true);
+      Memory_bank2_pages[i + 16].init(&Memory_extended_buffer[addr], true);
+   }
+
+   // set the active pages to point to the correct startup locations
+   // which is just the 256 pages of the main set of pages
+   for (auto i = 0; i < 256; i++) {
+      Memory_read_pages[i] = &Memory_main_pages[i];
+      Memory_write_pages[i] = &Memory_main_pages[i];
+   }
 
 	Memory_card_state = 0;
 	Memory_card_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM;
-	Memory_current_page_set = Memory_pages;
 
 	for (auto i = 0; i < 256; i++) {
 		m_c000_handlers[i].m_read_handler = nullptr;

@@ -240,3 +240,5 @@ tags
 /.editorconfig
 /CurrentSettings.vssettings
 /apple2emu.vssettings
+.ycm*
+

@@ -30,7 +30,7 @@ SOFTWARE.
 //
 
 #include <stdio.h>
-#if defined(_WINDOWS)
+#if defined(_WIN32)
 #include <io.h>
 #else
 #endif

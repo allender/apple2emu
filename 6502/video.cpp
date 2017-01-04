@@ -615,7 +615,7 @@ bool video_create()
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
    if (err != GLEW_OK) {
-      printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
+	  printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
    }
 
 	// framebuffer and render to texture
@@ -698,7 +698,7 @@ bool video_init()
 	}
    int mode = GL_RGB;
    if (Splash_screen_surface->format->BytesPerPixel == 4) {
-      mode = GL_RGBA;
+	  mode = GL_RGBA;
    }
 
 	glGenTextures(1, &Splash_screen_texture);

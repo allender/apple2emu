@@ -35,13 +35,15 @@ SOFTWARE.
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
 
-const uint32_t Keybuffer_size = 32;
+static bool Keyboard_caps_lock_on = true;
 
-uint32_t key_buffer_front, key_buffer_end;
-uint32_t key_buffer[Keybuffer_size];
+static const uint32_t Keybuffer_size = 32;
+
+static uint32_t key_buffer_front, key_buffer_end;
+static uint32_t key_buffer[Keybuffer_size];
 
 // SDL scancode to ascii values
-uint8_t key_ascii_table[256] =
+static uint8_t key_ascii_table[256] =
 { 0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',   // 0x00 - 0x0f
  'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',   // 0x10 - 0x1f
  '3', '4', '5', '6', '7', '8', '9', '0',   0,   0,   0,   0, ' ', '-', '=', '[',   // 0x20 - 0x2f
@@ -62,7 +64,7 @@ uint8_t key_ascii_table[256] =
 
 
 // SDL scancode to shifted ascii values
-uint8_t key_shifted_ascii_table[256] =
+static uint8_t key_shifted_ascii_table[256] =
 { 0,   0,   0,   0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',   // 0x00 - 0x0f
  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@',   // 0x10 - 0x1f
  '#', '$', '%', '^', '&', '*', '(', ')',   0,   0,   0,   0, ' ', '_', '+', '{',   // 0x20 - 0x2f
@@ -141,8 +143,10 @@ static uint32_t keyboard_get_key()
 	}
 	else {
 		key = key_ascii_table[key];
-		if (Emulator_type != emulator_type::APPLE2E && key >= 'a' && key <= 'z') {
-			key -= 32;
+		if (key >= 'a' && key <= 'z') {
+			if (Emulator_type != emulator_type::APPLE2E || Keyboard_caps_lock_on) {
+				key -= 32;
+			}
 		}
 	}
 	return key;
@@ -154,6 +158,11 @@ void keyboard_init()
 	key_buffer_end = 0;
 	for (auto i = 0; i < Keybuffer_size; i++) {
 		key_buffer[i] = 0;
+	}
+	if (Emulator_type == emulator_type::APPLE2E) {
+		Keyboard_caps_lock_on = true;
+	} else {
+		Keyboard_caps_lock_on = false;
 	}
 }
 
@@ -187,6 +196,13 @@ void keyboard_handle_event(SDL_Event &evt)
 			ui_toggle_debug_menu();
 		}
 
+		// if the caps lock key was down, change toggle internal
+		// caps lock setting (for non apple2 machines)
+		if (scancode == SDL_SCANCODE_CAPSLOCK) {
+			Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
+		}
+
+
 		if (scancode == SDL_SCANCODE_F9) {
 			extern bool Debug_show_bitmap;
 			Debug_show_bitmap = !Debug_show_bitmap;
@@ -195,7 +211,9 @@ void keyboard_handle_event(SDL_Event &evt)
 		// we should only be putting keys into the keyboard buffer that are printable
 		// (i.e. in the apple ][ character set), or control keys.
 		if (scancode < 256) {
-			if (scancode == SDL_SCANCODE_LCTRL || scancode == SDL_SCANCODE_RCTRL || scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
+			if (scancode == SDL_SCANCODE_LCTRL || scancode == SDL_SCANCODE_RCTRL ||
+				scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT ||
+				scancode == SDL_SCANCODE_CAPSLOCK ) {
 				return;
 			}
 			if (mods & KMOD_SHIFT) {

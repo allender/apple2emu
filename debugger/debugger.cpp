@@ -204,7 +204,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			case cpu_6502::addr_mode::ZERO_PAGE_MODE:
 				if (opcode->m_mnemonic != 'JSR ') {
 					mem_value = memory_read(addressing_val);
-					sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
+					sprintf(internal_buffer, "\t%04X: %02X", addressing_val, mem_value);
 					strcat(Debugger_disassembly_line, internal_buffer);
 					if (isprint(mem_value)) {
 						sprintf(internal_buffer, " (%c)", mem_value);
@@ -218,7 +218,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE:
 				addressing_val += cpu.get_x();
 				mem_value = memory_read(addressing_val);
-				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
+				sprintf(internal_buffer, "\t%04X: %02X", addressing_val, mem_value);
 				strcat(Debugger_disassembly_line, internal_buffer);
 				if (isprint(mem_value)) {
 					sprintf(internal_buffer, " (%c)", mem_value);
@@ -231,7 +231,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
 				addressing_val += cpu.get_y();
 				mem_value = memory_read(addressing_val);
-				sprintf(internal_buffer, "\t%04X: 0x%02X", addressing_val, mem_value);
+				sprintf(internal_buffer, "\t%04X: %02X", addressing_val, mem_value);
 				strcat(Debugger_disassembly_line, internal_buffer);
 				if (isprint(mem_value)) {
 					sprintf(internal_buffer, " (%c)", mem_value);
@@ -448,7 +448,7 @@ static void debugger_display_status()
 	}
 	wmove(Debugger_status_window, row++, 1);
 	waddstr(Debugger_status_window, "$c054: ");
-	if (Video_mode & VIDEO_MODE_PRIMARY) {
+	if (!(Video_mode & VIDEO_MODE_PAGE2)) {
 		wattron(Debugger_status_window, A_REVERSE);
 		waddstr(Debugger_status_window, "Primary");
 		wattroff(Debugger_status_window, A_REVERSE);

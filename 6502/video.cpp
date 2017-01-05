@@ -354,7 +354,7 @@ static void video_render_screen(std::function<void(int, int)> render_func, std::
 
 static void video_render()
 {
-	bool primary = (Video_mode & VIDEO_MODE_PRIMARY) ? true : false;
+	bool primary = !(Video_mode & VIDEO_MODE_PAGE2) ? true : false;
 	uint16_t *gr_addr_map = nullptr;
 	uint16_t *text_addr_map = nullptr;
 
@@ -503,12 +503,24 @@ static void video_render()
 
 }
 
-static uint8_t video_read_handler(uint16_t addr)
+uint8_t video_set_state(uint16_t addr, uint8_t val, bool write)
 {
 	uint8_t a = addr & 0xff;
 
 	// switch based on the address to set the video modes
 	switch (a) {
+	case 0x0c:
+		Video_mode &= ~VIDEO_MODE_80COL;
+		break;
+	case 0x0d:
+		Video_mode |= VIDEO_MODE_80COL;
+		break;
+	case 0x0e:
+		Video_mode &= ~VIDEO_MODE_ALTCHAR;
+		break;
+	case 0x0f:
+		Video_mode |= VIDEO_MODE_ALTCHAR;
+		break;
 	case 0x50:
 		Video_mode &= ~VIDEO_MODE_TEXT;
 		break;
@@ -522,10 +534,10 @@ static uint8_t video_read_handler(uint16_t addr)
 		Video_mode |= VIDEO_MODE_MIXED;
 		break;
 	case 0x54:
-		Video_mode |= VIDEO_MODE_PRIMARY;
+		Video_mode &= ~VIDEO_MODE_PAGE2;
 		break;
 	case 0x55:
-		Video_mode &= ~VIDEO_MODE_PRIMARY;
+		Video_mode |= VIDEO_MODE_PAGE2;
 		break;
 	case 0x56:
 		Video_mode &= ~VIDEO_MODE_HIRES;
@@ -534,41 +546,48 @@ static uint8_t video_read_handler(uint16_t addr)
 		Video_mode |= VIDEO_MODE_HIRES;
 		break;
 	}
+
+	memory_set_paging_tables();
 
 	return 0;
 }
 
-static void video_write_handler(uint16_t addr, uint8_t value)
+uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
 {
-	uint8_t a = addr & 0xff;
+	uint8_t return_val = 0;
 
-	// switch based on the address to set the video modes
-	switch (a) {
-	case 0x50:
-		Video_mode &= ~VIDEO_MODE_TEXT;
+	addr = addr & 0xff;
+
+	switch(addr) {
+
+	// these are video modes
+	case 0x19:   // VBL
+		return_val = 0;
 		break;
-	case 0x51:
-		Video_mode |= VIDEO_MODE_TEXT;
+	case 0x1a:   // TEXT switch
+		return_val = Video_mode & VIDEO_MODE_TEXT ? 1 : 0;
 		break;
-	case 0x52:
-		Video_mode &= ~VIDEO_MODE_MIXED;
+	case 0x1b:   // MIXED switch
+		return_val = Video_mode & VIDEO_MODE_MIXED ? 1 : 0;
 		break;
-	case 0x53:
-		Video_mode |= VIDEO_MODE_MIXED;
+	case 0x1c:   // PAGE2 switch
+		return_val = Video_mode & VIDEO_MODE_PAGE2 ? 1 : 0;
 		break;
-	case 0x54:
-		Video_mode |= VIDEO_MODE_PRIMARY;
+	case 0x1d:   // HIRES switch
+		return_val = Video_mode & VIDEO_MODE_HIRES ? 1 : 0;
 		break;
-	case 0x55:
-		Video_mode &= ~VIDEO_MODE_PRIMARY;
+	case 0x1e:   // ALTCHAR switch
+		return_val = Video_mode & VIDEO_MODE_ALTCHAR ? 1 : 0;
 		break;
-	case 0x56:
-		Video_mode &= ~VIDEO_MODE_HIRES;
-		break;
-	case 0x57:
-		Video_mode |= VIDEO_MODE_HIRES;
+	case 0x1f:   // 80COL switch
+		return_val = Video_mode & VIDEO_MODE_80COL ? 1 : 0;
 		break;
 	}
+	if (return_val) {
+		return 0x80;
+	}
+
+	return return_val;
 }
 
 bool video_create()
@@ -708,11 +727,6 @@ bool video_init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, mode, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
-
-	// set up the memory handlers
-	for (auto i = 0x50; i <= 0x57; i++) {
-		memory_register_c000_handler(i, video_read_handler, video_write_handler);
-	}
 
 	return true;
 }

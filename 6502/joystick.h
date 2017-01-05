@@ -29,3 +29,4 @@ SOFTWARE.
 
 void joystick_init();
 void joystick_shutdown();
+uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write);

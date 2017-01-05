@@ -32,8 +32,10 @@ SOFTWARE.
 // video modes
 #define VIDEO_MODE_TEXT    (1 << 0)
 #define VIDEO_MODE_MIXED   (1 << 1)
-#define VIDEO_MODE_PRIMARY (1 << 2)
+#define VIDEO_MODE_PAGE2   (1 << 2)
 #define VIDEO_MODE_HIRES   (1 << 3)
+#define VIDEO_MODE_80COL   (1 << 4)
+#define VIDEO_MODE_ALTCHAR (1 << 5)
 
 // display types (mono)
 enum class video_display_types : uint8_t {
@@ -50,8 +52,10 @@ extern uint8_t Video_mode;
 
 bool video_init();
 void video_shutdown();
-void video_show_splash();
 void video_render_frame();
 void video_set_mono_type(video_display_types type);
 
 
+// called from soft switch reading/writing code in memory
+uint8_t video_set_state(uint16_t addr, uint8_t val, bool write);
+uint8_t video_get_state(uint16_t addr, uint8_t val, bool write);

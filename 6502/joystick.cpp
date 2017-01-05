@@ -71,63 +71,50 @@ static uint8_t joystick_read_axis(uint8_t axis_num)
 	return 0;
 }
 
-uint8_t joystick_read_handler(uint16_t addr)
+uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
-	uint8_t val = 0;
+	uint8_t return_val = 0;
 
 	addr = addr & 0xff;
 	switch (addr) {
 	case 0x61:
 	case 0x62:
 	case 0x63:
-		val = joystick_read_button(addr - 0x61);
+		joystick_read_button(addr - 0x61);
 		break;
 	case 0x64:
 	case 0x65:
 	case 0x66:
 	case 0x67:
-		val = joystick_read_axis(addr - 0x64);
+		joystick_read_axis(addr - 0x64);
 		break;
-	}
 
-	return val;
-}
-
-void joystick_write_handler(uint16_t addr, uint8_t val)
-{
-	joystick_read_handler(addr);
-}
-
-// this function initiates the analog to digital conversion from the
-// controllers (paddles/joysticks) to 0-255 digital value which will
-// be read from the axis read handler.  Basically set up
-// internal timer to indicate when the 558 timer should time out
-// based on the paddle/joystick value.  Read Inside the Apple ][e
-// chapter 10 for more information
-uint8_t joystick_reset_read_handler(uint16_t addr)
-{
-	// set the axis timer state to be current cycle count
-	// plus the cycle count when the timer should time out.
-	// The internal paddle read routine reads every 11ms
-	for (auto i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
-		int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[i]);
-		value = (uint16_t)(floor((float)(value + 32768) * (float)(255.0f / 65535.0f)));
-		// from kegs and other emulators.  I need to dig into why this is necessary because
-		// based on timings, it should not work like this.  Currently, I am getting a value
-		// back from the pdl read code of around 235 when axis at max value (instead of
-		// 255).  So this code (as is in other emulators) will force us to get to 255.  But
-		// seems like we should solve this the real way with timing.
-		if (value >= 255) {
-			value = 280;
+	// this function initiates the analog to digital conversion from the
+	// controllers (paddles/joysticks) to 0-255 digital value which will
+	// be read from the axis read handler.  Basically set up
+	// internal timer to indicate when the 558 timer should time out
+	// based on the paddle/joystick value.  Read Inside the Apple ][e
+	// chapter 10 for more information
+	case 0x70:
+		// set the axis timer state to be current cycle count
+		// plus the cycle count when the timer should time out.
+		// The internal paddle read routine reads every 11ms
+		for (auto i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+			int16_t value = SDL_GameControllerGetAxis(Controllers[0].m_gc, Controllers[0].m_axis[i]);
+			value = (uint16_t)(floor((float)(value + 32768) * (float)(255.0f / 65535.0f)));
+			// from kegs and other emulators.  I need to dig into why this is necessary because
+			// based on timings, it should not work like this.  Currently, I am getting a value
+			// back from the pdl read code of around 235 when axis at max value (instead of
+			// 255).  So this code (as is in other emulators) will force us to get to 255.  But
+			// seems like we should solve this the real way with timing.
+			if (value >= 255) {
+				value = 280;
+			}
+			Controllers[0].m_axis_timer_state[i] = Total_cycles + uint32_t(value * Joystick_cycles_scale);
 		}
-		Controllers[0].m_axis_timer_state[i] = Total_cycles + uint32_t(value * Joystick_cycles_scale);
 	}
-	return 0;
-}
 
-void joystick_reset_write_handler(uint16_t addr, uint8_t val)
-{
-	joystick_reset_read_handler(addr);
+	return return_val;
 }
 
 void joystick_init()
@@ -159,12 +146,6 @@ void joystick_init()
 			}
 		}
 	}
-
-	// register the read/write handlers 
-	for (auto i = 0x61; i < 0x67; i++) {
-		memory_register_c000_handler(i, joystick_read_handler, joystick_write_handler);
-	}
-	memory_register_c000_handler(0x70, joystick_reset_read_handler, joystick_reset_write_handler);
 }
 
 void joystick_shutdown()

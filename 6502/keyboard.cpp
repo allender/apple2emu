@@ -94,7 +94,7 @@ static void keyboard_insert_key(uint32_t code)
 	key_buffer_end = (key_buffer_end + 1) % Keybuffer_size;
 }
 
-uint32_t keyboard_get_key()
+static uint32_t keyboard_get_key()
 {
 	uint32_t key;
 
@@ -207,4 +207,21 @@ void keyboard_handle_event(SDL_Event &evt)
 			keyboard_insert_key(scancode);
 		}
 	}
+}
+
+static uint8_t last_key = 0;
+uint8_t keyboard_read()
+{
+	uint8_t temp_key = keyboard_get_key();
+	if (temp_key > 0) {
+		last_key = temp_key | 0x80;
+	}
+
+	return(last_key);
+}
+
+uint8_t keyboard_clear()
+{
+	last_key &= 0x7F;
+	return last_key;
 }

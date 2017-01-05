@@ -217,13 +217,14 @@ int main(int argc, char* argv[])
 	while (!quit) {
 		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 
-		// process debugger (before opcode processing so that we can break on
-		// specific addresses properly
-		debugger_process(cpu);
 
 		// process the next opcode
 		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
 			while (true) {
+				// process debugger (before opcode processing so that we can break on
+				// specific addresses properly
+				debugger_process(cpu);
+
 				uint32_t cycles = cpu.process_opcode();
 				Total_cycles_this_frame += cycles;
 				Total_cycles += cycles;
@@ -237,6 +238,8 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
+		} else {
+			debugger_process(cpu);
 		}
 
 		{
@@ -265,7 +268,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-   SDL_RemoveTimer(render_timer);
+	SDL_RemoveTimer(render_timer);
 	SDL_DestroySemaphore(cpu_sem);
 
 	video_shutdown();

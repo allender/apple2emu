@@ -33,9 +33,10 @@ SOFTWARE.
 #include "video.h"
 #include "curses.h"
 #include "debugger/debugger.h"
-#include "6502/keyboard.h"
+#include "keyboard.h"
+#include "joystick.h"
+#include "speaker.h"
 
-#define MAX_SLOTS 7
 
 // defines for memory status (RAM card, 0xc000 usage, etc)
 #define RAM_CARD_READ           (1 << 0)
@@ -43,31 +44,43 @@ SOFTWARE.
 #define RAM_CARD_WRITE_PROTECT  (1 << 2)
 #define RAM_SLOTCX_ROM          (1 << 3)
 #define RAM_SLOTC3_ROM          (1 << 4)
+#define RAM_AUX_MEMORY_READ     (1 << 6)
+#define RAM_AUX_MEMORY_WRITE    (1 << 7)
+#define RAM_ALT_ZERO_PAGE       (1 << 8)
+#define RAM_80STORE             (1 << 9)
+
+// state of the memory card
+static uint8_t Memory_state;
 
 // values for memory sizes
-static const int32_t Memory_main_size = (48 * 1024);
-static const int32_t Memory_rom_size = (16 * 1024);
-static const int32_t Memory_switched_bank_size = (4 * 1024);
-static const int32_t Memory_c000_rom_size = (4 * 1024);
-static const int32_t Memory_extended_size = (8 * 1024);
+static const int Memory_main_size = (48 * 1024);
+static const int Memory_rom_size = (16 * 1024);
+static const int Memory_switched_bank_size = (4 * 1024);
+static const int Memory_c000_rom_size = (4 * 1024);
+static const int Memory_extended_size = (8 * 1024);
+static const int Memory_c300_rom_size = (256);
+static const int Memory_aux_size = (48 * 256);
 
-static const int32_t Memory_page_size = 256;
+static const int Memory_page_size = 256;
 
 // and page bvalues
-static const int32_t Memory_num_main_pages = (Memory_main_size / Memory_page_size);
-static const int32_t Memory_num_rom_pages = (Memory_rom_size / Memory_page_size);
-static const int32_t Memory_num_bank_pages = (Memory_switched_bank_size / Memory_page_size);
-static const int32_t Memory_num_c000_pages = (Memory_c000_rom_size/ Memory_page_size);
-static const int32_t Memory_num_extended_pages = (Memory_extended_size / Memory_page_size);
+static const int Memory_num_main_pages = (Memory_main_size / Memory_page_size);
+static const int Memory_num_rom_pages = (Memory_rom_size / Memory_page_size);
+static const int Memory_num_bank_pages = (Memory_switched_bank_size / Memory_page_size);
+static const int Memory_num_internal_rom_pages = (Memory_c000_rom_size/ Memory_page_size);
+static const int Memory_num_extended_pages = (Memory_extended_size / Memory_page_size);
+static const int Memory_num_aux_pages = (Memory_aux_size / Memory_page_size);
 
 // iie roms are 16k in size.  c000 to cfff can have different
 // functions depending on iie soft switches
 static const int APPLE2E_ROM_SIZE = 0x4000;
-static const int C000_ROM_SIZE = 0x1000;
 
-static slot_handlers  m_c000_handlers[256];
-static uint8_t last_key = 0;
-static uint8_t Memory_card_state;
+// information on peripheral slots.  Note that there are really
+// 8 slots in the apple.  1-7 are the normal slots but slot 0
+// was used for the ram card for the apple2/2+
+static const int Num_slots = 8;
+
+static soft_switch_function m_soft_switch_handlers[256];
 
 // class to handle memory paging.  Simple wrapper class  to hold the
 // pointer and whether or not the page is write protected.  Memory
@@ -107,18 +120,21 @@ public:
 // main definition of memory pages for the emulator.  There is a
 // page array for each "type" of memory (i.e. main, rom, extended
 // auxilliary, etc).  
-memory_page Memory_main_pages[Memory_num_main_pages];         // 192 pages - 48k
-memory_page Memory_rom_pages[Memory_num_rom_pages];           // 64 pages - 16k
-memory_page Memory_bank1_pages[Memory_num_bank_pages];        // 16 pages - 4k
-memory_page Memory_bank2_pages[Memory_num_bank_pages];        // 16 pages - 4k
-memory_page Memory_extended_pages[Memory_num_extended_pages]; // 32 pages - 8k
+memory_page Memory_main_pages[Memory_num_main_pages];             // 192 pages - 48k
+memory_page Memory_rom_pages[Memory_num_rom_pages];               // 64 pages - 16k
+memory_page Memory_bank_pages[2][Memory_num_bank_pages];          // 16 pages - 4k
+memory_page Memory_extended_pages[Memory_num_extended_pages];     // 32 pages - 8k
+memory_page Memory_internal_rom_pages[Memory_num_internal_rom_pages]; // 16 page - 4k
+memory_page Memory_aux_pages[Memory_num_aux_pages];               // 16 page - 4k
+memory_page Memory_aux_bank_pages[2][Memory_num_bank_pages];      // 16 pages - 4k
+memory_page Memory_aux_extended_pages[Memory_num_extended_pages]; // 32 pages - 8k
 
 // pointers for read/write pages.  These are the methods by
 // which memory reading and writing will be done.  We have
 // separate read/write arrays because the apple allows writing
 // to RAM banks while allowing reading from ROM area
-memory_page *Memory_read_pages[256];
-memory_page *Memory_write_pages[256];
+memory_page *Memory_read_pages[Memory_page_size];
+memory_page *Memory_write_pages[Memory_page_size];
 
 // Below are actually memory buffers.  The memory pointers for
 // all of the memory_pages(s) will point into these buffers
@@ -139,28 +155,15 @@ static uint8_t *Memory_bank2_buffer = nullptr;
 // one 12k buffer for extended ram 
 static uint8_t *Memory_extended_buffer = nullptr;
 
-static uint8_t *Memory_default_c000_buffer = nullptr;
+// buffer to hold internal rom from iie rom as
+static uint8_t *Memory_internal_rom_buffer = nullptr;
 
-static uint8_t keyboard_read_handler(uint16_t addr)
-{
-	uint8_t temp_key = keyboard_get_key();
-	if (temp_key > 0) {
-		last_key = temp_key | 0x80;
-	}
-
-	return(last_key);
-}
-
-static uint8_t keyboard_clear_read_handler(uint16_t addr)
-{
-	last_key &= 0x7F;
-	return last_key;
-}
-
-static void keyboard_clear_write_handler(uint16_t addr, uint8_t val)
-{
-	keyboard_clear_read_handler(addr);
-}
+// buffer for the aux memory.  Includes buffers for
+// bank switched RAM as well
+static uint8_t *Memory_aux_buffer = nullptr;
+static uint8_t *Memory_aux_bank1_buffer = nullptr;
+static uint8_t *Memory_aux_bank2_buffer = nullptr;
+static uint8_t *Memory_aux_extended_buffer = nullptr;
 
 static bool memory_load_from_filename(const char *filename, uint8_t *dest)
 {
@@ -177,8 +180,8 @@ static bool memory_load_from_filename(const char *filename, uint8_t *dest)
 	// 4k into another buffer for use when certain soft switches
 	// are used
 	if (buffer_size == APPLE2E_ROM_SIZE) {
-		fread(Memory_default_c000_buffer, 1, 0x1000, fp);
-		buffer_size -= 0x1000;
+		fread(Memory_internal_rom_buffer, 1, Memory_c000_rom_size, fp);
+		buffer_size -= Memory_c000_rom_size;
 	}
 
 	// allocate the memory buffer
@@ -197,7 +200,7 @@ static void memory_load_rom_images()
 	else if (Emulator_type == emulator_type::APPLE2_PLUS) {
 		memory_load_from_filename("roms/apple2_plus.rom", &Memory_rom_buffer[0x1000]);
 	} else if (Emulator_type == emulator_type::APPLE2E) {
-		memory_load_from_filename("roms/apple2e.rom", &Memory_rom_buffer[0]);
+		memory_load_from_filename("roms/apple2e.rom", &Memory_rom_buffer[0x1000]);
 	}
 	memory_load_from_filename("roms/disk2.rom", &Memory_rom_buffer[0x600]);
 }
@@ -233,78 +236,114 @@ static void memory_initialize()
 	}
 }
 
-// set up the paging table pointers based on the current memory
-// setup.  
-static void memory_set_paging_tables()
+// handler for writing to 0xc00X for memory state
+uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 {
-	// set up the main 48k.
-	for (auto page = 0; page < Memory_num_main_pages; page++) {
-		Memory_read_pages[page] = &Memory_main_pages[page];
-		Memory_write_pages[page] = &Memory_main_pages[page];
+	uint8_t return_val = 0;
+
+	addr = addr & 0x0f;
+	// WOOHOO -- c000 is used as keyboard read so let's just deal with that
+	// here
+	if (addr == 0x0 && write == false) {
+		return keyboard_read();
 	}
 
-	// set up the rom/extended memory paging.  This will be either bank 1
-	// or bank 2 and the extended buffer.  First start with the read pages
-	if (Memory_card_state & RAM_CARD_READ) {
-		// set up the pages for the first 4k bank
-		if (Memory_card_state & RAM_CARD_BANK2) {
-			for (auto i = 0; i < Memory_num_bank_pages; i++) {
-				Memory_read_pages[0xd0 + i] = &Memory_bank2_pages[i];
-			}
-		} else {
-			for (auto i = 0; i < Memory_num_bank_pages; i++) {
-				Memory_read_pages[0xd0 + i] = &Memory_bank1_pages[i];
-			}
-		}
+	auto old_state = Memory_state;
 
-		// set the paging table pointers to the extended buffer
-		for (auto i = 0; i < Memory_num_extended_pages; i++) {
-			Memory_read_pages[0xe0 + i] = &Memory_extended_pages[i];
-		}
-	}
-	
-	// for rom reading, point to the rom pages.  Have to take into
-	// account whether we are running apple ii or iie as we might
-	// want to load builtin rom for the 2e
-	else {
-		if (Emulator_type != emulator_type::APPLE2E) {
-			// for apple 2 and 2+, skip the first 16 pages (0xc000 - 0xcfff)
-			for (auto i = 0; i < Memory_num_rom_pages; i++ ) {
-				Memory_read_pages[0xc0 + i] = &Memory_rom_pages[i];
-			}
-		}
+	switch(addr) {
+	case 0x00:
+		Memory_state &= ~RAM_80STORE;
+		break;
+	case 0x01:
+		Memory_state |= RAM_80STORE;
+		break;
+	case 0x02:
+		Memory_state &= ~RAM_AUX_MEMORY_READ;
+		break;
+	case 0x03:
+		Memory_state |= RAM_AUX_MEMORY_READ;
+		break;
+	case 0x04:
+		Memory_state &= ~RAM_AUX_MEMORY_WRITE;
+		break;
+	case 0x05:
+		Memory_state |= RAM_AUX_MEMORY_WRITE;
+		break;
+	case 0x06:
+		// this is opposite of the 2e refernece manual.  Other sources
+		// suggest the manual is in error
+		Memory_state |= RAM_SLOTCX_ROM;
+		break;
+	case 0x07:
+		// this is opposite of the 2e refernece manual.  Other sources
+		// suggest the manual is in error
+		Memory_state &= ~RAM_SLOTCX_ROM;
+		break;
+	case 0x08:
+		Memory_state &= ~RAM_ALT_ZERO_PAGE;
+		break;
+	case 0x09:
+		Memory_state |= RAM_ALT_ZERO_PAGE;
+		break;
+	case 0x0a:
+		Memory_state &= ~RAM_SLOTC3_ROM;
+		break;
+	case 0x0b:
+		Memory_state |= RAM_SLOTC3_ROM;
+		break;
 	}
 
-	// set up the pages for writing
-	if (Memory_card_state & RAM_CARD_WRITE_PROTECT) {
-		// if the ram card is write protected, then set up pages for writing
-		// to rom, which won't really do anything
-		if (Emulator_type != emulator_type::APPLE2E) {
-			// for apple 2 and 2+, skip the first 16 pages/ (0xc000 - 0xcfff)
-			for (auto i = 0; i < Memory_num_rom_pages; i++) {
-				Memory_write_pages[0xc0 + i] = &Memory_rom_pages[i];
-			}
-		}
+	if (old_state != Memory_state) {
+		memory_set_paging_tables();
 	}
 
-	// writing is enabled to the extended ram space
-	else {
-		// set up the pages for the first 4k bank
-		if (Memory_card_state & RAM_CARD_BANK2) {
-			for (auto i = 0; i < Memory_num_bank_pages; i++) {
-				Memory_write_pages[0xd0 + i] = &Memory_bank2_pages[i];
-			}
-		} else {
-			for (auto i = 0; i < Memory_num_bank_pages; i++) {
-				Memory_write_pages[0xd0 + i] = &Memory_bank1_pages[i];
-			}
-		}
+	return return_val;
+}
 
-		// set the paging table pointers to the extended buffer
-		for (auto i = 0; i< Memory_num_extended_pages; i++) {
-			Memory_write_pages[0xe0 + i] = &Memory_extended_pages[i];
-		}
+// handler for reading memory status
+uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
+{
+	uint8_t return_val = 0;
+
+	addr = addr & 0xff;
+	switch(addr) {
+	case 0x10:
+		// this is the keyboard clear status
+		keyboard_clear();
+		break;
+	case 0x11:
+		return_val = Memory_state & RAM_CARD_BANK2 ? 1 : 0;
+		break;
+	case 0x12:
+		return_val = Memory_state & RAM_CARD_READ ? 1 : 0;
+		break;
+	case 0x13:   // RAMRD switch
+		return_val = Memory_state & RAM_AUX_MEMORY_READ ? 1 : 0;
+		break;
+	case 0x14:   // RAMWRT switch
+		return_val = Memory_state & RAM_AUX_MEMORY_WRITE ? 1 : 0;
+		break;
+	case 0x15:   // SLOTCXROM switch
+		// note the return values here.  0 means that slot
+		// roms are active and 1 means internal rom
+		return_val = Memory_state & RAM_SLOTCX_ROM ? 0 : 1;
+		break;
+	case 0x16:   // ALTZP switch
+		return_val = Memory_state & RAM_ALT_ZERO_PAGE ? 1 : 0;
+		break;
+	case 0x17:   // SLOTC3ROM
+		return_val = Memory_state & RAM_SLOTC3_ROM ? 1 : 0;
+		break;
+	case 0x18:   // 80STORE switch
+		return_val = Memory_state & RAM_80STORE ? 1 : 0;
+		break;
+
 	}
+
+	if (return_val) {
+		return 0x80;
+	}
+	return val;
 }
 
 // Read/write handler for the memory expansion card in SLOT 0.  A 16K
@@ -318,7 +357,7 @@ static void memory_set_paging_tables()
 //
 // http://apple2online.com/web_documents/Apple%20IIe%20Technical%20Reference%20Manual%20KB.pdf
 //
-static uint8_t memory_expansion_read_handler(uint16_t addr)
+static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
 	static uint8_t last_access = 0;
 
@@ -328,18 +367,18 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		// cases for bank 2
 	case 0x80:
 	case 0x84:
-		Memory_card_state |= RAM_CARD_READ;
-		Memory_card_state |= RAM_CARD_BANK2;
-		Memory_card_state |= RAM_CARD_WRITE_PROTECT;
+		Memory_state |= RAM_CARD_READ;
+		Memory_state |= RAM_CARD_BANK2;
+		Memory_state |= RAM_CARD_WRITE_PROTECT;
 		last_access = 0;
 		break;
 	case 0x81:
 	case 0x85:
-		Memory_card_state &= ~RAM_CARD_READ;
-		Memory_card_state |= RAM_CARD_BANK2;
-		Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+		Memory_state &= ~RAM_CARD_READ;
+		Memory_state |= RAM_CARD_BANK2;
+		Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 		if (last_access) {
-			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+			Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
 		}
 		else {
@@ -348,18 +387,18 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		break;
 	case 0x82:
 	case 0x86:
-		Memory_card_state &= ~RAM_CARD_READ;
-		Memory_card_state |= RAM_CARD_BANK2;
-		Memory_card_state |= RAM_CARD_WRITE_PROTECT;
+		Memory_state &= ~RAM_CARD_READ;
+		Memory_state |= RAM_CARD_BANK2;
+		Memory_state |= RAM_CARD_WRITE_PROTECT;
 		last_access = 0;
 		break;
 	case 0x83:
 	case 0x87:
-		Memory_card_state |= RAM_CARD_READ;
-		Memory_card_state |= RAM_CARD_BANK2;
-		Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+		Memory_state |= RAM_CARD_READ;
+		Memory_state |= RAM_CARD_BANK2;
+		Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 		if (last_access) {
-			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+			Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
 		}
 		else {
@@ -369,18 +408,18 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		// cases for bank 1
 	case 0x88:
 	case 0x8c:
-		Memory_card_state |= RAM_CARD_READ;
-		Memory_card_state &= ~RAM_CARD_BANK2;
-		Memory_card_state |= RAM_CARD_WRITE_PROTECT;
+		Memory_state |= RAM_CARD_READ;
+		Memory_state &= ~RAM_CARD_BANK2;
+		Memory_state |= RAM_CARD_WRITE_PROTECT;
 		last_access = 0;
 		break;
 	case 0x89:
 	case 0x8d:
-		Memory_card_state &= ~RAM_CARD_READ;
-		Memory_card_state &= ~RAM_CARD_BANK2;
-		Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+		Memory_state &= ~RAM_CARD_READ;
+		Memory_state &= ~RAM_CARD_BANK2;
+		Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 		if (last_access) {
-			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+			Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
 		}
 		else {
@@ -389,18 +428,18 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 		break;
 	case 0x8a:
 	case 0x8e:
-		Memory_card_state &= ~RAM_CARD_READ;
-		Memory_card_state &= ~RAM_CARD_BANK2;
-		Memory_card_state |= RAM_CARD_WRITE_PROTECT;
+		Memory_state &= ~RAM_CARD_READ;
+		Memory_state &= ~RAM_CARD_BANK2;
+		Memory_state |= RAM_CARD_WRITE_PROTECT;
 		last_access = 0;
 		break;
 	case 0x8b:
 	case 0x8f:
-		Memory_card_state |= RAM_CARD_READ;
-		Memory_card_state &= ~RAM_CARD_BANK2;
-		Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+		Memory_state |= RAM_CARD_READ;
+		Memory_state &= ~RAM_CARD_BANK2;
+		Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 		if (last_access) {
-			Memory_card_state &= ~RAM_CARD_WRITE_PROTECT;
+			Memory_state &= ~RAM_CARD_WRITE_PROTECT;
 			last_access = 0;
 		}
 		else {
@@ -409,15 +448,12 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	}
 
 	// set write protect on ramcard pages if necessary.  Total of 48 pages
+	auto bank = Memory_state & RAM_CARD_BANK2 ? 1 : 0;
 	for (auto i = 0; i < Memory_num_bank_pages; i++) {
-		if (Memory_card_state & RAM_CARD_BANK2) {
-			Memory_bank2_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
-		} else {
-			Memory_bank1_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
-		}
+		Memory_bank_pages[bank][i].set_write_protected(Memory_state & RAM_CARD_WRITE_PROTECT ? true : false);
 	}
 	for (auto i = 0; i < Memory_num_extended_pages; i++) {
-		Memory_extended_pages[i].set_write_protected(Memory_card_state & RAM_CARD_WRITE_PROTECT ? true : false);
+		Memory_extended_pages[i].set_write_protected(Memory_state & RAM_CARD_WRITE_PROTECT ? true : false);
 	}
 
 	// set up paging pointers
@@ -426,25 +462,127 @@ static uint8_t memory_expansion_read_handler(uint16_t addr)
 	return 0;
 }
 
-static void memory_expansion_write_handler(uint16_t addr, uint8_t val)
+// set up the paging table pointers based on the current memory
+// setup.  
+void memory_set_paging_tables()
 {
-	memory_expansion_read_handler(addr);
+	// set up the zero pages
+	for (auto i = 0; i < 2; i++) {
+		if (Memory_state & RAM_ALT_ZERO_PAGE) {
+			Memory_read_pages[i] = &Memory_aux_pages[i];
+			Memory_write_pages[i] = &Memory_aux_pages[i];
+		} else {
+			Memory_read_pages[i] = &Memory_main_pages[i];
+			Memory_write_pages[i] = &Memory_main_pages[i];
+		}
+	}
+
+	// set up the main 48k.  Skip the first two pages because
+	// these will be set based on the alt zp switch (previous
+	// set of code)
+	for (auto page = 2; page < Memory_num_main_pages; page++) {
+		if (Memory_state & RAM_AUX_MEMORY_READ) {
+			Memory_read_pages[page] = &Memory_aux_pages[page];
+		} else {
+			Memory_read_pages[page] = &Memory_main_pages[page];
+		}
+
+		if (Memory_state & RAM_AUX_MEMORY_WRITE) {
+			Memory_write_pages[page] = &Memory_aux_pages[page];
+		} else {
+			Memory_write_pages[page] = &Memory_main_pages[page];
+		}
+	}
+
+	// set up c000 - 0xcfff.  Set to internal rom (apple 2e) or
+	// slot rom depending on slot flag
+	for (auto page = 0xc0; page < 0xd0; page++) {
+		if (Memory_state & RAM_SLOTCX_ROM) {
+			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
+		} else {
+			Memory_read_pages[page] = &Memory_internal_rom_pages[page - 0xc0];
+		}
+	}
+
+	// check to see if slot3 page should be remapped
+	if (!(Memory_state & RAM_SLOTC3_ROM)) {
+		Memory_read_pages[0xc3] = &Memory_internal_rom_pages[3];
+	}
+
+	// extended RAM/ROM section.  
+	auto bank = Memory_state & RAM_CARD_BANK2 ? 1 : 0;
+
+	for (auto page = 0xd0; page < 0xe0; page++) {
+		if (Memory_state & RAM_CARD_READ) {
+			if (Memory_state & RAM_ALT_ZERO_PAGE) {
+				Memory_read_pages[page] = &Memory_aux_bank_pages[bank][page - 0xd0];
+				Memory_write_pages[page] = &Memory_aux_bank_pages[bank][page - 0xd0];
+			} else {
+				Memory_read_pages[page] = &Memory_bank_pages[bank][page - 0xd0];
+				Memory_write_pages[page] = &Memory_bank_pages[bank][page - 0xd0];
+			}
+		} else {
+			// offset is 0xc0 here because rom pages start at page 0xc0
+			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
+			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+		}
+	}
+
+	for (auto page = 0xe0; page < 0x100; page++) {
+		if (Memory_state & RAM_CARD_READ) {
+			if (Memory_state & RAM_ALT_ZERO_PAGE) {
+				Memory_read_pages[page] = &Memory_aux_extended_pages[page - 0xe0];
+				Memory_write_pages[page] = &Memory_aux_extended_pages[page - 0xe0];
+			} else {
+				Memory_read_pages[page] = &Memory_extended_pages[page - 0xe0];
+				Memory_write_pages[page] = &Memory_extended_pages[page - 0xe0];
+			}
+		} else {
+			// offset is 0xc0 here because rom pages start at page 0xc0
+			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
+			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+		}
+	}
+	
+	// deal with page pointers for 80 column moide
+	if (Memory_state & RAM_80STORE) {
+		for (auto page = 0x04; page < 0x08; page++) {
+			if (Video_mode & VIDEO_MODE_PAGE2) {
+				Memory_read_pages[page] = &Memory_aux_pages[page];
+			} else {
+				Memory_read_pages[page] = &Memory_main_pages[page];
+			}
+			Memory_write_pages[page] = &Memory_main_pages[page];
+		}
+
+		if (Video_mode & VIDEO_MODE_HIRES) {
+			for (auto page = 0x20; page < 0x40; page++) {
+				if (Video_mode & VIDEO_MODE_PAGE2) {
+					Memory_read_pages[page] = &Memory_aux_pages[page];
+				} else {
+					Memory_read_pages[page] = &Memory_main_pages[page];
+				}
+				Memory_write_pages[page] = &Memory_main_pages[page];
+			}
+		}
+	}
 }
 
 uint8_t memory_read(const uint16_t addr)
 {
-	uint8_t page = (addr / 256);
+	uint8_t page = (addr / Memory_page_size);
 
 	// look for memory mapped I/O locations
 	if (page == 0xc0) {
 		uint8_t mapped_addr = addr & 0xff;
-		if (m_c000_handlers[mapped_addr].m_read_handler != nullptr) {
-			return m_c000_handlers[mapped_addr].m_read_handler(addr);
+		if (m_soft_switch_handlers[mapped_addr] != nullptr) {
+			return m_soft_switch_handlers[mapped_addr](addr, 0, false);
 		}
-		else {
-			//LOG(INFO) << "Reading from $" << std::setbase(16) << addr << " and there is no read handler.";
+		if (Memory_read_pages[page] == nullptr) {
+			return 0;
 		}
 	}
+	assert(Memory_read_pages[page] != nullptr);
 	return *(Memory_read_pages[page]->get_ptr() + (addr & 0xff));
 }
 
@@ -452,19 +590,20 @@ uint8_t memory_read(const uint16_t addr)
 // faciliate memory mapped I/O and other similar things
 void memory_write(const uint16_t addr, uint8_t val)
 {
-	uint8_t page = (addr / 256);
+	uint8_t page = (addr / Memory_page_size);
 
 	if (page == 0xc0) {
 		uint8_t mapped_addr = addr & 0xff;
-		if (m_c000_handlers[mapped_addr].m_write_handler != nullptr) {
-			m_c000_handlers[mapped_addr].m_write_handler(addr, val);
+		if (m_soft_switch_handlers[mapped_addr] != nullptr) {
+			m_soft_switch_handlers[mapped_addr](addr, val, true);
 			return;
 		}
-		else {
-			//LOG(INFO) << "Writing $" << std::setbase(16) << std::setw(2) << val << " to $" << std::setbase(16) << addr << " and there is no write handler";
+		if (Memory_write_pages[page] == nullptr) {
+			return;
 		}
 	}
 
+	assert(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
 	}
@@ -472,23 +611,21 @@ void memory_write(const uint16_t addr, uint8_t val)
 	*(Memory_write_pages[page]->get_ptr() + (addr & 0xff)) = val;
 }
 
-void memory_register_c000_handler(uint8_t addr, slot_io_read_function read_function, slot_io_write_function write_function)
+void memory_register_soft_switch_handler(uint8_t addr, soft_switch_function func)
 {
-	m_c000_handlers[addr].m_read_handler = read_function;
-	m_c000_handlers[addr].m_write_handler = write_function;
+	m_soft_switch_handlers[addr] = func;
 }
 
 // register handlers for the I/O slots
-void memory_register_slot_handler(const uint8_t slot, slot_io_read_function read_function, slot_io_write_function write_function)
+void memory_register_slot_handler(const uint8_t slot, soft_switch_function func)
 {
-	assert((slot >= 0) && (slot <= MAX_SLOTS));
+	assert((slot >= 0) && (slot < Num_slots));
 	uint8_t addr = 0x80 + (slot << 4);
 
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same 
 	// handler as we will deal with all slot operations in the same function
 	for (auto i = 0; i <= 0xf; i++) {
-		m_c000_handlers[addr + i].m_read_handler = read_function;
-		m_c000_handlers[addr + i].m_write_handler = write_function;
+		m_soft_switch_handlers[addr + i] = func;
 	}
 }
 
@@ -516,16 +653,15 @@ void memory_init()
 	// memory for c000-cfff rom (used in apple2e).  Holds
 	// the c000-cfff rom from the rom images which gets
 	// used depending on soft switches
-	if (Memory_default_c000_buffer == nullptr) {
-		Memory_default_c000_buffer = new uint8_t[C000_ROM_SIZE];
+	if (Memory_internal_rom_buffer == nullptr) {
+		Memory_internal_rom_buffer = new uint8_t[Memory_c000_rom_size];
 	}
-	memset(Memory_default_c000_buffer, 0, C000_ROM_SIZE);
+	memset(Memory_internal_rom_buffer, 0, Memory_c000_rom_size);
 
 	// load rom images based on the type of machine we are starting
 	memory_load_rom_images();
 
-	// same for the extended memory buffer.  We'll just allocate the
-	// entire 64k because really, why not
+	// allocate ram for banks in extended ram
 	if (Memory_bank1_buffer == nullptr) {
 		Memory_bank1_buffer = new uint8_t[Memory_switched_bank_size];
 	}
@@ -540,8 +676,30 @@ void memory_init()
 	if (Memory_extended_buffer == nullptr) {
 	  Memory_extended_buffer = new uint8_t[Memory_extended_size];
 	}
-
 	memset(Memory_extended_buffer, 0, Memory_extended_size);
+
+	// alternate zero page buffer
+	if (Memory_aux_buffer == nullptr) {
+		Memory_aux_buffer = new uint8_t[Memory_aux_size];
+	}
+	memset(Memory_aux_buffer, 0, Memory_aux_size);
+
+	// and banks for aux memory
+	if (Memory_aux_bank1_buffer == nullptr) {
+		Memory_aux_bank1_buffer = new uint8_t[Memory_switched_bank_size];
+	}
+	if (Memory_aux_bank2_buffer == nullptr) {
+	  Memory_aux_bank2_buffer = new uint8_t[Memory_switched_bank_size];
+	}
+	memset(Memory_aux_bank1_buffer, 0, Memory_switched_bank_size);
+	memset(Memory_aux_bank2_buffer, 0, Memory_switched_bank_size);
+
+	// This is the 12k buffer that is active for either bank
+	// 1 or bank 2
+	if (Memory_aux_extended_buffer == nullptr) {
+	  Memory_aux_extended_buffer = new uint8_t[Memory_extended_size];
+	}
+	memset(Memory_aux_extended_buffer, 0, Memory_extended_size);
 
 	// initialize memory with "random" pattern.  there was long discussion
 	// in applewin github issues tracker related to what to do about
@@ -550,33 +708,58 @@ void memory_init()
 
 	// main memory area page pointers.  This is not write protected.  There
 	// are 
-	for (auto i = 0; i < Memory_main_size / 256; i++) {
-		Memory_main_pages[i].init(&Memory_buffer[i * 256], false);
+	for (auto i = 0; i < Memory_num_main_pages; i++) {
+		Memory_main_pages[i].init(&Memory_buffer[i * Memory_page_size], false);
 	}
 
 	// ROM area.  This is write protected
-	for (auto i = 0; i < Memory_rom_size / 256; i++) {
-		Memory_rom_pages[i].init(&Memory_rom_buffer[i * 256], true);
+	for (auto i = 0; i < Memory_num_rom_pages; i++) {
+		Memory_rom_pages[i].init(&Memory_rom_buffer[i * Memory_page_size], true);
 	}
 
 	// set up pointers for ramcard pages
-	for (auto i = 0; i < Memory_switched_bank_size / 256; i++) {
-	  uint32_t addr = i * 256;
-	  Memory_bank1_pages[i].init(&Memory_bank1_buffer[addr], false);
-	  Memory_bank2_pages[i].init(&Memory_bank2_buffer[addr], false);
+	for (auto i = 0; i < Memory_num_bank_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_bank_pages[0][i].init(&Memory_bank1_buffer[addr], false);
+		Memory_bank_pages[1][i].init(&Memory_bank2_buffer[addr], false);
 	}
 
 	// final 12k, the page pointers are the same.  Offset 8k into extended memory
 	// buffer because we have 2 4k pages before that
-	for (auto i = 0; i < Memory_extended_size / 256; i++) {
-	  uint32_t addr = i * 256;
-	  Memory_extended_pages[i].init(&Memory_extended_buffer[addr], false);
+	for (auto i = 0; i < Memory_num_extended_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_extended_pages[i].init(&Memory_extended_buffer[addr], false);
+	}
+
+	// set up pages for internal ROM on apple iie
+	for (auto i = 0; i < Memory_num_internal_rom_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_internal_rom_pages[i].init(&Memory_internal_rom_buffer[addr], true);
+	}
+
+	// memory for the auxiliary ram
+	for (auto i = 0; i < Memory_num_aux_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_aux_pages[i].init(&Memory_aux_buffer[addr], false);
+	}
+
+	// set up pointers for auxiliary bank pages 
+	for (auto i = 0; i < Memory_num_bank_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_aux_bank_pages[0][i].init(&Memory_aux_bank1_buffer[addr], false);
+		Memory_aux_bank_pages[1][i].init(&Memory_aux_bank2_buffer[addr], false);
+	}
+
+	// final 12k of exnteded RAM in the auxiliary buffer
+	for (auto i = 0; i < Memory_num_extended_pages; i++) {
+		uint32_t addr = i * Memory_page_size;
+		Memory_aux_extended_pages[i].init(&Memory_aux_extended_buffer[addr], false);
 	}
 
 	// set up the main memory card state
-	Memory_card_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM;
+	Memory_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM;
 	if (Emulator_type != emulator_type::APPLE2E) {
-		Memory_card_state |= RAM_CARD_WRITE_PROTECT;
+		Memory_state |= RAM_CARD_WRITE_PROTECT;
 	}
 
 	// update paging based on the current memory configuration.  this
@@ -584,28 +767,53 @@ void memory_init()
 	// correct pages
 	memory_set_paging_tables();
 
-	for (auto i = 0; i < Memory_main_size / 256; i++) {
+	for (auto i = 0; i < Memory_num_main_pages; i++) {
 		Memory_read_pages[i] = &Memory_main_pages[i];
 		Memory_write_pages[i] = &Memory_main_pages[i];
 	}
 
 
 	for (auto i = 0; i < 256; i++) {
-		m_c000_handlers[i].m_read_handler = nullptr;
-		m_c000_handlers[i].m_write_handler = nullptr;
+		m_soft_switch_handlers[i] = nullptr;
 	}
 
-	// register handlers for keyboard.   There is only a read handler here
-	// since we need to read memory to get a key back from the system
-	for (auto i = 0; i < 0xf; i++) {
-		memory_register_c000_handler(0x00, keyboard_read_handler, nullptr);
+	// register handlers for 0xc000 to 0xc00c.  These are memory
+	// management switches (except for the read of 0xc000 which is
+	// reading the keyboard).
+	for (auto i = 0; i < 0x0c; i++) {
+		memory_register_soft_switch_handler(i, memory_set_state);
+	}
+	for (auto i = 0x0c; i < 0x10; i++) {
+		memory_register_soft_switch_handler(i, video_set_state);
 	}
 
-	// clear keyboard strobe -- this can be a read or write handler
-	memory_register_c000_handler(0x10, keyboard_clear_read_handler, keyboard_clear_write_handler);
+	// register handler for reading memory status
+	for (auto i = 0x10; i < 0x19; i++) {
+		memory_register_soft_switch_handler(i, memory_get_state);
+	}
 
-	// register a handler for memory expansion card in slot 0
-	memory_register_slot_handler(0, memory_expansion_read_handler, memory_expansion_write_handler);
+	// reading video status
+	for (auto i = 0x19; i < 0x20; i++) {
+		memory_register_soft_switch_handler(i, video_get_state);
+	}
+
+	// register 0xc030 for the speaker
+	memory_register_soft_switch_handler(0x30, speaker_soft_switch_handler);
+
+	// set up memory handlers for video
+	for (auto i = 0x50; i <= 0x57; i++) {
+		memory_register_soft_switch_handler(i, video_set_state);
+	}
+
+	// register the read/write handlers for the joystick
+	for (auto i = 0x61; i < 0x67; i++) {
+		memory_register_soft_switch_handler(i, joystick_soft_switch_handler);
+	}
+	memory_register_soft_switch_handler(0x70, joystick_soft_switch_handler);
+
+	// register a handler for memory expansion card in slot 0.  This handler will
+	// also handle the first 64K in the apple iie
+	memory_register_slot_handler(0, memory_expansion_soft_switch_handler);
 }
 
 void memory_shutdown()
@@ -613,9 +821,32 @@ void memory_shutdown()
 	if (Memory_buffer != nullptr) {
 		delete[] Memory_buffer;
 	}
-
+	if (Memory_rom_buffer != nullptr) {
+		delete[] Memory_rom_buffer;
+	}
+	if (Memory_internal_rom_buffer != nullptr) {
+		delete[] Memory_internal_rom_buffer;
+	}
+	if (Memory_bank1_buffer != nullptr) {
+		delete[] Memory_bank1_buffer;
+	}
+	if (Memory_bank2_buffer != nullptr) {
+		delete[] Memory_bank2_buffer;
+	}
 	if (Memory_extended_buffer != nullptr) {
 		delete[] Memory_extended_buffer;
+	}
+	if (Memory_aux_buffer != nullptr) {
+		delete[] Memory_aux_buffer;
+	}
+	if (Memory_aux_bank1_buffer != nullptr) {
+		delete[] Memory_aux_bank1_buffer;
+	}
+	if (Memory_aux_bank2_buffer != nullptr) {
+		delete[] Memory_aux_bank2_buffer;
+	}
+	if (Memory_aux_extended_buffer != nullptr) {
+		delete[] Memory_aux_extended_buffer;
 	}
 }
 

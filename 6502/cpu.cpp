@@ -329,10 +329,10 @@ void cpu_6502::init()
 {
 	m_pc = 0;
 	m_sp = 0xff;
-	m_xindex = 0;
-	m_yindex = 0;
-	m_acc = 0;
-	m_status_register = 0;
+	m_xindex = 0xff;
+	m_yindex = 0xff;
+	m_acc = 0xff;
+	m_status_register = 0xff;
 	set_flag(register_bit::NOT_USED_BIT, 1);
 
 	// start vector

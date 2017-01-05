@@ -204,7 +204,7 @@ void disk_eject(const uint32_t slot)
 	Disk_drives[slot - 1].eject_disk();
 }
 
-uint8_t read_handler(uint16_t addr)
+uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 {
 	uint8_t action = (addr & 0x000f);
 
@@ -315,18 +315,15 @@ uint8_t read_handler(uint16_t addr)
 		return 0;
 	}
 
-}
-
-void write_handler(uint16_t addr, uint8_t val)
-{
-	read_handler(addr);
-	Current_drive->m_data_register = val;
+	if (write == true) {
+		Current_drive->m_data_register = val;
+	}
 }
 
 // initialize the disk system
 void disk_init()
 {
-	memory_register_slot_handler(6, read_handler, write_handler);
+	memory_register_slot_handler(6, drive_handler);
 	for (int i = 0; i < Max_drives; i++) {
 		Disk_drives[i].init(false);
 	}

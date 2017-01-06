@@ -146,7 +146,7 @@ static char character_conv[] = {
 	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $08	*/
 	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $10	*/
 	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $18	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $20	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $20	*/
 	'(', ')', '*', '+', ',', '-', '.', '/',		/* $28	*/
 	'0', '1', '2', '3', '4', '5', '6', '7',		/* $30	*/
 	'8', '9', ':', ';', '<', '=', '>', '?',		/* $38	*/
@@ -155,7 +155,7 @@ static char character_conv[] = {
 	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $48	*/
 	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $50	*/
 	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $58	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $60	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $60	*/
 	'(', ')', '*', '+', ',', '-', '.', '/',		/* $68	*/
 	'0', '1', '2', '3', '4', '5', '6', '7',		/* $70	*/
 	'8', '9', ':', ';', '<', '=', '>', '?',		/* $78	*/
@@ -164,7 +164,7 @@ static char character_conv[] = {
 	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $88	*/
 	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $90	*/
 	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $98	*/
-	' ', '!', '"', '#', '$', '%', '&', '\'',	   /* $A0	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $A0	*/
 	'(', ')', '*', '+', ',', '-', '.', '/',		/* $A8	*/
 	'0', '1', '2', '3', '4', '5', '6', '7',		/* $B0	*/
 	'8', '9', ':', ';', '<', '=', '>', '?',		/* $B8	*/
@@ -173,10 +173,10 @@ static char character_conv[] = {
 	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $C8	*/
 	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $D0	*/
 	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $D8	*/
-	' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
+	'`', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
 	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $E8	*/
 	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $F0	*/
-	'x', 'y', 'z', ';', '<', '=', '>', '?',		/* $F8	*/
+	'x', 'y', 'z', '{', '|', '}', '~', 0x7f,    /* $F8	*/
 };
 
 // callback for flashing characters
@@ -369,15 +369,15 @@ static void video_render()
 	auto render_text_cell = [text_addr_map](int x, int y) -> void {
 		font *cur_font;
 		uint16_t addr = text_addr_map[y] + x;
-		uint8_t c = memory_read(addr);
+		uint8_t c1 = memory_read(addr);
 		int x_pixel = x * Video_cell_width;
 		int y_pixel = y * Video_cell_height;
 
 		// get normal or inverse font
-		if (c <= 0x3f) {
+		if (c1 <= 0x3f) {
 			cur_font = &Video_inverse_font;
 		}
-		else if ((c <= 0x7f) && (Video_flash == true)) {
+		else if ((c1 <= 0x7f) && (Video_flash == true)) {
 			// set inverse if flashing is true
 			cur_font = &Video_inverse_font;
 		}
@@ -389,7 +389,8 @@ static void video_render()
 		// value from memory and then subtract out the first character in our
 		// font (as we need to be 0-based from that point).  Then we can get
 		// the row/col in the bitmap sheet where the character is
-		c = character_conv[c] - cur_font->m_header.m_char_offset;
+		uint8_t c = character_conv[c1];
+		c -= cur_font->m_header.m_char_offset;
 
 		glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
 		glColor3f(1.0f, 1.0f, 1.0f);

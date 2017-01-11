@@ -41,12 +41,6 @@ SOFTWARE.
 
 #pragma once
 
-#if defined(__APPLE__)
-#include <OpenGL/GL.h>
-#else
-#include <GL/GL.h>
-#endif
-
 // holds the font definition
 class font {
 public:

@@ -144,7 +144,7 @@ static uint32_t keyboard_get_key()
 	else {
 		key = key_ascii_table[key];
 		if (key >= 'a' && key <= 'z') {
-			if (Emulator_type != emulator_type::APPLE2E || Keyboard_caps_lock_on) {
+			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
 				key -= 32;
 			}
 		}
@@ -159,7 +159,7 @@ void keyboard_init()
 	for (auto i = 0; i < Keybuffer_size; i++) {
 		key_buffer[i] = 0;
 	}
-	if (Emulator_type == emulator_type::APPLE2E) {
+	if (Emulator_type >= emulator_type::APPLE2E) {
 		Keyboard_caps_lock_on = true;
 	} else {
 		Keyboard_caps_lock_on = false;

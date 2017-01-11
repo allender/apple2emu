@@ -210,6 +210,8 @@ static void memory_load_rom_images()
 		memory_load_from_filename("roms/apple2_plus.rom", &Memory_rom_buffer[0x1000]);
 	} else if (Emulator_type == emulator_type::APPLE2E) {
 		memory_load_from_filename("roms/apple2e.rom", &Memory_rom_buffer[0x1000]);
+	} else if (Emulator_type == emulator_type::APPLE2E_ENHANCED) {
+		memory_load_from_filename("roms/apple2e_enhanced.rom", &Memory_rom_buffer[0x1000]);
 	}
 	memory_load_from_filename("roms/disk2.rom", &Memory_rom_buffer[0x600]);
 }
@@ -601,7 +603,7 @@ uint8_t memory_read(const uint16_t addr)
 	}
 
 	// reset rom expansion page settings
-	if (Emulator_type == emulator_type::APPLE2E) {
+	if (Emulator_type >= emulator_type::APPLE2E) {
 		if (addr == 0xcfff) {
 			// read to 0xcfff resets the expansion rom area
 			Memory_state |= RAM_EXPANSION_RESET;
@@ -842,7 +844,7 @@ void memory_init()
 	// reset expansion rom flag so that the expansion rom gets
 	// reset to the internal rom (for the apple2e)
 	Memory_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM | RAM_EXPANSION_RESET;
-	if (Emulator_type != emulator_type::APPLE2E) {
+	if (Emulator_type < emulator_type::APPLE2E) {
 		Memory_state |= RAM_CARD_WRITE_PROTECT;
 	}
 

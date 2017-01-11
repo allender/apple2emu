@@ -58,6 +58,7 @@ const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPE
 	"Apple ][",
 	"Apple ][+",
 	"Apple ][e",
+	"Apple ][e Enhanced",
 };
 
 static const double Render_time = 33;   // roughly 30 fps

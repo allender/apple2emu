@@ -36,6 +36,7 @@ enum class emulator_type: uint8_t {
 	APPLE2 = 0,
 	APPLE2_PLUS,
 	APPLE2E,
+	APPLE2E_ENHANCED,
 
 	NUM_EMULATOR_TYPES,
 };

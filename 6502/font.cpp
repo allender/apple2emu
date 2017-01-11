@@ -38,19 +38,32 @@ SOFTWARE.
 // load up a font defintion
 bool font::load(const char *filename)
 {
-	if (m_surface != nullptr) {
-		SDL_FreeSurface(m_surface);
-	}
+	FILE *fp;
 
-	m_surface = IMG_Load(filename);
-	if (m_surface == nullptr) {
-		printf("Unable to load image %s: %s\n", filename, IMG_GetError());
+	//if (m_surface != nullptr) {
+	//	SDL_FreeSurface(m_surface);
+	//}
+
+	fp = fopen(filename, "rb");
+	if (fp == nullptr) {
 		return false;
 	}
-   int mode = GL_RGB;
-   if (m_surface->format->BytesPerPixel == 4) {
-      mode = GL_RGBA;
-   }
+	fread(&m_header.m_id, sizeof(uint8_t), 2, fp);
+	fread(&m_header.m_bitmap_width, sizeof(m_header.m_bitmap_width), 1, fp);
+	fread(&m_header.m_bitmap_height, sizeof(m_header.m_bitmap_height), 1, fp);
+	fread(&m_header.m_cell_width, sizeof(m_header.m_cell_width), 1, fp);
+	fread(&m_header.m_cell_height, sizeof(m_header.m_cell_height), 1, fp);
+	fread(&m_header.m_bpp, sizeof(m_header.m_bpp), 1, fp);
+	fread(&m_header.m_char_offset, sizeof(m_header.m_char_offset), 1, fp);
+	fread(&m_header.m_char_widths, sizeof(uint8_t), 256, fp);
+	
+	// now read the pixels
+	int num_pixels = m_header.m_bitmap_width * m_header.m_bitmap_height * (m_header.m_bpp / 8);
+	uint8_t *pixels = new uint8_t[num_pixels];
+	fread(pixels, num_pixels, 1, fp);
+	fclose(fp);
+
+	_ASSERTE((m_header.m_id[0] != 0xbf) || (m_header.m_id[1] != 0xf2));
 
 	// load the pixels into a GL texture
 	glGenTextures(1, &m_texture_id);
@@ -59,26 +72,23 @@ bool font::load(const char *filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_surface->w, m_surface->h, 0, mode, GL_UNSIGNED_BYTE, m_surface->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_header.m_bitmap_width, m_header.m_bitmap_height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	// set up font information on cells and locations for characters
-	m_header.m_font_width = m_surface->w;
-	m_header.m_font_height = m_surface->h;
-	m_header.m_format = m_surface->format->format;
-
-	// Figure out the cell location for each character.  The offset is the ascii offset to the
-	// first character in the font.  The cell widths are hard coded because this is how
-	// the texture was exported from CBFG
-	m_header.m_char_offset = 32;
-	m_header.m_cell_height = 16;
-	m_header.m_cell_width = 14;
+	//
+	// I used CBFG to generate the fonts.  it was a TTF to bitmap font generator
+	// that was totally suited for what I needed.  I've hard coded values here
+	// because honestly I don't need to do anything different.
+	//
+	// http://www.codehead.co.uk/cbfg/
+	//
 
 	// uv widths and heights for the cells - they are all fixed so this
 	// is a fixed value
-	m_header.m_cell_u = (float)m_header.m_cell_width / (float)m_header.m_font_width;
-	m_header.m_cell_v = (float)m_header.m_cell_height / (float)m_header.m_font_height;
+	m_cell_u = (float)m_header.m_cell_width / (float)m_header.m_bitmap_width;
+	m_cell_v = (float)m_header.m_cell_height / (float)m_header.m_bitmap_height;
 
-	uint32_t chars_per_row = m_header.m_font_width / m_header.m_cell_width;
+	uint32_t chars_per_row = m_header.m_bitmap_width / m_header.m_cell_width;
 
 	// calculate rects for characters in the font.  These things here will be 0
 	// based as we need to start with the first character in the bitmap sheet.
@@ -86,9 +96,17 @@ bool font::load(const char *filename)
 		uint32_t character_row = i / chars_per_row;
 		uint32_t character_col = i - character_row * chars_per_row;
 
-		m_char_u[i] = character_col * m_header.m_cell_u;
-		m_char_v[i] = character_row * m_header.m_cell_v;
+		m_char_u[i] = character_col * m_cell_u;
+		m_char_v[i] = character_row * m_cell_v;
 	}
+
+	// I had this in here when getting 80 column mode running because
+	// we had to have widths of 7, but I think that with the new
+	// way of loading fonts and rendering (to 560x380), this isn't necessary
+	// anymore for some reason
+	//if (hack == true) {
+	//	m_cell_u -= 1.0f / m_header.m_bitmap_width;
+	//}
 
 	return true;
 }

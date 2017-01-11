@@ -42,12 +42,14 @@ const int Num_vertical_cells_mixed = 20;
 const int Num_horizontal_cells = 40;
 
 // always render to default size - SDL can scale it up
-const static int Video_native_width = 280;
-const static int Video_native_height = 192;
+// we use 560 here because of double hires (and 80 column
+// support.  
+const static int Video_native_width = 560;
+const static int Video_native_height = 384;
 const int Video_cell_width = Video_native_width / 40;
 const int Video_cell_height = Video_native_height / 24;
 
-static int Video_scale_factor = 3;
+static int Video_scale_factor = 2;
 static SDL_Rect Video_native_size;
 static SDL_Rect Video_window_size;
 
@@ -86,6 +88,7 @@ SDL_GLContext Video_context;
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
 font Video_font, Video_inverse_font;
+font Video_font_80, Video_inverse_font_80;
 
 uint8_t Video_mode = VIDEO_MODE_TEXT;
 
@@ -396,11 +399,54 @@ static void video_render()
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 		glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
-		glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);
-		glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_header.m_cell_u, cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
-		glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_header.m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
+		glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + Video_cell_width, y_pixel);
+		glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_cell_u, cur_font->m_char_v[c] + cur_font->m_cell_v); glVertex2i(x_pixel + Video_cell_width, y_pixel + Video_cell_height);
+		glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
 		glEnd();
 		glBindTexture(GL_TEXTURE_2D, 0);
+	};
+
+	auto render_text80_cell = [text_addr_map](int x, int y) -> void {
+		font *cur_font;
+		uint16_t addr = text_addr_map[y] + x;
+		uint8_t character[2];
+		character[0] = memory_read_aux(addr);
+		character[1] = memory_read(addr);
+		int x_pixel = x * Video_cell_width;
+		int y_pixel = y * Video_cell_height;
+
+		// get normal or inverse font
+		for (auto i = 0; i < 2; i++) {
+			if (character[i] <= 0x3f) {
+				cur_font = &Video_inverse_font_80;
+			}
+			else if ((character[i] <= 0x7f) && (Video_flash == true)) {
+				// set inverse if flashing is true
+				cur_font = &Video_inverse_font_80;
+			}
+			else {
+				cur_font = &Video_font;
+			}
+
+			// get character in memory, and then convert to ASCII.  We get character
+			// value from memory and then subtract out the first character in our
+			// font (as we need to be 0-based from that point).  Then we can get
+			// the row/col in the bitmap sheet where the character is
+			uint8_t c = character_conv[character[i]];
+			c -= cur_font->m_header.m_char_offset;
+
+			glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glBegin(GL_QUADS);
+			glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c]); glVertex2i(x_pixel, y_pixel);
+			glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_cell_u, cur_font->m_char_v[c]);  glVertex2i(x_pixel + (Video_cell_width/2), y_pixel);
+			glTexCoord2f(cur_font->m_char_u[c] + cur_font->m_cell_u, cur_font->m_char_v[c] + cur_font->m_cell_v); glVertex2i(x_pixel + (Video_cell_width/2), y_pixel + Video_cell_height);
+			glTexCoord2f(cur_font->m_char_u[c], cur_font->m_char_v[c] + cur_font->m_cell_v); glVertex2i(x_pixel, y_pixel + Video_cell_height);
+			glEnd();
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			x_pixel += (Video_cell_width/2);
+		}
 	};
 
 	auto render_lores_cell = [gr_addr_map](int x, int y) -> void {
@@ -433,13 +479,11 @@ static void video_render()
 	};
 
 	auto render_mono_hires_cell = [gr_addr_map](int x, int y) -> void {
-		int y_pixel = y * 8;
+		int y_pixel = y * Video_cell_height;
 		for (int b = 0; b < 8; b++) {
-			int x_pixel = x * 7;
+			int x_pixel = x * Video_cell_width;
 			uint32_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
 			uint8_t byte = memory_read(memory_loc);
-			uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc - 1) : 0) >> 6) & 1;
-			uint8_t right_neighbor = (x < 39 ? memory_read(memory_loc + 1) : 0) & 1;
 			if (byte) {
 				// mono mode - we don't care about the high bit in the display byte
 				byte &= 0x7f;
@@ -447,20 +491,20 @@ static void video_render()
 				glColor3f(1.0f, 1.0f, 1.0f);
 				glBegin(GL_QUADS);
 				glTexCoord2f(0.0f, 0.0f); glVertex2i(x_pixel, y_pixel);
-				glTexCoord2f(1.0f, 0.0f); glVertex2i(x_pixel + 8, y_pixel);
-				glTexCoord2f(1.0f, 1.0f); glVertex2i(x_pixel + 8, y_pixel + 1);
-				glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 1);
+				glTexCoord2f(1.0f, 0.0f); glVertex2i(x_pixel + Video_cell_width+2, y_pixel);
+				glTexCoord2f(1.0f, 1.0f); glVertex2i(x_pixel + Video_cell_width+2, y_pixel + 2);
+				glTexCoord2f(0.0f, 1.0f); glVertex2i(x_pixel, y_pixel + 2);
 				glEnd();
 			}
-			y_pixel++;
+			y_pixel += 2;
 		}
 	};
 
 	auto render_color_hires_cell = [gr_addr_map](int x, int y) -> void {
 		int odd = x % 2;
-		int y_pixel = y * 8;
+		int y_pixel = y * Video_cell_height;
 		for (int b = 0; b < 8; b++) {
-			int x_pixel = x * 7;
+			int x_pixel = x * Video_cell_width;
 			uint32_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
 			uint8_t byte = memory_read(memory_loc);
 			uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc - 1) : 0) >> 6) & 1;
@@ -475,32 +519,37 @@ static void video_render()
 				glColor3f(1.0f, 1.0f, 1.0f);
 				glBegin(GL_QUADS);
 				glTexCoord2f(u, v); glVertex2i(x_pixel, y_pixel);
-				glTexCoord2f(u + (7.0f / (float)Hires_color_texture_width), v); glVertex2i(x_pixel + 7, y_pixel);
-				glTexCoord2f(u + (7.0f / (float)Hires_color_texture_width), v + (1.0f / (float)Num_hires_color_patterns)); glVertex2i(x_pixel + 7, y_pixel + 1);
-				glTexCoord2f(u, v + (1.0f / (float)Num_hires_color_patterns)); glVertex2i(x_pixel, y_pixel + 1);
+				glTexCoord2f(u + (7.0f / (float)Hires_color_texture_width), v); glVertex2i(x_pixel + Video_cell_width, y_pixel);
+				glTexCoord2f(u + (7.0f / (float)Hires_color_texture_width), v + (1.0f / (float)Num_hires_color_patterns)); glVertex2i(x_pixel + Video_cell_width, y_pixel + 2);
+				glTexCoord2f(u, v + (1.0f / (float)Num_hires_color_patterns)); glVertex2i(x_pixel, y_pixel + 2);
 				glEnd();
 			}
-			y_pixel++;
+			y_pixel += 2;
 		}
 	};
 
-	std::function<void(int, int)> func;
+	std::function<void(int, int)> main_func;
+	std::function<void(int, int)> mixed_func;
 	if (Video_mode & VIDEO_MODE_TEXT) {
-		func = render_text_cell;
+		if (Video_mode & VIDEO_MODE_80COL) {
+			mixed_func = main_func = render_text80_cell;
+		} else {
+			mixed_func = main_func = render_text_cell;
+		}
 	}
 	else if (!(Video_mode & VIDEO_MODE_HIRES)) {
-		func = render_lores_cell;
+		main_func = render_lores_cell;
 	}
 	else if (Video_mode & VIDEO_MODE_HIRES) {
 
 		if (Video_display_mode != video_display_types::COLOR) {
-			func = render_mono_hires_cell;
+			main_func = render_mono_hires_cell;
 		}
 		else {
-			func = render_color_hires_cell;
+			main_func = render_color_hires_cell;
 		}
 	}
-	video_render_screen(func, render_text_cell);
+	video_render_screen(main_func, mixed_func);
 
 }
 
@@ -657,15 +706,21 @@ bool video_create()
 		return false;
 	}
 
-	if (Video_font.load("apple2.tga") == false) {
+	if (Video_font.load("apple_font.bff") == false) {
 		return false;
 	}
-	if (Video_inverse_font.load("apple2_inverted.tga") == false) {
+	if (Video_inverse_font.load("apple_font_inverted.bff") == false) {
+		return false;
+	}
+	if (Video_font_80.load("apple_font80.bff") == false) {
+		return false;
+	}
+	if (Video_inverse_font_80.load("apple_font80_inverted.bff") == false) {
 		return false;
 	}
 
 	if (video_create_hires_textures() == false) {
-		return false;
+	/	return false;
 	}
 
 	return true;

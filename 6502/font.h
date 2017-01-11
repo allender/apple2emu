@@ -49,21 +49,22 @@ SOFTWARE.
 
 // holds the font definition
 class font {
-private:
-	SDL_Surface   *m_surface;
-
 public:
 	struct header {
-		uint32_t   m_format;
-		int32_t    m_font_width;
-		int32_t    m_font_height;
+		char       m_id[2];
+		uint32_t   m_bitmap_width;
+		uint32_t   m_bitmap_height;
 		uint32_t   m_cell_width;
 		uint32_t   m_cell_height;
-		float      m_cell_u;
-		float      m_cell_v;
 		uint8_t    m_bpp;
 		uint8_t    m_char_offset;
+		uint8_t    m_char_widths[256];
 	};
+
+		
+	uint8_t    m_format;
+	float      m_cell_u;
+	float      m_cell_v;
 
 	header        m_header;
 	GLuint        m_texture_id;

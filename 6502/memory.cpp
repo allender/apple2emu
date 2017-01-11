@@ -27,7 +27,6 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <iomanip>
-#include <cassert>
 #include "apple2emu.h"
 #include "memory.h"
 #include "video.h"
@@ -49,8 +48,10 @@ SOFTWARE.
 #define RAM_ALT_ZERO_PAGE       (1 << 8)
 #define RAM_80STORE             (1 << 9)
 
+#define RAM_EXPANSION_RESET     (1 << 10)
+
 // state of the memory card
-static uint8_t Memory_state;
+static uint32_t Memory_state;
 
 // values for memory sizes
 static const int Memory_main_size = (48 * 1024);
@@ -60,6 +61,7 @@ static const int Memory_c000_rom_size = (4 * 1024);
 static const int Memory_extended_size = (8 * 1024);
 static const int Memory_c300_rom_size = (256);
 static const int Memory_aux_size = (48 * 256);
+static const int Memory_expansion_rom_size = (2 * 1024);
 
 static const int Memory_page_size = 256;
 
@@ -70,6 +72,7 @@ static const int Memory_num_bank_pages = (Memory_switched_bank_size / Memory_pag
 static const int Memory_num_internal_rom_pages = (Memory_c000_rom_size/ Memory_page_size);
 static const int Memory_num_extended_pages = (Memory_extended_size / Memory_page_size);
 static const int Memory_num_aux_pages = (Memory_aux_size / Memory_page_size);
+static const int Memory_num_expansion_rom_pages (Memory_expansion_rom_size / Memory_page_size);
 
 // iie roms are 16k in size.  c000 to cfff can have different
 // functions depending on iie soft switches
@@ -128,6 +131,9 @@ memory_page Memory_internal_rom_pages[Memory_num_internal_rom_pages]; // 16 page
 memory_page Memory_aux_pages[Memory_num_aux_pages];               // 16 page - 4k
 memory_page Memory_aux_bank_pages[2][Memory_num_bank_pages];      // 16 pages - 4k
 memory_page Memory_aux_extended_pages[Memory_num_extended_pages]; // 32 pages - 8k
+memory_page Memory_expansion_rom_pages[Num_slots][Memory_num_expansion_rom_pages];  // 8 pages - 2k
+
+memory_page *Memory_current_expansion_rom_pages; // this will be what is actively used
 
 // pointers for read/write pages.  These are the methods by
 // which memory reading and writing will be done.  We have
@@ -164,6 +170,9 @@ static uint8_t *Memory_aux_buffer = nullptr;
 static uint8_t *Memory_aux_bank1_buffer = nullptr;
 static uint8_t *Memory_aux_bank2_buffer = nullptr;
 static uint8_t *Memory_aux_extended_buffer = nullptr;
+
+// memory buffer space for expansion rom for peripherals
+static uint8_t *Memory_expansion_rom_buffer[Num_slots];
 
 static bool memory_load_from_filename(const char *filename, uint8_t *dest)
 {
@@ -494,9 +503,9 @@ void memory_set_paging_tables()
 		}
 	}
 
-	// set up c000 - 0xcfff.  Set to internal rom (apple 2e) or
+	// set up c000 - 0xc7ff.  Set to internal rom (apple 2e) or
 	// slot rom depending on slot flag
-	for (auto page = 0xc0; page < 0xd0; page++) {
+	for (auto page = 0xc0; page < 0xc8; page++) {
 		if (Memory_state & RAM_SLOTCX_ROM) {
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
 		} else {
@@ -549,23 +558,31 @@ void memory_set_paging_tables()
 		for (auto page = 0x04; page < 0x08; page++) {
 			if (Video_mode & VIDEO_MODE_PAGE2) {
 				Memory_read_pages[page] = &Memory_aux_pages[page];
+				Memory_write_pages[page] = &Memory_aux_pages[page];
 			} else {
 				Memory_read_pages[page] = &Memory_main_pages[page];
+				Memory_write_pages[page] = &Memory_main_pages[page];
 			}
-			Memory_write_pages[page] = &Memory_main_pages[page];
 		}
 
 		if (Video_mode & VIDEO_MODE_HIRES) {
 			for (auto page = 0x20; page < 0x40; page++) {
 				if (Video_mode & VIDEO_MODE_PAGE2) {
 					Memory_read_pages[page] = &Memory_aux_pages[page];
+					Memory_write_pages[page] = &Memory_aux_pages[page];
 				} else {
 					Memory_read_pages[page] = &Memory_main_pages[page];
+					Memory_write_pages[page] = &Memory_main_pages[page];
 				}
-				Memory_write_pages[page] = &Memory_main_pages[page];
 			}
 		}
 	}
+}
+
+uint8_t memory_read_aux(const uint16_t addr)
+{
+	uint8_t page = (addr / Memory_page_size);
+	return *(Memory_aux_pages[page].get_ptr() + (addr & 0xff));
 }
 
 uint8_t memory_read(const uint16_t addr)
@@ -582,7 +599,54 @@ uint8_t memory_read(const uint16_t addr)
 			return 0;
 		}
 	}
-	assert(Memory_read_pages[page] != nullptr);
+
+	// reset rom expansion page settings
+	else if (addr == 0xcfff) {
+		// read to 0xcfff resets the expansion rom area
+		Memory_state |= RAM_EXPANSION_RESET;
+		Memory_current_expansion_rom_pages = nullptr;
+	}
+
+	// handle reads in perhiperal rom (or internal rom) memory
+	else if (page >= 0xc1 && page <= 0xc7 && Memory_current_expansion_rom_pages == nullptr) {
+
+		// check to see if we need to update the expansion ROM area.  Access 
+		// to a peripheral slot means that we _might_ access the expansion
+		// rom.  Set flags to indicate what pages might need to be paged
+		// in if that expansion area is accessed.
+		auto slot = (page & 0xf);
+		if (Memory_expansion_rom_buffer[slot] != nullptr) {
+			Memory_current_expansion_rom_pages = &Memory_expansion_rom_pages[slot][0];
+		}
+		else if (slot == 3 && !(Memory_state & RAM_SLOTC3_ROM)) {
+			Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
+		} else {
+			Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
+		}
+	}
+
+	// we are accessing expansion rom.  (apple 2e only).  When we 
+	// access these pages, we need to make sure that the page pointers
+	// point to the correct location for the expansion rom
+	else if (page >= 0xc8 && page <= 0xcf) {
+		// if we haven't paged in the memory pages yet, do so here.  If
+		// the reset flag is set, and no slot is active, then we can
+		// just use the internal rom.  If reset is active and a slot
+		// is active, use the slot's expansion rom (or internal rom
+		// if this is slot 3)
+		if (Memory_state & RAM_EXPANSION_RESET) {
+			if (Memory_current_expansion_rom_pages == nullptr) {
+				Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
+			}
+			// this is a reset case and we just point to the internal rom pages
+			for (auto page = 0xc8; page <= 0xcf; page++) {
+				Memory_read_pages[page] = &Memory_current_expansion_rom_pages[page - 0xc8];
+			}
+			Memory_state &= ~RAM_EXPANSION_RESET;
+		}
+	}
+
+	_ASSERT(Memory_read_pages[page] != nullptr);
 	return *(Memory_read_pages[page]->get_ptr() + (addr & 0xff));
 }
 
@@ -603,7 +667,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 		}
 	}
 
-	assert(Memory_write_pages[page] != nullptr);
+	_ASSERT(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
 	}
@@ -617,15 +681,19 @@ void memory_register_soft_switch_handler(uint8_t addr, soft_switch_function func
 }
 
 // register handlers for the I/O slots
-void memory_register_slot_handler(const uint8_t slot, soft_switch_function func)
+void memory_register_slot_handler(const uint8_t slot, soft_switch_function func, uint8_t *expansion_rom)
 {
-	assert((slot >= 0) && (slot < Num_slots));
+	_ASSERT((slot >= 0) && (slot < Num_slots));
 	uint8_t addr = 0x80 + (slot << 4);
 
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same 
 	// handler as we will deal with all slot operations in the same function
 	for (auto i = 0; i <= 0xf; i++) {
 		m_soft_switch_handlers[addr + i] = func;
+	}
+
+	if (expansion_rom != nullptr) {
+		Memory_expansion_rom_buffer[slot] = expansion_rom;
 	}
 }
 
@@ -701,6 +769,10 @@ void memory_init()
 	}
 	memset(Memory_aux_extended_buffer, 0, Memory_extended_size);
 
+	for (auto i = 0; i < Num_slots; i++) {
+		Memory_expansion_rom_buffer[i] = nullptr;
+	}
+
 	// initialize memory with "random" pattern.  there was long discussion
 	// in applewin github issues tracker related to what to do about
 	// memory initialization.  https://github.com/AppleWin/AppleWin/issues/206
@@ -756,8 +828,10 @@ void memory_init()
 		Memory_aux_extended_pages[i].init(&Memory_aux_extended_buffer[addr], false);
 	}
 
-	// set up the main memory card state
-	Memory_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM;
+	// set up the main memory card state.  Make sure to set the
+	// reset expansion rom flag so that the expansion rom gets
+	// reset to the internal rom (for the apple2e)
+	Memory_state = RAM_CARD_BANK2 | RAM_SLOTCX_ROM | RAM_EXPANSION_RESET;
 	if (Emulator_type != emulator_type::APPLE2E) {
 		Memory_state |= RAM_CARD_WRITE_PROTECT;
 	}
@@ -771,7 +845,6 @@ void memory_init()
 		Memory_read_pages[i] = &Memory_main_pages[i];
 		Memory_write_pages[i] = &Memory_main_pages[i];
 	}
-
 
 	for (auto i = 0; i < 256; i++) {
 		m_soft_switch_handlers[i] = nullptr;

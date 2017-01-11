@@ -601,48 +601,58 @@ uint8_t memory_read(const uint16_t addr)
 	}
 
 	// reset rom expansion page settings
-	else if (addr == 0xcfff) {
-		// read to 0xcfff resets the expansion rom area
-		Memory_state |= RAM_EXPANSION_RESET;
-		Memory_current_expansion_rom_pages = nullptr;
-	}
-
-	// handle reads in perhiperal rom (or internal rom) memory
-	else if (page >= 0xc1 && page <= 0xc7 && Memory_current_expansion_rom_pages == nullptr) {
-
-		// check to see if we need to update the expansion ROM area.  Access 
-		// to a peripheral slot means that we _might_ access the expansion
-		// rom.  Set flags to indicate what pages might need to be paged
-		// in if that expansion area is accessed.
-		auto slot = (page & 0xf);
-		if (Memory_expansion_rom_buffer[slot] != nullptr) {
-			Memory_current_expansion_rom_pages = &Memory_expansion_rom_pages[slot][0];
+	if (Emulator_type == emulator_type::APPLE2E) {
+		if (addr == 0xcfff) {
+			// read to 0xcfff resets the expansion rom area
+			Memory_state |= RAM_EXPANSION_RESET;
+			Memory_current_expansion_rom_pages = nullptr;
 		}
-		else if (slot == 3 && !(Memory_state & RAM_SLOTC3_ROM)) {
-			Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
-		} else {
-			Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
-		}
-	}
 
-	// we are accessing expansion rom.  (apple 2e only).  When we 
-	// access these pages, we need to make sure that the page pointers
-	// point to the correct location for the expansion rom
-	else if (page >= 0xc8 && page <= 0xcf) {
-		// if we haven't paged in the memory pages yet, do so here.  If
-		// the reset flag is set, and no slot is active, then we can
-		// just use the internal rom.  If reset is active and a slot
-		// is active, use the slot's expansion rom (or internal rom
-		// if this is slot 3)
-		if (Memory_state & RAM_EXPANSION_RESET) {
-			if (Memory_current_expansion_rom_pages == nullptr) {
+		// handle reads in perhiperal rom (or internal rom) memory
+		else if (page >= 0xc1 && page <= 0xc7 && Memory_current_expansion_rom_pages == nullptr) {
+
+			// check to see if we need to update the expansion ROM area.  Access 
+			// to a peripheral slot means that we _might_ access the expansion
+			// rom.  Set flags to indicate what pages might need to be paged
+			// in if that expansion area is accessed.
+			auto slot = (page & 0xf);
+			if (Memory_expansion_rom_buffer[slot] != nullptr) {
+				Memory_current_expansion_rom_pages = &Memory_expansion_rom_pages[slot][0];
+			}
+			else if (slot == 3 && !(Memory_state & RAM_SLOTC3_ROM)) {
+				Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
+			} else {
 				Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
 			}
-			// this is a reset case and we just point to the internal rom pages
-			for (auto page = 0xc8; page <= 0xcf; page++) {
-				Memory_read_pages[page] = &Memory_current_expansion_rom_pages[page - 0xc8];
+		}
+
+		// we are accessing expansion rom.  (apple 2e only).  When we 
+		// access these pages, we need to make sure that the page pointers
+		// point to the correct location for the expansion rom
+		else if (page >= 0xc8 && page <= 0xcf) {
+			// if we haven't paged in the memory pages yet, do so here.  If
+			// the reset flag is set, and no slot is active, then we can
+			// just use the internal rom.  If reset is active and a slot
+			// is active, use the slot's expansion rom (or internal rom
+			// if this is slot 3)
+			if (Memory_state & RAM_EXPANSION_RESET) {
+				if (Memory_current_expansion_rom_pages == nullptr) {
+					Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
+				}
+				// this is a reset case and we just point to the internal rom pages
+				for (auto page = 0xc8; page <= 0xcf; page++) {
+					Memory_read_pages[page] = &Memory_current_expansion_rom_pages[page - 0xc8];
+				}
+				Memory_state &= ~RAM_EXPANSION_RESET;
 			}
-			Memory_state &= ~RAM_EXPANSION_RESET;
+		}
+	} else {
+		// apple2 plus, is there is no expansion rom.  If there is no
+		// handler for the page, then just return
+		if (page >= 0xc0 && page <= 0xcf) {
+			if (Memory_read_pages[page] == nullptr) {
+				return 0;
+			}
 		}
 	}
 

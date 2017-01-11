@@ -25,15 +25,15 @@ SOFTWARE.
 
 */
 
-#include "SDL.h"
-
 // header file for fonts
 //
 // Fonts used here are bitmap fonts and these have been generated using the 
 // tool found at https://github.com/CodeheadUK/CBFG
 //
-// The TTF font used for the 40 column display is PrintChar21 and the package is found
-// at http://www.kreativekorp.com/software/fonts/apple2.shtml
+// The TTF font used for the 40 column display is PrintChar21 and the package
+// is found at http://www.kreativekorp.com/software/fonts/apple2.shtml
+//
+// The 80 column font is PR Number 3
 //
 // The ttf was converted to a bitmap file format (as defined by the CBFG tool).
 //

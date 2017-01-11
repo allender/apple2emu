@@ -720,7 +720,7 @@ bool video_create()
 	}
 
 	if (video_create_hires_textures() == false) {
-	/	return false;
+		return false;
 	}
 
 	return true;

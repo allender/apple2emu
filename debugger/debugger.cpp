@@ -70,16 +70,16 @@ static WINDOW *Debugger_command_window = nullptr;
 static WINDOW *Debugger_disasm_window = nullptr;
 static WINDOW *Debugger_breakpoint_window = nullptr;
 static WINDOW *Debugger_status_window = nullptr;
-static uint32_t Debugger_memory_display_bytes = 16;
-static uint32_t Debugger_memory_num_lines = 12;
-static uint32_t Debugger_register_num_lines = 9;
-static uint32_t Debugger_command_num_lines = 5;
-static uint32_t Debugger_disasm_num_lines = 0;
-static uint32_t Debugger_breakpoint_num_lines = 0;
-static uint32_t Debugger_status_num_lines = 0;
-static uint32_t Debugger_column_one_width = 80;
-static uint32_t Debugger_column_two_width = 30;
-static uint32_t Debugger_memory_display_address = 0;
+static int Debugger_memory_num_lines = 12;
+static int Debugger_register_num_lines = 9;
+static int Debugger_command_num_lines = 5;
+static int Debugger_disasm_num_lines = 0;
+static int Debugger_breakpoint_num_lines = 0;
+static int Debugger_status_num_lines = 0;
+static int Debugger_column_one_width = 80;
+static int Debugger_column_two_width = 30;
+static uint16_t Debugger_memory_display_bytes = 16;
+static uint16_t Debugger_memory_display_address = 0;
 
 static const char *addressing_format_string[] = {
 	"",           // NO_MODE
@@ -129,7 +129,7 @@ static void debugger_get_status(cpu_6502 &cpu)
 }
 
 // disassemble the given address into the buffer
-static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
+static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint16_t addr)
 {
 	char internal_buffer[Debugger_disassembly_line_length];
 	Debugger_disassembly_line[0] = '\0';
@@ -161,7 +161,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 
 		strcat(Debugger_disassembly_line, internal_buffer);
 
-		uint16_t addressing_val;
+		uint16_t addressing_val = 0;
 		if (opcode->m_size == 2) {
 			addressing_val = memory_read(addr + 1);
 		}
@@ -169,7 +169,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 			addressing_val = (memory_read(addr + 2) << 8) | memory_read(addr + 1);
 		}
 		if (opcode->m_size > 1) {
-			uint32_t mem_value = -1;
+			uint32_t mem_value = 0xffffffff;
 
 			cpu_6502::addr_mode mode = opcode->m_addr_mode;
 			if (mode == cpu_6502::addr_mode::RELATIVE_MODE) {
@@ -270,7 +270,7 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint32_t addr)
 }
 
 // disassemble at the given address
-static void debugger_disassemble(cpu_6502 &cpu, uint32_t addr, int32_t num_lines = 20)
+static void debugger_disassemble(cpu_6502 &cpu, uint16_t addr, int32_t num_lines = 20)
 {
 	for (auto i = 0; i < num_lines; i++) {
 		uint8_t size = debugger_get_disassembly(cpu, addr);
@@ -315,15 +315,15 @@ static void debugger_display_memory()
 {
 	wclear(Debugger_memory_window);
 	box(Debugger_memory_window, 0, 0);
-	uint32_t addr = Debugger_memory_display_address;
-	for (uint32_t i = 0; i < Debugger_memory_num_lines - 2; i++) {
+	uint16_t addr = Debugger_memory_display_address;
+	for (auto i = 0; i < Debugger_memory_num_lines - 2; i++) {
 		mvwprintw(Debugger_memory_window, i + 1, 2, "%04X: ", addr);
-		for (uint32_t j = 0; j < Debugger_memory_display_bytes; j++) {
+		for (uint16_t j = 0; j < Debugger_memory_display_bytes; j++) {
 			wprintw(Debugger_memory_window, "%02x ", memory_read(addr + j));
 		}
 		wprintw(Debugger_memory_window, "  ");
 
-		for (uint32_t j = 0; j < Debugger_memory_display_bytes; j++) {
+		for (uint16_t j = 0; j < Debugger_memory_display_bytes; j++) {
 			wprintw(Debugger_memory_window, "%c", isprint(memory_read(addr + j)) ? memory_read(addr + j) : '.');
 		}
 		addr += Debugger_memory_display_bytes;
@@ -364,7 +364,7 @@ static void debugger_display_disasm(cpu_6502 &cpu)
 	auto addr = cpu.get_pc();
 	auto row = 1;
 	wattron(Debugger_disasm_window, A_REVERSE);
-	for (uint32_t i = 0; i < Debugger_disasm_num_lines - 2; i++) {
+	for (auto i = 0; i < Debugger_disasm_num_lines - 2; i++) {
 		auto size = debugger_get_disassembly(cpu, addr);
 		// see if there is breakpoint at given line and show that in red
 		for (auto j = 0; j < Debugger_num_breakpoints; j++) {
@@ -540,7 +540,7 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			if (Debugger_num_breakpoints < Max_breakpoints) {
 				token = strtok(nullptr, " ");
 				if (token != nullptr) {
-					uint32_t address = strtol(token, nullptr, 16);
+					uint16_t address = (uint16_t)strtol(token, nullptr, 16);
 					if (address > 0xffff) {
 						printw("Address %x must be in range 0-0xffff\n", address);
 					}
@@ -596,14 +596,14 @@ static void debugger_process_commands(cpu_6502 &cpu)
 		// disassemble.  With no address, use current PC
 		// if address given, then disassemble at that adddress
 		else if (!stricmp(token, "dis")) {
-			uint32_t addr;
+			uint16_t addr;
 
 			token = strtok(nullptr, " ");
 			if (token == nullptr) {
 				addr = cpu.get_pc();
 			}
 			else {
-				addr = strtol(token, nullptr, 16);
+				addr = (uint16_t)strtol(token, nullptr, 16);
 			}
 			debugger_disassemble(cpu, addr);
 		}
@@ -612,7 +612,7 @@ static void debugger_process_commands(cpu_6502 &cpu)
 		else if (!stricmp(token, "x") || !stricmp(token, "examine")) {
 			token = strtok(nullptr, " ");
 			if (token != nullptr) {
-				Debugger_memory_display_address = strtol(token, nullptr, 16);
+				Debugger_memory_display_address = (uint16_t)strtol(token, nullptr, 16);
 			}
 		}
 

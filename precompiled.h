@@ -29,15 +29,6 @@ SOFTWARE.
 #include "6502/cpu.h"
 #include "6502/memory.h"
 
-// includes for easylogging.  Defines need to be set up
-// before header is included
-#define ELPP_THREAD_SAFE
-#if defined(_WIN32) || defined(_WIN64)
-#define ELPP_DEFAULT_LOG_FILE "logs\\apple2emu.log"
-#else
-#define ELPP_DEFAULT_LOG_FILE "logs/apple2emu.log"
-#endif
-
 #define USE_SDL
 
 #if defined(LITTLE_ENDIAN)
@@ -45,6 +36,10 @@ SOFTWARE.
 #endif
 
 #define LITTLE_ENDIAN
+
+// define for helping to clear out unreferenced
+// parameter warmings
+#define UNREFERENCED(X) X
 
 // get past stricmp problems
 #if !defined(_WIN32) && !defined(_WIN64)

@@ -324,7 +324,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 			nib_data[offset - 2] &= 0x3f;
 
 			// checksum the entire buffer
-			auto xor_value = 0;
+			uint8_t xor_value = 0;
 			for (auto i = 0; i <= 343; i++) {
 				auto prev_val = nib_data[i];
 				nib_data[i] = nib_data[i] ^ xor_value;
@@ -377,9 +377,11 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		// need to get the sector number.  Let's also verify that the track number
 		// matches
 		work_ptr += 2;  // skip past the volume number
+#if defined(_DEBUG)
 		uint8_t encoded_track = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
-		work_ptr += 2;
 		assert(encoded_track == track);
+#endif
+		work_ptr += 2;
 
 		uint8_t encoded_sector = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
 		work_ptr += 2;
@@ -413,7 +415,7 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		work_ptr += 5;
 
 		// xor the buffer with itself
-		auto xor_value = 0;
+		uint8_t xor_value = 0;
 		for (auto i = 0; i < 343; i++) {
 			nib_data[i] = nib_data[i] ^ xor_value;
 			xor_value = nib_data[i];

@@ -63,7 +63,7 @@ static const int Memory_c300_rom_size = (256);
 static const int Memory_aux_size = (48 * 256);
 static const int Memory_expansion_rom_size = (2 * 1024);
 
-static const int Memory_page_size = 256;
+static const uint16_t Memory_page_size = 256;
 
 // and page bvalues
 static const int Memory_num_main_pages = (Memory_main_size / Memory_page_size);
@@ -250,6 +250,8 @@ static void memory_initialize()
 // handler for writing to 0xc00X for memory state
 uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(val);
+	UNREFERENCED(write);
 	uint8_t return_val = 0;
 
 	addr = addr & 0x0f;
@@ -314,6 +316,8 @@ uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 // handler for reading memory status
 uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(write);
+
 	uint8_t return_val = 0;
 
 	addr = addr & 0xff;
@@ -370,6 +374,9 @@ uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 //
 static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(write);
+	UNREFERENCED(val);
+
 	static uint8_t last_access = 0;
 
 	addr = addr & 0xff;
@@ -583,13 +590,13 @@ void memory_set_paging_tables()
 
 uint8_t memory_read_aux(const uint16_t addr)
 {
-	uint8_t page = (addr / Memory_page_size);
+	auto page = (addr / Memory_page_size);
 	return *(Memory_aux_pages[page].get_ptr() + (addr & 0xff));
 }
 
 uint8_t memory_read(const uint16_t addr)
 {
-	uint8_t page = (addr / Memory_page_size);
+	auto page = (addr / Memory_page_size);
 
 	// look for memory mapped I/O locations
 	if (page == 0xc0) {
@@ -642,8 +649,8 @@ uint8_t memory_read(const uint16_t addr)
 					Memory_current_expansion_rom_pages = &Memory_internal_rom_pages[0x8];
 				}
 				// this is a reset case and we just point to the internal rom pages
-				for (auto page = 0xc8; page <= 0xcf; page++) {
-					Memory_read_pages[page] = &Memory_current_expansion_rom_pages[page - 0xc8];
+				for (auto i = 0xc8; i <= 0xcf; i++) {
+					Memory_read_pages[i] = &Memory_current_expansion_rom_pages[i - 0xc8];
 				}
 				Memory_state &= ~RAM_EXPANSION_RESET;
 			}
@@ -666,7 +673,7 @@ uint8_t memory_read(const uint16_t addr)
 // faciliate memory mapped I/O and other similar things
 void memory_write(const uint16_t addr, uint8_t val)
 {
-	uint8_t page = (addr / Memory_page_size);
+	auto page = (addr / Memory_page_size);
 
 	if (page == 0xc0) {
 		uint8_t mapped_addr = addr & 0xff;
@@ -865,20 +872,20 @@ void memory_init()
 	// register handlers for 0xc000 to 0xc00c.  These are memory
 	// management switches (except for the read of 0xc000 which is
 	// reading the keyboard).
-	for (auto i = 0; i < 0x0c; i++) {
+	for (uint8_t i = 0; i < 0x0c; i++) {
 		memory_register_soft_switch_handler(i, memory_set_state);
 	}
-	for (auto i = 0x0c; i < 0x10; i++) {
+	for (uint8_t i = 0x0c; i < 0x10; i++) {
 		memory_register_soft_switch_handler(i, video_set_state);
 	}
 
 	// register handler for reading memory status
-	for (auto i = 0x10; i < 0x19; i++) {
+	for (uint8_t i = 0x10; i < 0x19; i++) {
 		memory_register_soft_switch_handler(i, memory_get_state);
 	}
 
 	// reading video status
-	for (auto i = 0x19; i < 0x20; i++) {
+	for (uint8_t i = 0x19; i < 0x20; i++) {
 		memory_register_soft_switch_handler(i, video_get_state);
 	}
 
@@ -886,12 +893,12 @@ void memory_init()
 	memory_register_soft_switch_handler(0x30, speaker_soft_switch_handler);
 
 	// set up memory handlers for video
-	for (auto i = 0x50; i <= 0x57; i++) {
+	for (uint8_t i = 0x50; i <= 0x57; i++) {
 		memory_register_soft_switch_handler(i, video_set_state);
 	}
 
 	// register the read/write handlers for the joystick
-	for (auto i = 0x61; i < 0x67; i++) {
+	for (uint8_t i = 0x61; i < 0x67; i++) {
 		memory_register_soft_switch_handler(i, joystick_soft_switch_handler);
 	}
 	memory_register_soft_switch_handler(0x70, joystick_soft_switch_handler);

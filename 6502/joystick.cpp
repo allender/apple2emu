@@ -53,14 +53,14 @@ const int Max_controllers = 16;
 controller Controllers[Max_controllers];
 
 // reads the status of button num from the joystick structures
-static uint8_t joystick_read_button(uint8_t button_num)
+static uint8_t joystick_read_button(int button_num)
 {
 	uint8_t val = SDL_GameControllerGetButton(Controllers[0].m_gc, Controllers[0].m_buttons[button_num]);
 	// signals is active low.  So return 0 when on, and high bit set when not
 	return val ? 0 : 0x80;
 }
 
-static uint8_t joystick_read_axis(uint8_t axis_num)
+static uint8_t joystick_read_axis(int axis_num)
 {
 	// timer state for paddles is controlled by ths number of cycles.  The axis
 	// timer state will have been previously set to the total cycles run
@@ -73,6 +73,9 @@ static uint8_t joystick_read_axis(uint8_t axis_num)
 
 uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(write);
+	UNREFERENCED(val);
+
 	uint8_t return_val = 0;
 
 	addr = addr & 0xff;

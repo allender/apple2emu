@@ -245,8 +245,8 @@ uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 			}
 
 			if (dir != 0) {
-				Current_drive->m_half_track_count = std::max(0, std::min(79, Current_drive->m_half_track_count + dir));
-				auto new_track = std::min(Current_drive->get_num_tracks() - 1, Current_drive->m_half_track_count >> 1);
+				Current_drive->m_half_track_count = static_cast<uint8_t>(std::max(0, std::min(79, Current_drive->m_half_track_count + dir)));
+				uint8_t new_track = static_cast<uint8_t>(std::min(Current_drive->get_num_tracks() - 1, Current_drive->m_half_track_count >> 1));
 				if (new_track != Current_drive->m_current_track) {
 					Current_drive->set_new_track(new_track);
 				}
@@ -308,16 +308,16 @@ uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 		break;
 	}
 
-	if (!(addr & 0x1)) {
-		return Current_drive->m_data_register;
-	}
-	else {
-		return 0;
-	}
-
 	if (write == true) {
 		Current_drive->m_data_register = val;
 	}
+
+	if (!(addr & 0x1)) {
+		return Current_drive->m_data_register;
+	}
+
+	return 0;
+
 }
 
 // initialize the disk system

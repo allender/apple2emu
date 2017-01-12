@@ -92,9 +92,6 @@
     <ClInclude Include="utils\path_utils.h">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="..\easyloggingpp\src\easylogging++.h">
-      <Filter>utils</Filter>
-    </ClInclude>
     <ClInclude Include="6502\speaker.h">
       <Filter>system</Filter>
     </ClInclude>
@@ -158,5 +155,8 @@
     <Filter Include="nativefiledialog">
       <UniqueIdentifier>{2de433df-56d2-40af-8d01-f6c1211c596c}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="apple2emu.vssettings" />
   </ItemGroup>
 </Project>

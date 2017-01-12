@@ -107,6 +107,7 @@ static char *get_cmdline_option(char **start, char **end, const std::string &sho
 	return nullptr;
 }
 
+#if 0
 static bool cmdline_option_exists(char **start, char **end, const std::string &short_option, const std::string &long_option = "")
 {
 	char **iter = std::find(start, end, short_option);
@@ -118,15 +119,18 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	}
 	return true;
 }
+#endif
 
 static uint32_t render_event_timer(uint32_t interval, void *param)
 {
+	UNREFERENCED(param);
 	SDL_SemPost(cpu_sem);
 	return interval;
 }
 
 bool dissemble_6502(const char *filename)
 {
+	UNREFERENCED(filename);
 	return true;
 }
 
@@ -184,8 +188,9 @@ int main(int argc, char* argv[])
 			exit(-1);
 		}
 		fseek(fp, 0, SEEK_END);
-		uint32_t buffer_size = ftell(fp);
+		auto buffer_size = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
+		_ASSERT(buffer_size <= UINT16_MAX);
 
 		// allocate the memory buffer
 		uint8_t *buffer = new uint8_t[buffer_size];
@@ -196,7 +201,7 @@ int main(int argc, char* argv[])
 		}
 		fread(buffer, 1, buffer_size, fp);
 		fclose(fp);
-		memory_load_buffer(buffer, buffer_size, load_addr);
+		memory_load_buffer(buffer, (uint16_t)buffer_size, load_addr);
 		cpu.set_pc(prog_start);
 	}
 

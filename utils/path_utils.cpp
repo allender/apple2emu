@@ -49,8 +49,8 @@ bool path_utils_change_ext(std::string &new_filename, const std::string &old_fil
 
 void path_utils_get_filename(std::string &full_path, std::string &filename)
 {
-	int extension_loc = full_path.find_last_of('.');
-	int path_loc = full_path.find_last_of('\\');
+	auto extension_loc = full_path.find_last_of('.');
+	auto path_loc = full_path.find_last_of('\\');
 	if (path_loc == std::string::npos) {
 		path_loc = full_path.find_last_of('/');
 	}

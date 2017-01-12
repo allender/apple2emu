@@ -185,6 +185,7 @@ static char character_conv[] = {
 // callback for flashing characters
 static uint32_t timer_flash_callback(uint32_t interval, void *param)
 {
+	(param);
 	Video_flash = !Video_flash;
 	return interval;
 }
@@ -253,7 +254,7 @@ static bool video_create_hires_textures()
 		// loop through potential neighbors of the byte.  We will
 		// need left neighbor and right neighbor.
 		for (auto column = 0; column < 2; column++) {
-			uint8_t even_index = ((pattern & 0x80) ? 2 : 0) + column;
+			uint8_t even_index = static_cast<uint8_t>(((pattern & 0x80) ? 2 : 0) + column);
 			uint8_t odd_index = ((pattern & 0x80) ? 2 : 0) + ((even_index + 1) % 2);
 			even_color = Hires_colors[even_index];
 			odd_color = Hires_colors[odd_index];
@@ -369,7 +370,7 @@ static void video_render()
 		gr_addr_map = primary ? Video_hires_map : Video_hires_secondary_map;
 	}
 
-	auto render_text_cell = [text_addr_map](int x, int y) -> void {
+	auto render_text_cell = [text_addr_map](uint16_t x, uint16_t y) -> void {
 		font *cur_font;
 		uint16_t addr = text_addr_map[y] + x;
 		uint8_t c1 = memory_read(addr);
@@ -406,7 +407,7 @@ static void video_render()
 		glBindTexture(GL_TEXTURE_2D, 0);
 	};
 
-	auto render_text80_cell = [text_addr_map](int x, int y) -> void {
+	auto render_text80_cell = [text_addr_map](uint16_t x, uint16_t y) -> void {
 		font *cur_font;
 		uint16_t addr = text_addr_map[y] + x;
 		uint8_t character[2];
@@ -449,7 +450,7 @@ static void video_render()
 		}
 	};
 
-	auto render_lores_cell = [gr_addr_map](int x, int y) -> void {
+	auto render_lores_cell = [gr_addr_map](uint16_t x, uint16_t y) -> void {
 		// get the 2 nibble value of the color.  Blit the corresponding colors
 		// to the screen
 		uint16_t addr = gr_addr_map[y] + x;
@@ -478,11 +479,11 @@ static void video_render()
 		glEnd();
 	};
 
-	auto render_mono_hires_cell = [gr_addr_map](int x, int y) -> void {
+	auto render_mono_hires_cell = [gr_addr_map](uint16_t x, uint16_t y) -> void {
 		int y_pixel = y * Video_cell_height;
-		for (int b = 0; b < 8; b++) {
+		for (uint8_t b = 0; b < 8; b++) {
 			int x_pixel = x * Video_cell_width;
-			uint32_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
+			uint16_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
 			uint8_t byte = memory_read(memory_loc);
 			if (byte) {
 				// mono mode - we don't care about the high bit in the display byte
@@ -500,12 +501,12 @@ static void video_render()
 		}
 	};
 
-	auto render_color_hires_cell = [gr_addr_map](int x, int y) -> void {
+	auto render_color_hires_cell = [gr_addr_map](uint16_t x, uint16_t y) -> void {
 		int odd = x % 2;
 		int y_pixel = y * Video_cell_height;
-		for (int b = 0; b < 8; b++) {
+		for (uint8_t b = 0; b < 8; b++) {
 			int x_pixel = x * Video_cell_width;
-			uint32_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
+			uint16_t memory_loc = gr_addr_map[y] + (1024 * b) + x;
 			uint8_t byte = memory_read(memory_loc);
 			uint8_t left_neighbor = ((x > 0 ? memory_read(memory_loc - 1) : 0) >> 6) & 1;
 			uint8_t right_neighbor = (x < 39 ? memory_read(memory_loc + 1) : 0) & 1;
@@ -528,8 +529,8 @@ static void video_render()
 		}
 	};
 
-	std::function<void(int, int)> main_func;
-	std::function<void(int, int)> mixed_func;
+	std::function<void(uint16_t, uint16_t)> main_func;
+	std::function<void(uint16_t, uint16_t)> mixed_func;
 	if (Video_mode & VIDEO_MODE_TEXT) {
 		if (Video_mode & VIDEO_MODE_80COL) {
 			mixed_func = main_func = render_text80_cell;
@@ -555,6 +556,9 @@ static void video_render()
 
 uint8_t video_set_state(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(write);
+	UNREFERENCED(val);
+
 	uint8_t a = addr & 0xff;
 
 	// switch based on the address to set the video modes
@@ -604,6 +608,9 @@ uint8_t video_set_state(uint16_t addr, uint8_t val, bool write)
 
 uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
 {
+	UNREFERENCED(write);
+	UNREFERENCED(val);
+
 	uint8_t return_val = 0;
 
 	addr = addr & 0xff;

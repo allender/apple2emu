@@ -43,7 +43,7 @@ const int Num_horizontal_cells = 40;
 
 // always render to default size - SDL can scale it up
 // we use 560 here because of double hires (and 80 column
-// support.  
+// support.
 const static int Video_native_width = 560;
 const static int Video_native_height = 384;
 const int Video_cell_width = Video_native_width / 40;
@@ -231,7 +231,7 @@ static bool video_create_hires_textures()
 	// of 256 textures that take into account the 4 different
 	// possible patterns for the neighboring pixels.  Additionally
 	// we have to create the same set of textures for even/odd
-	// scanline columns. 
+	// scanline columns.
 
 	// texture information for color texture for hires pixel patternsi
 	// pixel array is:
@@ -271,7 +271,7 @@ static bool video_create_hires_textures()
 				uint8_t prev_bit = left_neighbor;
 				uint8_t next_bit;
 
-				// loop through 7 pixels 
+				// loop through 7 pixels
 				for (auto x = 0; x < Hires_texture_width - 1; x++) {
 					uint8_t cur_bit = (pattern >> x) & 1;
 					if (x < Hires_texture_width - 2) {
@@ -358,7 +358,7 @@ static void video_render_screen(std::function<void(int, int)> render_func, std::
 
 static void video_render()
 {
-	bool primary = !(Video_mode & VIDEO_MODE_PAGE2) ? true : false;
+	bool primary = (!(Video_mode & VIDEO_MODE_PAGE2) || (Video_mode & VIDEO_MODE_80COL)) ? true : false;
 	uint16_t *gr_addr_map = nullptr;
 	uint16_t *text_addr_map = nullptr;
 
@@ -412,7 +412,7 @@ static void video_render()
 		uint16_t addr = text_addr_map[y] + x;
 		uint8_t character[2];
 		character[0] = memory_read_aux(addr);
-		character[1] = memory_read(addr);
+		character[1] = memory_read_main(addr);
 		int x_pixel = x * Video_cell_width;
 		int y_pixel = y * Video_cell_height;
 
@@ -426,7 +426,7 @@ static void video_render()
 				cur_font = &Video_inverse_font_80;
 			}
 			else {
-				cur_font = &Video_font;
+				cur_font = &Video_font_80;
 			}
 
 			// get character in memory, and then convert to ASCII.  We get character
@@ -858,7 +858,7 @@ void video_render_frame()
 		glColor3fv(Mono_color);
 	}
 
-	// render texture to window.  Just render the texture to the 
+	// render texture to window.  Just render the texture to the
 	// full screen (using normalized device coordinates)
 	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
 	glBegin(GL_QUADS);

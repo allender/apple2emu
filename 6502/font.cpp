@@ -104,9 +104,9 @@ bool font::load(const char *filename)
 	// we had to have widths of 7, but I think that with the new
 	// way of loading fonts and rendering (to 560x380), this isn't necessary
 	// anymore for some reason
-	//if (hack == true) {
-	//	m_cell_u -= 1.0f / m_header.m_bitmap_width;
-	//}
+	if (m_header.m_cell_width == 8) {
+		m_cell_u -= 1.0f / m_header.m_bitmap_width;
+	}
 
 	return true;
 }

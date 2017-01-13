@@ -30,11 +30,27 @@ SOFTWARE.
 
 #include <stdint.h>
 
+// defines for memory status (RAM card, 0xc000 usage, etc)
+#define RAM_CARD_READ           (1 << 0)
+#define RAM_CARD_BANK2          (1 << 1)
+#define RAM_CARD_WRITE_PROTECT  (1 << 2)
+#define RAM_SLOTCX_ROM          (1 << 3)
+#define RAM_SLOTC3_ROM          (1 << 4)
+#define RAM_AUX_MEMORY_READ     (1 << 6)
+#define RAM_AUX_MEMORY_WRITE    (1 << 7)
+#define RAM_ALT_ZERO_PAGE       (1 << 8)
+#define RAM_80STORE             (1 << 9)
+
+#define RAM_EXPANSION_RESET     (1 << 10)
+
+extern uint32_t Memory_state;
+
 typedef std::function<uint8_t(uint16_t, uint8_t, bool)> soft_switch_function;
 
 void memory_init();
 void memory_shutdown();
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location);
+uint8_t memory_read_main(const uint16_t addr);
 uint8_t memory_read_aux(uint16_t addr);
 uint8_t memory_read(uint16_t addr);
 void memory_write(uint16_t addr, uint8_t val);

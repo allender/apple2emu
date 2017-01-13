@@ -37,21 +37,8 @@ SOFTWARE.
 #include "speaker.h"
 
 
-// defines for memory status (RAM card, 0xc000 usage, etc)
-#define RAM_CARD_READ           (1 << 0)
-#define RAM_CARD_BANK2          (1 << 1)
-#define RAM_CARD_WRITE_PROTECT  (1 << 2)
-#define RAM_SLOTCX_ROM          (1 << 3)
-#define RAM_SLOTC3_ROM          (1 << 4)
-#define RAM_AUX_MEMORY_READ     (1 << 6)
-#define RAM_AUX_MEMORY_WRITE    (1 << 7)
-#define RAM_ALT_ZERO_PAGE       (1 << 8)
-#define RAM_80STORE             (1 << 9)
-
-#define RAM_EXPANSION_RESET     (1 << 10)
-
 // state of the memory card
-static uint32_t Memory_state;
+uint32_t Memory_state;
 
 // values for memory sizes
 static const int Memory_main_size = (48 * 1024);
@@ -122,7 +109,7 @@ public:
 
 // main definition of memory pages for the emulator.  There is a
 // page array for each "type" of memory (i.e. main, rom, extended
-// auxilliary, etc).  
+// auxilliary, etc).
 memory_page Memory_main_pages[Memory_num_main_pages];             // 192 pages - 48k
 memory_page Memory_rom_pages[Memory_num_rom_pages];               // 64 pages - 16k
 memory_page Memory_bank_pages[2][Memory_num_bank_pages];          // 16 pages - 4k
@@ -158,7 +145,7 @@ static uint8_t *Memory_rom_buffer = nullptr;
 static uint8_t *Memory_bank1_buffer = nullptr;
 static uint8_t *Memory_bank2_buffer = nullptr;
 
-// one 12k buffer for extended ram 
+// one 12k buffer for extended ram
 static uint8_t *Memory_extended_buffer = nullptr;
 
 // buffer to hold internal rom from iie rom as
@@ -221,7 +208,7 @@ static void memory_load_rom_images()
 //
 // https://github.com/AppleWin/AppleWin/issues/206
 // https://github.com/AppleWin/AppleWin/issues/225
-// 
+//
 // as it covers the issue well.  That and I don't have my apple ][
 // anymore on which to test
 static void memory_initialize()
@@ -481,7 +468,7 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 }
 
 // set up the paging table pointers based on the current memory
-// setup.  
+// setup.
 void memory_set_paging_tables()
 {
 	// set up the zero pages
@@ -527,7 +514,7 @@ void memory_set_paging_tables()
 		Memory_read_pages[0xc3] = &Memory_internal_rom_pages[3];
 	}
 
-	// extended RAM/ROM section.  
+	// extended RAM/ROM section.
 	auto bank = Memory_state & RAM_CARD_BANK2 ? 1 : 0;
 
 	for (auto page = 0xd0; page < 0xe0; page++) {
@@ -561,7 +548,7 @@ void memory_set_paging_tables()
 			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
 		}
 	}
-	
+
 	// deal with page pointers for 80 column moide
 	if (Memory_state & RAM_80STORE) {
 		for (auto page = 0x04; page < 0x08; page++) {
@@ -594,6 +581,12 @@ uint8_t memory_read_aux(const uint16_t addr)
 	return *(Memory_aux_pages[page].get_ptr() + (addr & 0xff));
 }
 
+uint8_t memory_read_main(const uint16_t addr)
+{
+	auto page = (addr / Memory_page_size);
+	return *(Memory_main_pages[page].get_ptr() + (addr & 0xff));
+}
+
 uint8_t memory_read(const uint16_t addr)
 {
 	auto page = (addr / Memory_page_size);
@@ -620,7 +613,7 @@ uint8_t memory_read(const uint16_t addr)
 		// handle reads in perhiperal rom (or internal rom) memory
 		else if (page >= 0xc1 && page <= 0xc7 && Memory_current_expansion_rom_pages == nullptr) {
 
-			// check to see if we need to update the expansion ROM area.  Access 
+			// check to see if we need to update the expansion ROM area.  Access
 			// to a peripheral slot means that we _might_ access the expansion
 			// rom.  Set flags to indicate what pages might need to be paged
 			// in if that expansion area is accessed.
@@ -635,7 +628,7 @@ uint8_t memory_read(const uint16_t addr)
 			}
 		}
 
-		// we are accessing expansion rom.  (apple 2e only).  When we 
+		// we are accessing expansion rom.  (apple 2e only).  When we
 		// access these pages, we need to make sure that the page pointers
 		// point to the correct location for the expansion rom
 		else if (page >= 0xc8 && page <= 0xcf) {
@@ -705,7 +698,7 @@ void memory_register_slot_handler(const uint8_t slot, soft_switch_function func,
 	_ASSERT((slot >= 0) && (slot < Num_slots));
 	uint8_t addr = 0x80 + (slot << 4);
 
-	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same 
+	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same
 	// handler as we will deal with all slot operations in the same function
 	for (auto i = 0; i <= 0xf; i++) {
 		m_soft_switch_handlers[addr + i] = func;
@@ -798,7 +791,7 @@ void memory_init()
 	memory_initialize();
 
 	// main memory area page pointers.  This is not write protected.  There
-	// are 
+	// are
 	for (auto i = 0; i < Memory_num_main_pages; i++) {
 		Memory_main_pages[i].init(&Memory_buffer[i * Memory_page_size], false);
 	}
@@ -834,7 +827,7 @@ void memory_init()
 		Memory_aux_pages[i].init(&Memory_aux_buffer[addr], false);
 	}
 
-	// set up pointers for auxiliary bank pages 
+	// set up pointers for auxiliary bank pages
 	for (auto i = 0; i < Memory_num_bank_pages; i++) {
 		uint32_t addr = i * Memory_page_size;
 		Memory_aux_bank_pages[0][i].init(&Memory_aux_bank1_buffer[addr], false);

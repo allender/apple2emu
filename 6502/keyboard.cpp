@@ -40,7 +40,7 @@ static bool Keyboard_caps_lock_on = true;
 static const int Keybuffer_size = 32;
 
 static int key_buffer_front, key_buffer_end;
-static uint8_t key_buffer[Keybuffer_size];
+static int key_buffer[Keybuffer_size];
 
 // SDL scancode to ascii values
 static uint8_t key_ascii_table[256] =
@@ -92,14 +92,13 @@ static void keyboard_insert_key(uint32_t code)
 		return;
 	}
 
-	_ASSERT(code <= UINT8_MAX);
-	key_buffer[key_buffer_end] = (uint8_t)code;
+	key_buffer[key_buffer_end] = code;
 	key_buffer_end = (key_buffer_end + 1) % Keybuffer_size;
 }
 
 static uint8_t keyboard_get_key()
 {
-	uint8_t key;
+	uint32_t key;
 
 	// Buffer empty
 	if (key_buffer_front == key_buffer_end) {
@@ -150,7 +149,9 @@ static uint8_t keyboard_get_key()
 			}
 		}
 	}
-	return key;
+
+	_ASSERT(key <= UINT8_MAX);
+	return static_cast<uint8_t>(key);
 }
 
 void keyboard_init()

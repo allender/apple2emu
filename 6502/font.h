@@ -45,7 +45,7 @@ SOFTWARE.
 class font {
 public:
 	struct header {
-		char       m_id[2];
+		uint8_t    m_id[2];
 		uint32_t   m_bitmap_width;
 		uint32_t   m_bitmap_height;
 		uint32_t   m_cell_width;

@@ -150,7 +150,7 @@ static uint8_t keyboard_get_key()
 		}
 	}
 
-	_ASSERT(key <= UINT8_MAX);
+	ASSERT(key <= UINT8_MAX);
 	return static_cast<uint8_t>(key);
 }
 

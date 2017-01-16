@@ -2,7 +2,7 @@
 #  temporary placeholder under cmake is in place
 #
 CC = g++
-CFLAGS = -g -D_GNU_SOURCE=1 -D_THREAD_SAFE -c -std=c++11 -Wall -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I /usr/local/include -I. -I nativefiledialog/src -I nativefiledialog/src/include -I include -I . -include "precompiled.h" 
+CFLAGS = -g -D_GNU_SOURCE=1 -D_THREAD_SAFE -c -std=c++11 -Wall -Werror -I/Library/Frameworks/SDL2.framework/Headers -I/Library/Frameworks/SDL2_image.framework/Headers -I /usr/local/include -I. -I nativefiledialog/src -I nativefiledialog/src/include -I include -I . -include "precompiled.h" 
 
 MFLAGS = -g -D_GNU_SOURCE=1 -D_THREAD_SAFE -c -Wall -I/usr/local/include/SDL2 -I /usr/local/include -I. -I nativefiledialog/src -I nativefiledialog/src/include -I include -I . 
 

@@ -41,7 +41,6 @@ static bool Show_debug_menu = false;
 static bool Menu_open_at_start = false;
 static bool Imgui_initialized = false;
 
-static const int32_t Line_length = 256;
 static const char *Settings_filename = "settings.txt";
 
 // settings to be stored

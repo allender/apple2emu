@@ -61,7 +61,6 @@ const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPE
 	"Apple ][e Enhanced",
 };
 
-static const double Render_time = 33;   // roughly 30 fps
 static SDL_sem *cpu_sem;
 
 // globals used to control emulator
@@ -190,12 +189,12 @@ int main(int argc, char* argv[])
 		fseek(fp, 0, SEEK_END);
 		auto buffer_size = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
-		_ASSERT(buffer_size <= UINT16_MAX);
+		ASSERT(buffer_size <= UINT16_MAX);
 
 		// allocate the memory buffer
 		uint8_t *buffer = new uint8_t[buffer_size];
 		if (buffer == nullptr) {
-			printf("Unable to allocate %d bytes for source code file buffer\n", buffer_size);
+			printf("Unable to allocate %ld bytes for source code file buffer\n", buffer_size);
 			fclose(fp);
 			exit(-1);
 		}

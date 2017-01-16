@@ -46,7 +46,6 @@ static const int Memory_rom_size = (16 * 1024);
 static const int Memory_switched_bank_size = (4 * 1024);
 static const int Memory_c000_rom_size = (4 * 1024);
 static const int Memory_extended_size = (8 * 1024);
-static const int Memory_c300_rom_size = (256);
 static const int Memory_aux_size = (48 * 256);
 static const int Memory_expansion_rom_size = (2 * 1024);
 
@@ -658,7 +657,7 @@ uint8_t memory_read(const uint16_t addr)
 		}
 	}
 
-	_ASSERT(Memory_read_pages[page] != nullptr);
+	ASSERT(Memory_read_pages[page] != nullptr);
 	return *(Memory_read_pages[page]->get_ptr() + (addr & 0xff));
 }
 
@@ -679,7 +678,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 		}
 	}
 
-	_ASSERT(Memory_write_pages[page] != nullptr);
+	ASSERT(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
 	}
@@ -695,7 +694,7 @@ void memory_register_soft_switch_handler(uint8_t addr, soft_switch_function func
 // register handlers for the I/O slots
 void memory_register_slot_handler(const uint8_t slot, soft_switch_function func, uint8_t *expansion_rom)
 {
-	_ASSERT((slot >= 0) && (slot < Num_slots));
+	ASSERT((slot >= 0) && (slot < Num_slots));
 	uint8_t addr = 0x80 + (slot << 4);
 
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same

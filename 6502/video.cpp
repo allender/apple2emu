@@ -185,7 +185,7 @@ static char character_conv[] = {
 // callback for flashing characters
 static uint32_t timer_flash_callback(uint32_t interval, void *param)
 {
-	(param);
+	UNREFERENCED(param);
 	Video_flash = !Video_flash;
 	return interval;
 }

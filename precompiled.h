@@ -39,7 +39,7 @@ SOFTWARE.
 
 // define for helping to clear out unreferenced
 // parameter warmings
-#define UNREFERENCED(X) X
+#define UNREFERENCED(X) (X=X)
 
 // get past stricmp problems
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -52,7 +52,20 @@ SOFTWARE.
 #pragma warning(disable:4996)
 #endif
 
+// define macro for turning off
+// warnings in dev studio for use of fopen
+// etc
+#if defined(_WIN32) || defined(_WIN64)
 #define _CRT_SECURE_NO_WARNINGS
+#endif
+
+// defines for asserts
+#if defined(_WIN32) || defined(_WIN64)
+#define ASSERT(X)   _ASSERT(x)
+#else
+#include <assert.h>
+#define ASSERT(x)   assert(x)
+#endif
 
 // timings - these need to get moved elsewhere eventually.
 

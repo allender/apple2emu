@@ -48,7 +48,7 @@ bool font::load(const char *filename)
 	if (fp == nullptr) {
 		return false;
 	}
-	fread(&m_header.m_id, sizeof(uint8_t), 2, fp);
+	fread(m_header.m_id, sizeof(uint8_t), 2, fp);
 	fread(&m_header.m_bitmap_width, sizeof(m_header.m_bitmap_width), 1, fp);
 	fread(&m_header.m_bitmap_height, sizeof(m_header.m_bitmap_height), 1, fp);
 	fread(&m_header.m_cell_width, sizeof(m_header.m_cell_width), 1, fp);
@@ -63,7 +63,7 @@ bool font::load(const char *filename)
 	fread(pixels, num_pixels, 1, fp);
 	fclose(fp);
 
-	ASSERT((m_header.m_id[0] != 0xbf) || (m_header.m_id[1] != 0xf2));
+	ASSERT((m_header.m_id[0] == 0xbf) && (m_header.m_id[1] == 0xf2));
 
 	// load the pixels into a GL texture
 	glGenTextures(1, &m_texture_id);

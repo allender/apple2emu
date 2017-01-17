@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #include <stdint.h>
+#include "debugbreak.h"
 #include "6502/cpu.h"
 #include "6502/memory.h"
 
@@ -60,12 +61,14 @@ SOFTWARE.
 #endif
 
 // defines for asserts
-#if defined(_WIN32) || defined(_WIN64)
-#define ASSERT(X)   _ASSERT(x)
-#else
-#include <assert.h>
-#define ASSERT(x)   assert(x)
-#endif
+#define ASSERT(x)    \
+   do {              \
+      if (!(x)) {    \
+         fprintf(stderr, "Assertion Failed: %s - %s:%d\n", #x, __FILE__, __LINE__); \
+         debug_break();    \
+      }              \
+   } while (0)
+
 
 // timings - these need to get moved elsewhere eventually.
 

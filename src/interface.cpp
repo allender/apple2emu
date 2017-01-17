@@ -30,9 +30,9 @@ SOFTWARE.
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "interface.h"
-#include "6502/video.h"
-#include "6502/disk.h"
-#include "utils/path_utils.h"
+#include "video.h"
+#include "disk.h"
+#include "path_utils.h"
 #include "apple2emu.h"
 #include "nfd.h"
 
@@ -75,7 +75,7 @@ static void ui_load_settings()
 			while (value[0] == ' ') {
 				value.erase(0, 1);
 			}
-			
+
 			if (setting == "auto_start") {
 				int i_val = strtol(value.c_str(), nullptr, 10);
 				Auto_start = i_val ? true : false;

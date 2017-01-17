@@ -31,7 +31,7 @@ SOFTWARE.
 #include "memory.h"
 #include "video.h"
 #include "curses.h"
-#include "debugger/debugger.h"
+#include "debugger.h"
 #include "keyboard.h"
 #include "joystick.h"
 #include "speaker.h"

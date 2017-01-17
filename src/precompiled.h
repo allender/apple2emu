@@ -27,8 +27,8 @@ SOFTWARE.
 
 #include <stdint.h>
 #include "debugbreak.h"
-#include "6502/cpu.h"
-#include "6502/memory.h"
+#include "cpu.h"
+#include "memory.h"
 
 #define USE_SDL
 
@@ -72,7 +72,7 @@ SOFTWARE.
 
 // timings - these need to get moved elsewhere eventually.
 
-// master crystal is 14.31818 Mhz.  CPU clock is 
+// master crystal is 14.31818 Mhz.  CPU clock is
 const float Clock_master = 14.31818f;
 const float CLock_6502 = ((Clock_master * 65.0f) / 912.0f);
 

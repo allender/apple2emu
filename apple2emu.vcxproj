@@ -57,7 +57,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;CONSOLE_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)cpu;$(ProjectDir)..\glew-1.13.0\include;$(ProjectDir)..\SDL2-2.0.4\include;$(ProjectDir)..\SDL2_image-2.0.1\include;$(ProjectDir)..\easyloggingpp\src;$(ProjectDir)nativefiledialog\src;$(ProjectDir)nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)src;$(ProjectDir)..\glew-1.13.0\include;$(ProjectDir)..\SDL2-2.0.4\include;$(ProjectDir)..\SDL2_image-2.0.1\include;$(ProjectDir)nativefiledialog\src;$(ProjectDir)nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>precompiled.h</ForcedIncludeFiles>
       <PrecompiledHeaderFile>precompiled.h</PrecompiledHeaderFile>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -95,54 +95,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="6502\assemble.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="6502\cpu.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\disk.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\disk_image.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\font.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\joystick.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\keyboard.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\memory.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\speaker.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="6502\video.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="debugger\debugger.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="apple2emu.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">precompiled.h</ForcedIncludeFiles>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -161,30 +113,24 @@
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="ui\interface.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    <ClCompile Include="src\apple2emu.cpp" />
+    <ClCompile Include="src\assemble.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="utils\path_utils.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="src\cpu.cpp" />
+    <ClCompile Include="src\debugger.cpp" />
+    <ClCompile Include="src\disk.cpp" />
+    <ClCompile Include="src\disk_image.cpp" />
+    <ClCompile Include="src\font.cpp" />
+    <ClCompile Include="src\interface.cpp" />
+    <ClCompile Include="src\joystick.cpp" />
+    <ClCompile Include="src\keyboard.cpp" />
+    <ClCompile Include="src\memory.cpp" />
+    <ClCompile Include="src\path_utils.cpp" />
+    <ClCompile Include="src\speaker.cpp" />
+    <ClCompile Include="src\video.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="6502\assemble.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="6502\cpu.h" />
-    <ClInclude Include="6502\disk.h" />
-    <ClInclude Include="6502\disk_image.h" />
-    <ClInclude Include="6502\font.h" />
-    <ClInclude Include="6502\joystick.h" />
-    <ClInclude Include="6502\keyboard.h" />
-    <ClInclude Include="6502\memory.h" />
-    <ClInclude Include="6502\speaker.h" />
-    <ClInclude Include="6502\video.h" />
-    <ClInclude Include="apple2emu.h" />
-    <ClInclude Include="debugger\debugger.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_sdl.h" />
@@ -195,14 +141,22 @@
     <ClInclude Include="nativefiledialog\src\common.h" />
     <ClInclude Include="nativefiledialog\src\include\nfd.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />
-    <ClInclude Include="precompiled.h" />
-    <ClInclude Include="ui\interface.h" />
-    <ClInclude Include="utils\path_utils.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="apple2emu.vssettings">
-      <DependentUpon>6502\memory.cpp</DependentUpon>
-    </None>
+    <ClInclude Include="src\apple2emu.h" />
+    <ClInclude Include="src\assemble.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="src\cpu.h" />
+    <ClInclude Include="src\debugger.h" />
+    <ClInclude Include="src\disk.h" />
+    <ClInclude Include="src\disk_image.h" />
+    <ClInclude Include="src\font.h" />
+    <ClInclude Include="src\interface.h" />
+    <ClInclude Include="src\joystick.h" />
+    <ClInclude Include="src\keyboard.h" />
+    <ClInclude Include="src\memory.h" />
+    <ClInclude Include="src\path_utils.h" />
+    <ClInclude Include="src\speaker.h" />
+    <ClInclude Include="src\video.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

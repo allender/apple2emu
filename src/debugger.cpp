@@ -29,9 +29,9 @@ SOFTWARE.
 #include <cstring>
 #include <cassert>
 
-#include "debugger/debugger.h"
-#include "6502/video.h"
-#include "6502/curses.h"
+#include "debugger.h"
+#include "video.h"
+#include "curses.h"
 #include "panel.h"
 
 enum class breakpoint_type {

@@ -32,10 +32,10 @@ SOFTWARE.
 #include "SDL_opengl.h"
 #include "SDL_image.h"
 #include "apple2emu.h"
-#include "6502/memory.h"
-#include "6502/video.h"
-#include "6502/font.h"
-#include "ui/interface.h"
+#include "memory.h"
+#include "video.h"
+#include "font.h"
+#include "interface.h"
 
 const int Num_vertical_cells = 24;
 const int Num_vertical_cells_mixed = 20;

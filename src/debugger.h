@@ -27,13 +27,10 @@ SOFTWARE.
 
 #pragma once
 
-// class for disk drive.  Represents physical drive
-#include "disk_image.h"
-#include "utils/path_utils.h"
+#include "cpu.h"
+#include "memory.h"
 
-void disk_init();
-void disk_shutdown();
-bool disk_insert(const char *disk_image_filename, const uint32_t slot);
-void disk_eject(const uint32_t slot);
-const char *disk_get_mounted_filename(const uint32_t slot);
-
+void debugger_enter();
+void debugger_init();
+void debugger_shutdown();
+void debugger_process(cpu_6502& cpu);

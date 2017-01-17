@@ -29,8 +29,8 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "keyboard.h"
 #include "video.h"
-#include "debugger/debugger.h"
-#include "ui/interface.h"
+#include "debugger.h"
+#include "interface.h"
 
 #define KEY_SHIFT   (1<<8)
 #define KEY_CTRL    (1<<9)
@@ -84,7 +84,7 @@ static uint8_t key_shifted_ascii_table[256] =
 };
 
 
-// inserts a key into the keyboard buffer 
+// inserts a key into the keyboard buffer
 static void keyboard_insert_key(uint32_t code)
 {
 	// Buffer full, ignore keystroke

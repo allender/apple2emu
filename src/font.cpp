@@ -32,8 +32,8 @@ SOFTWARE.
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "SDL_image.h"
-#include "6502/font.h"
-#include "6502/video.h"
+#include "font.h"
+#include "video.h"
 
 // load up a font defintion
 bool font::load(const char *filename)
@@ -56,7 +56,7 @@ bool font::load(const char *filename)
 	fread(&m_header.m_bpp, sizeof(m_header.m_bpp), 1, fp);
 	fread(&m_header.m_char_offset, sizeof(m_header.m_char_offset), 1, fp);
 	fread(&m_header.m_char_widths, sizeof(uint8_t), 256, fp);
-	
+
 	// now read the pixels
 	int num_pixels = m_header.m_bitmap_width * m_header.m_bitmap_height * (m_header.m_bpp / 8);
 	uint8_t *pixels = new uint8_t[num_pixels];

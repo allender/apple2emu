@@ -32,19 +32,19 @@ SOFTWARE.
 #include <stdlib.h>
 #include <errno.h>
 
-#include "6502/cpu.h"
-#include "6502/assemble.h"
-#include "6502/video.h"
-#include "6502/disk.h"
-#include "6502/keyboard.h"
-#include "6502/joystick.h"
-#include "6502/speaker.h"
-#include "debugger/debugger.h"
-#include "utils/path_utils.h"
-#include "ui/interface.h"
+#include "cpu.h"
+#include "assemble.h"
+#include "video.h"
+#include "disk.h"
+#include "keyboard.h"
+#include "joystick.h"
+#include "speaker.h"
+#include "debugger.h"
+#include "path_utils.h"
+#include "interface.h"
+#include "apple2emu.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
-#include "apple2emu.h"
 
 #include "SDL.h"
 
@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
 		exit(-1);
 	}
-	
+
 	while (!quit) {
 		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
 

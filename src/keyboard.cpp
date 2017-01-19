@@ -206,10 +206,17 @@ void keyboard_handle_event(SDL_Event &evt)
 			Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
 		}
 
-
 		if (scancode == SDL_SCANCODE_F9) {
 			extern bool Debug_show_bitmap;
 			Debug_show_bitmap = !Debug_show_bitmap;
+		}
+
+		if (scancode == SDL_SCANCODE_PAUSE) {
+			if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+				Emulator_state = emulator_state::EMULATOR_PAUSED;
+			} else {
+				Emulator_state = emulator_state::EMULATOR_STARTED;
+			}
 		}
 
 		// we should only be putting keys into the keyboard buffer that are printable

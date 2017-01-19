@@ -835,9 +835,7 @@ void video_render_frame()
 	glLoadIdentity();
 	glEnable(GL_TEXTURE_2D);
 
-	if (Emulator_state == emulator_state::EMULATOR_STARTED) {
-		video_render();
-	} else {
+	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
 		// blit splash screen
 		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
 		glColor3f(1.0f, 1.0f, 1.0f);
@@ -848,6 +846,8 @@ void video_render_frame()
 		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
 		glEnd();
 		glBindTexture(GL_TEXTURE_2D, 0);
+	} else {
+		video_render();
 	}
 
 	// back to main framebuffer

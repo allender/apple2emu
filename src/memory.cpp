@@ -82,6 +82,7 @@ class memory_page {
 
 private:
 	bool m_write_protected;
+	bool m_dirty;
 	uint8_t *m_ptr;
 
 public:
@@ -92,6 +93,7 @@ public:
 	void init(uint8_t *ptr, bool write_protected) {
 		m_ptr = ptr;
 		m_write_protected = write_protected;
+		m_dirty = true;
 	}
 
 	// returns write protect status
@@ -99,13 +101,25 @@ public:
 		return m_write_protected;
 	}
 
+	bool const dirty() const {
+		return m_dirty;
+	}
+
 	// sets write protect status
 	void set_write_protected(bool write_protected) {
 		m_write_protected = write_protected;
 	}
 
-	// returns the pointer to memory
-	uint8_t * get_ptr() const { return m_ptr; }
+	// reads the value from the given page address
+	uint8_t read(uint8_t addr) {
+		return *(m_ptr + addr);
+	}
+
+	// writes out a value
+	void write(uint8_t addr, uint8_t val) {
+		*(m_ptr + addr) = val;
+		m_dirty = true;
+	}
 };
 
 // main definition of memory pages for the emulator.  There is a
@@ -579,13 +593,13 @@ void memory_set_paging_tables()
 uint8_t memory_read_aux(const uint16_t addr)
 {
 	auto page = (addr / Memory_page_size);
-	return *(Memory_aux_pages[page].get_ptr() + (addr & 0xff));
+	return Memory_aux_pages[page].read(addr & 0xff);
 }
 
 uint8_t memory_read_main(const uint16_t addr)
 {
 	auto page = (addr / Memory_page_size);
-	return *(Memory_main_pages[page].get_ptr() + (addr & 0xff));
+	return Memory_main_pages[page].read(addr & 0xff);
 }
 
 uint8_t memory_read(const uint16_t addr)
@@ -660,7 +674,7 @@ uint8_t memory_read(const uint16_t addr)
 	}
 
 	ASSERT(Memory_read_pages[page] != nullptr);
-	return *(Memory_read_pages[page]->get_ptr() + (addr & 0xff));
+	return Memory_read_pages[page]->read(addr & 0xff);
 }
 
 // function to write value to memory.  Trapped here in order to
@@ -685,7 +699,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 		return;
 	}
 
-	*(Memory_write_pages[page]->get_ptr() + (addr & 0xff)) = val;
+	Memory_write_pages[page]->write(addr & 0xff, val);
 }
 
 void memory_register_soft_switch_handler(uint8_t addr, soft_switch_function func)

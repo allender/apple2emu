@@ -1,8 +1,8 @@
 #
 #  CMake file for Apple2emu
 #
-cmake_minimum_required(VERSION 2.8.0)
-project(apple2emu)
+cmake_minimum_required(VERSION 3.6.0)
+project(apple2emu CXX)
 
 # Directory for output files
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -16,36 +16,29 @@ endforeach()
 # need to pull in find scripts for SDL and SDL image
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(CURSES_NEED_NCURSES TRUE)
-
 # here are the packages needed to build apple2emu
 find_package(SDL2 REQUIRED sdl2)
 find_package(SDL2_image REQUIRED SDL2_image>=2.0.0)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(curses)
 
-if (NOT CURSES_FOUND)
+# win32 builds will use pdcurses locally while
+# other builds will require ncurses
+if (WIN32)
    set (CURSES_LIBRARIES ${PROJECT_SOURCE_DIR}/pdcurses/pdcurses.lib ${PROJECT_SOURCE_DIR}/pdcurses/panel.lib)
-endif()
-
-# get c++11 set
-if (CMAKE_VERSION VERSION_LESS "3.1")
-   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
-   endif()
-else ()
-   set (CMAKE_CXX_STANDARD 11)
-endif()
-
-# turn off some warnings in g++
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-   set (CMAKE_CXX_FLAGS "-Wno-multichar ${CMAKE_CXX_FLAGS}")
+else()
+   set(CURSES_NEED_NCURSES TRUE)
+   find_package(curses REQUIRED)
    set (CURSES_LIBS ncurses)
 endif()
 
+set (CMAKE_CXX_STANDARD 11)
+
+# deal with compiler flags
 if (MSVC)
    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+else()
+   set (CMAKE_CXX_FLAGS "-Wall -Werror -Wno-multichar ${CMAKE_CXX_FLAGS}")
 endif(MSVC)
 
 # subdirectories to build
@@ -79,6 +72,7 @@ set (EMU_SOURCES
    src/video.cpp)
 
 add_executable(apple2emu ${EMU_SOURCES})
+set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")
 target_link_libraries(apple2emu
    ${CURSES_LIBRARIES}
    imgui

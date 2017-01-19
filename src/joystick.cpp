@@ -25,7 +25,11 @@ SOFTWARE.
 
 */
 
+#include <stdio.h>
+
 #include "SDL.h"
+
+#include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "joystick.h"
 

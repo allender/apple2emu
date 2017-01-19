@@ -29,9 +29,13 @@ SOFTWARE.
 // implementation for fonts
 //
 
+#include <stdio.h>
+
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "SDL_image.h"
+
+#include "apple2emu_defs.h"
 #include "font.h"
 #include "video.h"
 
@@ -39,12 +43,12 @@ SOFTWARE.
 bool font::load(const char *filename)
 {
 	FILE *fp;
+	char path[1024]; // maybe should fix this
 
-	//if (m_surface != nullptr) {
-	//	SDL_FreeSurface(m_surface);
-	//}
+	strcpy(path, "fonts/");
+	strcat(path, filename);
 
-	fp = fopen(filename, "rb");
+	fp = fopen(path, "rb");
 	if (fp == nullptr) {
 		return false;
 	}

@@ -31,6 +31,8 @@ SOFTWARE.
 #include "SDL.h"
 #include "SDL_opengl.h"
 #include "SDL_image.h"
+
+#include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "memory.h"
 #include "video.h"

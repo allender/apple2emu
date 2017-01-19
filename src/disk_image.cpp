@@ -30,11 +30,14 @@ SOFTWARE.
 //
 
 #include <stdio.h>
+#include <string.h>
 #if defined(_WIN32)
 #include <io.h>
 #else
+#include <unistd.h>
 #endif
-#include <assert.h>
+
+#include "apple2emu_defs.h"
 #include "disk_image.h"
 
 #define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
@@ -53,7 +56,7 @@ const uint8_t disk_image::m_write_translate_table[64] =
 	0xF7,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF
 };
 
-// this table is used during de-nibbilize to go 
+// this table is used during de-nibbilize to go
 // from 8 bit disk byte to 6 bit bytes.  The table
 // is _really_ 64 entries large because we only
 // have a one to one mapping from disk bytes
@@ -137,7 +140,7 @@ void disk_image::initialize_image()
 		//for (auto i = 2; i < 6; i++) {
 		//	// get the starting physical sector for the block, then get the DOS sector
 		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
-		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos. 
+		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos.
 		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
 		//		format = format_type::DOS_FORMAT;
 		//		break;
@@ -260,10 +263,10 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 	}
 
 	for (auto sector = 0; sector < m_total_sectors; sector++) {
-		// read in the sector, which consists of 
+		// read in the sector, which consists of
 		// Address Field
 		//    Prologue    D5 AA 96
-		//    Volume      4 and 4 Volume 
+		//    Volume      4 and 4 Volume
 		//    Track       4 and 4 of track number
 		//    Sector      4 and 4 of secgtor
 		//    Checksum    volume ^ track ^ sector
@@ -331,7 +334,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 				xor_value = prev_val;
 			}
 
-			// translate the 6-bit bytes into disk bytes directly to the work buffer  
+			// translate the 6-bit bytes into disk bytes directly to the work buffer
 			for (auto i = 0; i <= 342; i++) {
 				*work_ptr++ = m_write_translate_table[nib_data[i] >> 2];
 			}
@@ -379,7 +382,7 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		work_ptr += 2;  // skip past the volume number
 #if defined(_DEBUG)
 		uint8_t encoded_track = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
-		assert(encoded_track == track);
+		ASSERT(encoded_track == track);
 #endif
 		work_ptr += 2;
 

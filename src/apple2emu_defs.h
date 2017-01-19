@@ -25,22 +25,9 @@ SOFTWARE.
 
 */
 
-#include <stdint.h>
 #include "debugbreak.h"
-#include "cpu.h"
-#include "memory.h"
 
-#define USE_SDL
-
-#if defined(LITTLE_ENDIAN)
-#undef LITTLE_ENDIAN
-#endif
-
-#define LITTLE_ENDIAN
-
-// define for helping to clear out unreferenced
-// parameter warmings
-#define UNREFERENCED(X) (X=X)
+#pragma once
 
 // get past stricmp problems
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -48,17 +35,17 @@ SOFTWARE.
 #define strnicmp strncasecmp
 #endif
 
-// turn off deprecated warnings
 #if defined(_WIN32) || defined(_WIN64)
+
+// turn off deprecated warnings
 #pragma warning(disable:4996)
+
+
 #endif
 
-// define macro for turning off
-// warnings in dev studio for use of fopen
-// etc
-#if defined(_WIN32) || defined(_WIN64)
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+// define for helping to clear out unreferenced
+// parameter warmings
+#define UNREFERENCED(X) (X=X)
 
 // defines for asserts
 #define ASSERT(x)    \

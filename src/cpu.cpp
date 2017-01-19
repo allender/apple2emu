@@ -28,9 +28,11 @@ SOFTWARE.
 /*
 *  Source file for 6502 emulation layer
 */
-//#include <conio.h>
-#include "cpu.h"
+#include "apple2emu_defs.h"
 #include "string.h"
+
+#include "cpu.h"
+#include "memory.h"
 
 cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
 	// 0x00 - 0x0f
@@ -51,7 +53,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
 { 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
 { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
-// 0x10 - 
+// 0x10 -
 { 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
 { 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
 { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -69,7 +71,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'ASL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x20 - 
+ // 0x20 -
  { 'JSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'AND ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -88,7 +90,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
 
- // 0x30 - 
+ // 0x30 -
  { 'BMI ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'AND ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -106,7 +108,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'ROL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x40 - 
+ // 0x40 -
  { 'RTI ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'EOR ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -124,7 +126,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'LSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x50 - 
+ // 0x50 -
  { 'BVC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'EOR ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -142,7 +144,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'LSR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x60 - 
+ // 0x60 -
  { 'RTS ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ADC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -160,7 +162,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'ROR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x70 - 
+ // 0x70 -
  { 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -178,7 +180,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'ROR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x80 - 
+ // 0x80 -
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
  { 'STA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -196,7 +198,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'STX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0x90 - 
+ // 0x90 -
  { 'BCC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'STA ', 2, 6, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -214,7 +216,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xa0 - 
+ // 0xa0 -
  { 'LDY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'LDA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { 'LDX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
@@ -232,7 +234,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'LDX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xb0 - 
+ // 0xb0 -
  { 'BCS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'LDA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -250,7 +252,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'LDX ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xc0 - 
+ // 0xc0 -
  { 'CPY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'CMP ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -268,7 +270,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'DEC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xd0 - 
+ // 0xd0 -
  { 'BNE ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'CMP ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -286,7 +288,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'DEC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xe0 - 
+ // 0xe0 -
  { 'CPX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'SBC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
@@ -304,7 +306,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
  { 'INC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
- // 0xf0 - 
+ // 0xf0 -
  { 'BEQ ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'SBC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },

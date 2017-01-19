@@ -27,12 +27,16 @@ SOFTWARE.
 
 #include <array>
 #include <cstring>
-#include <cassert>
 
+#include "apple2emu_defs.h"
 #include "debugger.h"
 #include "video.h"
-#include "curses.h"
-#include "panel.h"
+#if defined(_WIN32) || defined(_WIN64)
+   #include "curses.h"
+   #include "panel.h"
+#else
+   #include <curses.h>
+#endif
 
 enum class breakpoint_type {
 	INVALID,
@@ -535,7 +539,7 @@ static void debugger_process_commands(cpu_6502 &cpu)
 			else if (token[0] == 'w') {
 				bp_type = breakpoint_type::WWATCHPOINT;
 			}
-			assert(bp_type != breakpoint_type::INVALID);
+			ASSERT(bp_type != breakpoint_type::INVALID);
 
 			if (Debugger_num_breakpoints < Max_breakpoints) {
 				token = strtok(nullptr, " ");
@@ -642,10 +646,6 @@ void debugger_enter()
 {
 	Debugger_active = true;
 	Debugger_stopped = true;
-#if !defined(USE_SDL)
-	set_raw(false);
-	printw("\n");
-#endif
 
 	box(Debugger_register_window, 0, 0);
 }

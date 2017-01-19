@@ -25,6 +25,7 @@ SOFTWARE.
 
 */
 
+#include "apple2emu_defs.h"
 #include "speaker.h"
 #include "memory.h"
 

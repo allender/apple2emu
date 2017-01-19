@@ -116,7 +116,7 @@ static int AppendExtensionToSpecBuf(const char *ext, char *specBuf, size_t specB
 	size_t bytesWritten = sprintf_s(extWildcard, NFD_MAX_STRLEN, "*.%s", ext);
 	assert(bytesWritten == strlen(ext) + 2);
 #else
-	UNREFERENCED(ext);
+	ext = ext;
 #endif
 
 	strncat(specBuf, extWildcard, specBufLen - strlen(specBuf) - 1);
@@ -183,7 +183,7 @@ static nfdresult_t AddFiltersToDialog(::IFileDialog *fileOpenDialog, const char 
 		{
 			/* end of filter -- add it to specList */
 
-			// Empty filter name -- Windows describes them by extension.            
+			// Empty filter name -- Windows describes them by extension.
 			specList[specIdx].pszName = EMPTY_WSTR;
 			CopyNFDCharToWChar(specbuf, (wchar_t**)&specList[specIdx].pszSpec);
 

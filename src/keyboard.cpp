@@ -26,6 +26,8 @@ SOFTWARE.
 */
 
 #include "SDL.h"
+
+#include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "keyboard.h"
 #include "video.h"

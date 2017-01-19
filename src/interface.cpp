@@ -25,10 +25,13 @@ SOFTWARE.
 
 */
 
+#include <stdio.h>
 #include <string>
 #include <fstream>
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+
+#include "apple2emu_defs.h"
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
 #include "interface.h"
 #include "video.h"
 #include "disk.h"

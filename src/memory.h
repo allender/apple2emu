@@ -29,6 +29,7 @@ SOFTWARE.
 #define MEMORY_H
 
 #include <stdint.h>
+#include <functional>
 
 // defines for memory status (RAM card, 0xc000 usage, etc)
 #define RAM_CARD_READ           (1 << 0)

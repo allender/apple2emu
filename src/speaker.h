@@ -27,5 +27,7 @@ SOFTWARE.
 
 #pragma once
 
+#include <stdint.h>
+
 void speaker_init();
 uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write);

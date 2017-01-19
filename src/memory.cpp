@@ -27,10 +27,12 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <iomanip>
+
+#include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "memory.h"
 #include "video.h"
-#include "curses.h"
+//#include "curses.h"
 #include "debugger.h"
 #include "keyboard.h"
 #include "joystick.h"

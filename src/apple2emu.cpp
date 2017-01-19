@@ -32,6 +32,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <errno.h>
 
+#include "apple2emu_defs.h"
 #include "cpu.h"
 #include "assemble.h"
 #include "video.h"
@@ -43,8 +44,8 @@ SOFTWARE.
 #include "path_utils.h"
 #include "interface.h"
 #include "apple2emu.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
 
 #include "SDL.h"
 

@@ -49,10 +49,6 @@ static const char *Settings_filename = "settings.txt";
 // settings to be stored
 static int32_t Video_color_type = static_cast<int>(video_display_types::MONO_WHITE);
 
-static const uint32_t Cycles_array_size = 64;
-static uint32_t Cycles_per_frame[Cycles_array_size];
-static uint32_t Current_cycles_array_entry = 0;
-
 // inserts disk image into the given disk drive
 static void ui_insert_disk(const char *disk_filename, int slot)
 {
@@ -238,30 +234,6 @@ static void ui_show_main_menu()
 	ImGui::End();
 }
 
-static void ui_show_debug_menu()
-{
-	static bool animate = true;
-	static float cycles[Cycles_array_size];
-
-	ImGui::Begin("Debug");
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Separator();
-	ImGui::Checkbox("Animate", &animate);
-	if (animate == true) {
-		auto index = 0;
-		auto i = Current_cycles_array_entry;
-		while (true) {
-			cycles[index++] = static_cast<float>(Cycles_per_frame[i]);
-			i = (i + 1) % Cycles_array_size;
-			if (i == Current_cycles_array_entry) {
-				break;
-			}
-		}
-	}
-	ImGui::PlotLines("Cycles/Frame", cycles, Cycles_array_size, 0, nullptr, 17020.0f, 17050.0f, ImVec2(0, 50));
-	ImGui::End();
-}
-
 void ui_init()
 {
 	static bool settings_loaded = false;
@@ -271,9 +243,6 @@ void ui_init()
 	if (settings_loaded == false) {
 		ui_load_settings();
 		settings_loaded = true;
-	}
-	for (auto i = 0; i < Cycles_array_size; i++) {
-		Cycles_per_frame[i] = 0;
 	}
 }
 
@@ -300,31 +269,13 @@ void ui_do_frame(SDL_Window *window)
 	if (Show_main_menu) {
 		ui_show_main_menu();
 	}
-	if (Show_debug_menu) {
-		ui_show_debug_menu();
-	}
+	ImGui::Begin("Main Window", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+	ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+
+	// ugh -- the -12 is a total hack.  I can't figure out yet why this is necessary
+	ImGui::Image((ImTextureID)Video_framebuffer_texture, ImVec2((float)Video_window_size.w, (float)Video_window_size.h - 12), ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::End();
 	//ImGui::ShowTestWindow();
 
-	if (Show_main_menu || Show_debug_menu) {
-		ImGui::Render();
-	}
+	ImGui::Render();
 }
-
-void ui_toggle_main_menu()
-{
-	Show_main_menu = !Show_main_menu;
-}
-
-void ui_toggle_debug_menu()
-{
-	Show_debug_menu = !Show_debug_menu;
-}
-
-// since rendering is decoupled from cycles on the machine, extra
-// function to store off cycles for debug display
-void ui_update_cycle_count()
-{
-	Cycles_per_frame[Current_cycles_array_entry] = Total_cycles_this_frame;
-	Current_cycles_array_entry = (Current_cycles_array_entry + 1) % Cycles_array_size;
-}
-

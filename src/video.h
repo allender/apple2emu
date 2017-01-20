@@ -28,6 +28,7 @@ SOFTWARE.
 #pragma once
 
 #include "SDL.h"
+#include "SDL_opengl.h"
 
 // video modes
 #define VIDEO_MODE_TEXT    (1 << 0)
@@ -49,6 +50,8 @@ enum class video_display_types : uint8_t {
 
 extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
+extern GLuint Video_framebuffer_texture;
+extern SDL_Rect Video_window_size;
 
 bool video_init();
 void video_shutdown();

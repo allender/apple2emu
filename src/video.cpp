@@ -53,7 +53,6 @@ const int Video_cell_height = Video_native_height / 24;
 
 static int Video_scale_factor = 2;
 static SDL_Rect Video_native_size;
-static SDL_Rect Video_window_size;
 
 static SDL_Surface *Splash_screen_surface;
 static GLuint Splash_screen_texture;
@@ -83,6 +82,7 @@ static uint8_t *Hires_color_pixels;
 
 GLuint Video_framebuffer;
 GLuint Video_framebuffer_texture;
+SDL_Rect Video_window_size;
 
 SDL_Window *Video_window = nullptr;
 SDL_GLContext Video_context;
@@ -862,14 +862,14 @@ void video_render_frame()
 
 	// render texture to window.  Just render the texture to the
 	// full screen (using normalized device coordinates)
-	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
-	glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
-	glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
-	glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
-	glEnd();
-	glBindTexture(GL_TEXTURE_2D, 0);
+	//glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
+	//glBegin(GL_QUADS);
+	//glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
+	//glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
+	//glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
+	//glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
+	//glEnd();
+	//glBindTexture(GL_TEXTURE_2D, 0);
 
 	if (Debug_show_bitmap) {
 		glBindTexture(GL_TEXTURE_2D, Hires_color_texture);

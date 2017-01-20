@@ -236,7 +236,6 @@ int main(int argc, char* argv[])
 				Total_cycles += cycles;
 
 				if (Total_cycles_this_frame > cycles_per_frame) {
-					ui_update_cycle_count();
 					// this is essentially number of cycles for one redraw cycle
 					// for TV/monitor.  Around 17030 cycles I believe
 					Total_cycles_this_frame -= cycles_per_frame;

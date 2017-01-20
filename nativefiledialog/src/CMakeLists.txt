@@ -4,7 +4,7 @@
 if (WIN32)
    set(PLATFORM_CPP nfd_win.cpp)
 elseif (CMAKE_HOST_APPLE)
-   set(PLATFORM_CPP nfd_cocoa.m)
+   set(PLATFORM_CPP nfd_cocoa.mm)
 else()
    # for unix systems, make sure that we have
    # the gtk include directories available

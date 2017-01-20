@@ -31,6 +31,7 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #if defined(_WIN32)
 #include <io.h>
 #else

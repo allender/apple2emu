@@ -84,9 +84,11 @@ target_link_libraries(apple2emu
 
 # add post build step to copy extra files into
 # the build folder
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2.dll" "${CMAKE_CURRENT_BINARY_DIR}")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2_image.dll" "${CMAKE_CURRENT_BINARY_DIR}")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/libjpeg-9.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+if (WIN32)
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2_image.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/libjpeg-9.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" "${CMAKE_CURRENT_BINARY_DIR}")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/splash.jpg" "${CMAKE_CURRENT_BINARY_DIR}")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/disks" "${CMAKE_CURRENT_BINARY_DIR}/disks")

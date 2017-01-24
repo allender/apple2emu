@@ -46,6 +46,7 @@ enum class debugger_state {
 	IDLE,
 	WAITING_FOR_INPUT,
 	SINGLE_STEP,
+   SHOW_ALL,
 };
 
 struct breakpoint {
@@ -69,9 +70,6 @@ static FILE *Debugger_trace_fp = nullptr;
 
 static breakpoint Debugger_breakpoints[Max_breakpoints];
 static int Debugger_num_breakpoints;
-
-static uint16_t Debugger_memory_display_bytes = 16;
-static uint16_t Debugger_memory_display_address = 0;
 
 static ImGuiWindowFlags default_window_flags = ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -315,7 +313,7 @@ static void debugger_process_commands()
 		Debugger_state = debugger_state::SINGLE_STEP;
 	}
 	else if (!stricmp(token, "c") || !stricmp(token, "cont")) {
-		Debugger_state = debugger_state::IDLE;
+		Debugger_state = debugger_state::SHOW_ALL;
 	}
 
 	else if (!stricmp(token, "b") || !stricmp(token, "break") ||
@@ -495,7 +493,7 @@ struct MemoryEditor
 			for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) // display only visible items
 			{
 				uint16_t addr = (uint16_t)(line_i * Rows);
-				ImGui::Text("%0*X: ", addr_digits_count, base_display_addr+addr);
+				ImGui::Text("%0*lX: ", addr_digits_count, base_display_addr+addr);
 				ImGui::SameLine();
 
 				// Draw Hexadecimal
@@ -524,7 +522,7 @@ struct MemoryEditor
 						if (DataEditingTakeFocus)
 						{
 							ImGui::SetKeyboardFocusHere();
-							sprintf(AddrInput, "%0*X", addr_digits_count, base_display_addr+addr);
+							sprintf(AddrInput, "%0*lX", addr_digits_count, base_display_addr+addr);
 							sprintf(DataInput, "%02X", memory_read(addr));
 						}
 						ImGui::PushItemWidth(ImGui::CalcTextSize("FF").x);
@@ -547,7 +545,12 @@ struct MemoryEditor
 					}
 					else
 					{
-						ImGui::Text("%02X ", memory_read(addr));
+                  uint8_t val = 0;
+                  if (addr < 0xc000 || addr > 0xc0ff) {
+                     val = memory_read(addr);
+                  }
+
+						ImGui::Text("%02X ", val);
 						if (AllowEdits && ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
 						{
 							DataEditingTakeFocus = true;
@@ -570,7 +573,10 @@ struct MemoryEditor
 				for (int n = 0; n < Rows && addr < mem_size; n++, addr++)
 				{
 					if (n > 0) ImGui::SameLine();
-					int c = memory_read(addr);
+               int c = '?';
+               if (addr < 0xc000 || addr > 0xc0ff) {
+                  c = memory_read(addr);
+               }
 					ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
 				}
 			}
@@ -609,6 +615,11 @@ struct MemoryEditor
 				}
 			}
 			ImGui::PopItemWidth();
+
+         // keeps focus in input box
+         if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
+            ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+         }
 		}
 		ImGui::End();
 	}
@@ -664,7 +675,7 @@ static void debugger_display_disasm()
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
 			}
 			auto size = debugger_get_disassembly(addr);
-			ImGui::Text(Debugger_disassembly_line);
+			ImGui::Text("%s", Debugger_disassembly_line);
 			if (addr == cpu.get_pc()) {
 				ImGui::PopStyleColor();
 			}
@@ -689,6 +700,11 @@ static void debugger_display_disasm()
 			Debugger_input[0] = '\0';
 		}
 		ImGui::PopItemWidth();
+
+      // keeps focus on input box
+		if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
+			ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+      }
 	}
 	ImGui::End();
 
@@ -737,6 +753,102 @@ static void debugger_display_status()
 		ImVec2 status_size((float)(Video_window_size.w / 3.0f - 125.0f), (float)Video_window_size.h / 2.0f - 5.0f);
 		ImGui::SetWindowPos(status_pos);
 		ImGui::SetWindowSize(status_size);
+		ImGui::Text("$c011: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_CARD_BANK2) {
+			ImGui::Text("Bank1/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Bank2");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Bank1");
+			ImGui::SameLine();
+			ImGui::Text("/Bank2");
+		}
+		ImGui::Text("$c012: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_CARD_READ) {
+			ImGui::Text("Ram Card Write/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Ram Card Read");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Ram Card Write");
+			ImGui::SameLine();
+			ImGui::Text("/Ram Card Read");
+		}
+		ImGui::Text("$c013: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_AUX_MEMORY_READ) {
+			ImGui::Text("Main Read/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Aux Read");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Main Read");
+			ImGui::SameLine();
+			ImGui::Text("/Aux Read");
+		}
+		ImGui::Text("$c014: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_AUX_MEMORY_WRITE) {
+			ImGui::Text("Main Write/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Aux Write");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Main Write");
+			ImGui::SameLine();
+			ImGui::Text("/Aux Write");
+		}
+		ImGui::Text("$c015: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_SLOTCX_ROM) {
+			ImGui::Text("Internal Rom/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Cx Rom");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Internal Rom");
+			ImGui::SameLine();
+			ImGui::Text("/Cx Rom");
+		}
+		ImGui::Text("$c016: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_ALT_ZERO_PAGE) {
+			ImGui::Text("Zero Page/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Alt zp");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Zero Page");
+			ImGui::SameLine();
+			ImGui::Text("/Alt zp");
+		}
+		ImGui::Text("$c017: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_SLOTC3_ROM) {
+			ImGui::Text("Internal Rom/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "C3 Rom");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Internal Rom");
+			ImGui::SameLine();
+			ImGui::Text("/C3 Rom");
+		}
+		ImGui::Text("$c018: ");
+		ImGui::SameLine();
+		if (Memory_state & RAM_80STORE) {
+			ImGui::Text("Normal/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "80Store");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Normal");
+			ImGui::SameLine();
+			ImGui::Text("/80Store");
+		}
 		ImGui::Text("$c01a: ");
 		ImGui::SameLine();
 		if (Video_mode & VIDEO_MODE_TEXT) {
@@ -809,6 +921,7 @@ static void debugger_display_status()
 			ImGui::SameLine();
 			ImGui::Text("/80");
 		}
+
 
 	}
 	ImGui::End();

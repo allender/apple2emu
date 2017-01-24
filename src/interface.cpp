@@ -292,6 +292,8 @@ void ui_do_frame(SDL_Window *window)
 	ImGui_ImplSdl_NewFrame(window);
 	ImGui::Begin("Main Window", nullptr, flags);
 	ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+   ImGuiStyle& style = ImGui::GetStyle();
+   style.WindowPadding = ImVec2(0.0f, 0.0f);
 	ui_show_main_menu();
 
 	// tint the image based on the video mode
@@ -299,15 +301,17 @@ void ui_do_frame(SDL_Window *window)
 	ImVec4 image_tint(tint[0], tint[1], tint[2], 1.0f);
 
 	// ugh -- the -12 is a total hack.  I can't figure out yet why this is necessary
-	ImVec2 size((float)Video_window_size.w, (float)Video_window_size.h - 12.0f);
+	//ImVec2 size((float)Video_window_size.w, (float)Video_window_size.h - 12.0f);
+	ImVec2 size((float)Video_window_size.w, (float)Video_window_size.h);
 	if (debugger_active()) {
 		size.x /= 2.0f;
 		size.y /= 2.0f;
 	}
 
-	ImGui::Image((ImTextureID)Video_framebuffer_texture, size, ImVec2(0, 1), ImVec2(1, 0), image_tint);
+	ImGui::Image((void *)((uintptr_t)Video_framebuffer_texture), size, ImVec2(0, 1), ImVec2(1, 0), image_tint);
 
 	if (debugger_active()) {
+      style.WindowPadding = ImVec2(7.0f, 7.0f);
 		debugger_render();
 	}
 	ImGui::End();

@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #pragma once
+#include "cpu.h"
 
 enum class emulator_state : uint8_t {
 	SPLASH_SCREEN,
@@ -70,5 +71,7 @@ extern uint32_t Speed_multiplier;
 extern bool Auto_start;
 extern emulator_state Emulator_state;
 extern emulator_type Emulator_type;
+
+extern cpu_6502 cpu;
 
 void reset_machine();

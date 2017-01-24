@@ -38,16 +38,17 @@ SOFTWARE.
 #include "path_utils.h"
 #include "apple2emu.h"
 #include "nfd.h"
+#include "debugger.h"
 
 static bool Show_main_menu = false;
-static bool Show_debug_menu = false;
+static bool Show_debugger = false;
 static bool Menu_open_at_start = false;
 static bool Imgui_initialized = false;
 
 static const char *Settings_filename = "settings.txt";
 
 // settings to be stored
-static int32_t Video_color_type = static_cast<int>(video_display_types::MONO_WHITE);
+static int32_t Video_color_type = static_cast<int>(video_tint_types::MONO_WHITE);
 
 // inserts disk image into the given disk drive
 static void ui_insert_disk(const char *disk_filename, int slot)
@@ -96,7 +97,7 @@ static void ui_load_settings()
 			}
 			else if (setting == "video") {
 				Video_color_type = (uint8_t)strtol(value.c_str(), nullptr, 10);
-				video_set_mono_type(static_cast<video_display_types>(Video_color_type));
+				video_set_tint(static_cast<video_tint_types>(Video_color_type));
 			}
 			else if (setting == "speed") {
 				Speed_multiplier = (int)strtol(value.c_str(), nullptr, 10);
@@ -205,14 +206,11 @@ static void ui_show_disk_menu()
 static void ui_show_video_output_menu()
 {
 	ImGui::Text("Video Output Options:");
-	ImGui::RadioButton("White", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_WHITE));
-	ImGui::SameLine();
-	ImGui::RadioButton("Amber", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_AMBER));
-	ImGui::SameLine();
-	ImGui::RadioButton("Green", &Video_color_type, static_cast<uint8_t>(video_display_types::MONO_GREEN));
-	ImGui::SameLine();
-	ImGui::RadioButton("Color", &Video_color_type, static_cast<uint8_t>(video_display_types::COLOR));
-	video_set_mono_type(static_cast<video_display_types>(Video_color_type));
+	ImGui::RadioButton("White", &Video_color_type, static_cast<uint8_t>(video_tint_types::MONO_WHITE));
+	ImGui::RadioButton("Amber", &Video_color_type, static_cast<uint8_t>(video_tint_types::MONO_AMBER));
+	ImGui::RadioButton("Green", &Video_color_type, static_cast<uint8_t>(video_tint_types::MONO_GREEN));
+	ImGui::RadioButton("Color", &Video_color_type, static_cast<uint8_t>(video_tint_types::COLOR));
+	video_set_tint(static_cast<video_tint_types>(Video_color_type));
 }
 
 static void ui_show_speed_menu()
@@ -223,15 +221,26 @@ static void ui_show_speed_menu()
 
 static void ui_show_main_menu()
 {
-	ImGui::Begin("Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_ShowBorders);
-	ui_show_general_options();
-	ImGui::Separator();
-	ui_show_video_output_menu();
-	ImGui::Separator();
-	ui_show_disk_menu();
-	ImGui::Separator();
-	ui_show_speed_menu();
-	ImGui::End();
+	if (ImGui::BeginMenuBar()) {
+		if (ImGui::BeginMenu("File")) {
+			ui_show_general_options();
+			ui_show_speed_menu();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Disk")) {
+			ui_show_disk_menu();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Video")) {
+			ui_show_video_output_menu();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Sound")) {
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMenuBar();
+	}
 }
 
 void ui_init()
@@ -253,6 +262,16 @@ void ui_shutdown()
 	ui_save_settings();
 }
 
+void ui_toggle_main_menu()
+{
+	Show_main_menu = !Show_main_menu;
+}
+
+void ui_toggle_debugger()
+{
+	Show_debugger = !Show_debugger;
+}
+
 void ui_do_frame(SDL_Window *window)
 {
 	// initlialize imgui if it has not been initialized yet
@@ -265,15 +284,32 @@ void ui_do_frame(SDL_Window *window)
 		Imgui_initialized = true;
 	}
 
-	ImGui_ImplSdl_NewFrame(window);
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 	if (Show_main_menu) {
-		ui_show_main_menu();
+		flags |= ImGuiWindowFlags_MenuBar;
 	}
-	ImGui::Begin("Main Window", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+
+	ImGui_ImplSdl_NewFrame(window);
+	ImGui::Begin("Main Window", nullptr, flags);
 	ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+	ui_show_main_menu();
+
+	// tint the image based on the video mode
+	GLfloat *tint = video_get_tint();
+	ImVec4 image_tint(tint[0], tint[1], tint[2], 1.0f);
 
 	// ugh -- the -12 is a total hack.  I can't figure out yet why this is necessary
-	ImGui::Image((ImTextureID)Video_framebuffer_texture, ImVec2((float)Video_window_size.w, (float)Video_window_size.h - 12), ImVec2(0, 1), ImVec2(1, 0));
+	ImVec2 size((float)Video_window_size.w, (float)Video_window_size.h - 12.0f);
+	if (debugger_active()) {
+		size.x /= 2.0f;
+		size.y /= 2.0f;
+	}
+
+	ImGui::Image((ImTextureID)Video_framebuffer_texture, size, ImVec2(0, 1), ImVec2(1, 0), image_tint);
+
+	if (debugger_active()) {
+		debugger_render();
+	}
 	ImGui::End();
 	//ImGui::ShowTestWindow();
 

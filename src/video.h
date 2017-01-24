@@ -39,12 +39,12 @@ SOFTWARE.
 #define VIDEO_MODE_ALTCHAR (1 << 5)
 
 // display types (mono)
-enum class video_display_types : uint8_t {
+enum class video_tint_types : uint8_t {
 	MONO_WHITE = 0,
 	MONO_AMBER,
 	MONO_GREEN,
-	NUM_MONO_TYPES,
 	COLOR,
+	NUM_TINT_TYPES,
 };
 
 
@@ -56,7 +56,8 @@ extern SDL_Rect Video_window_size;
 bool video_init();
 void video_shutdown();
 void video_render_frame();
-void video_set_mono_type(video_display_types type);
+void video_set_tint(video_tint_types type);
+GLfloat *video_get_tint();
 
 
 // called from soft switch reading/writing code in memory

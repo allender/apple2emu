@@ -28,21 +28,24 @@ SOFTWARE.
 #include <array>
 #include <cstring>
 
+#include "apple2emu.h"
 #include "apple2emu_defs.h"
 #include "debugger.h"
+#include "memory.h"
 #include "video.h"
-#if defined(_WIN32) || defined(_WIN64)
-   #include "curses.h"
-   #include "panel.h"
-#else
-   #include <curses.h>
-#endif
+#include "imgui.h"
 
 enum class breakpoint_type {
 	INVALID,
 	BREAKPOINT,
 	RWATCHPOINT,
 	WWATCHPOINT,
+};
+
+enum class debugger_state {
+	IDLE,
+	WAITING_FOR_INPUT,
+	SINGLE_STEP,
 };
 
 struct breakpoint {
@@ -56,34 +59,21 @@ static const uint32_t Max_breakpoints = 15;
 
 static const uint32_t Debugger_status_line_length = 256;
 static const uint32_t Debugger_disassembly_line_length = 256;
+static char Debugger_input[Max_input];
 static char Debugger_status_line[Debugger_status_line_length];
 static char Debugger_disassembly_line[Debugger_disassembly_line_length];
 
-static bool Debugger_active = false;
-static bool Debugger_stopped = false;
+static debugger_state Debugger_state = debugger_state::IDLE;
 static bool Debugger_trace = false;
 static FILE *Debugger_trace_fp = nullptr;
 
 static breakpoint Debugger_breakpoints[Max_breakpoints];
 static int Debugger_num_breakpoints;
 
-// Variables for windows
-static WINDOW *Debugger_memory_window = nullptr;
-static WINDOW *Debugger_register_window = nullptr;
-static WINDOW *Debugger_command_window = nullptr;
-static WINDOW *Debugger_disasm_window = nullptr;
-static WINDOW *Debugger_breakpoint_window = nullptr;
-static WINDOW *Debugger_status_window = nullptr;
-static int Debugger_memory_num_lines = 12;
-static int Debugger_register_num_lines = 9;
-static int Debugger_command_num_lines = 5;
-static int Debugger_disasm_num_lines = 0;
-static int Debugger_breakpoint_num_lines = 0;
-static int Debugger_status_num_lines = 0;
-static int Debugger_column_one_width = 80;
-static int Debugger_column_two_width = 30;
 static uint16_t Debugger_memory_display_bytes = 16;
 static uint16_t Debugger_memory_display_address = 0;
+
+static ImGuiWindowFlags default_window_flags = ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
 static const char *addressing_format_string[] = {
 	"",           // NO_MODE
@@ -103,7 +93,7 @@ static const char *addressing_format_string[] = {
 };
 
 // print out the status (PC, regs, etc)
-static void debugger_get_short_status(cpu_6502 &cpu)
+static void debugger_get_short_status()
 {
 	uint8_t status = cpu.get_status();
 	sprintf(Debugger_status_line, "%02x %02X %02X %04X %c%c%c%c%c%c%c%c", cpu.get_acc(), cpu.get_x(), cpu.get_y(), cpu.get_sp() + 0x100,
@@ -118,7 +108,7 @@ static void debugger_get_short_status(cpu_6502 &cpu)
 }
 
 // print out the status (PC, regs, etc)
-static void debugger_get_status(cpu_6502 &cpu)
+static void debugger_get_status()
 {
 	uint8_t status = cpu.get_status();
 	sprintf(Debugger_status_line, "%04X   A=%02x   X=%02X   Y=%02X  Status = %c%c%c%c%c%c%c%c", cpu.get_pc(), cpu.get_acc(), cpu.get_x(), cpu.get_y(),
@@ -133,7 +123,7 @@ static void debugger_get_status(cpu_6502 &cpu)
 }
 
 // disassemble the given address into the buffer
-static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint16_t addr)
+static uint8_t debugger_get_disassembly(uint16_t addr)
 {
 	char internal_buffer[Debugger_disassembly_line_length];
 	Debugger_disassembly_line[0] = '\0';
@@ -274,11 +264,10 @@ static uint8_t debugger_get_disassembly(cpu_6502 &cpu, uint16_t addr)
 }
 
 // disassemble at the given address
-static void debugger_disassemble(cpu_6502 &cpu, uint16_t addr, int32_t num_lines = 20)
+static void debugger_disassemble(uint16_t addr, int32_t num_lines = 20)
 {
 	for (auto i = 0; i < num_lines; i++) {
-		uint8_t size = debugger_get_disassembly(cpu, addr);
-		printw("%s\n", Debugger_disassembly_line);
+		uint8_t size = debugger_get_disassembly(addr);
 		addr += size;
 	}
 }
@@ -287,7 +276,6 @@ static void debugger_stop_trace()
 {
 	if (Debugger_trace_fp != nullptr) {
 		fclose(Debugger_trace_fp);
-		printw("Stopping trace\n");
 	}
 }
 
@@ -297,95 +285,419 @@ static void debugger_start_trace()
 	debugger_stop_trace();
 
 	Debugger_trace_fp = fopen("trace.log", "wt");
-	if (Debugger_trace_fp == nullptr) {
-		printw("Unable to open trace file\n");
-	}
-	printw("Staring trace\n");
 }
 
-static void debugger_trace_line(cpu_6502& cpu)
+static void debugger_trace_line()
 {
 	if (Debugger_trace_fp == nullptr) {
 		return;
 	}
 
 	// print out the info the trace file
-	debugger_get_short_status(cpu);
-	debugger_get_disassembly(cpu, cpu.get_pc());
+	debugger_get_short_status();
+	debugger_get_disassembly(cpu.get_pc());
 	fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disassembly_line);
 }
 
-static void debugger_display_memory()
+static void debugger_process_commands()
 {
-	wclear(Debugger_memory_window);
-	box(Debugger_memory_window, 0, 0);
-	uint16_t addr = Debugger_memory_display_address;
-	for (auto i = 0; i < Debugger_memory_num_lines - 2; i++) {
-		mvwprintw(Debugger_memory_window, i + 1, 2, "%04X: ", addr);
-		for (uint16_t j = 0; j < Debugger_memory_display_bytes; j++) {
-			wprintw(Debugger_memory_window, "%02x ", memory_read(addr + j));
-		}
-		wprintw(Debugger_memory_window, "  ");
+	debugger_get_status();
+	debugger_get_disassembly(cpu.get_pc());
 
-		for (uint16_t j = 0; j < Debugger_memory_display_bytes; j++) {
-			wprintw(Debugger_memory_window, "%c", isprint(memory_read(addr + j)) ? memory_read(addr + j) : '.');
-		}
-		addr += Debugger_memory_display_bytes;
+	// parse the debugger commands
+	char *token = strtok(Debugger_input, " ");
+	if (token == nullptr) {
+		return;
 	}
-	wrefresh(Debugger_memory_window);
+
+	// step to next statement
+	if (!stricmp(token, "s") || !stricmp(token, "step")) {
+		Debugger_state = debugger_state::SINGLE_STEP;
+	}
+	else if (!stricmp(token, "c") || !stricmp(token, "cont")) {
+		Debugger_state = debugger_state::IDLE;
+	}
+
+	else if (!stricmp(token, "b") || !stricmp(token, "break") ||
+		!stricmp(token, "rw") || !stricmp(token, "rwatch") ||
+		!stricmp(token, "ww") || !stricmp(token, "wwatch")) {
+		// breakpoint at an address
+		breakpoint_type bp_type = breakpoint_type::INVALID;
+
+		if (token[0] == 'b') {
+			bp_type = breakpoint_type::BREAKPOINT;
+		}
+		else if (token[0] == 'r') {
+			bp_type = breakpoint_type::RWATCHPOINT;
+		}
+		else if (token[0] == 'w') {
+			bp_type = breakpoint_type::WWATCHPOINT;
+		}
+		ASSERT(bp_type != breakpoint_type::INVALID);
+
+		if (Debugger_num_breakpoints < Max_breakpoints) {
+			token = strtok(nullptr, " ");
+			if (token != nullptr) {
+				uint16_t address = (uint16_t)strtol(token, nullptr, 16);
+				if (address > 0xffff) {
+				}
+				else {
+					Debugger_breakpoints[Debugger_num_breakpoints].m_type = bp_type;
+					Debugger_breakpoints[Debugger_num_breakpoints].m_addr = address;
+					Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true;
+					Debugger_num_breakpoints++;
+				}
+			}
+		}
+	}
+
+	// enable and disable breakpoints
+	else if (!stricmp(token, "enable") || !stricmp(token, "disable")) {
+		bool enable = !stricmp(token, "enable");
+		token = strtok(nullptr, " ");
+		if (token == nullptr) {
+			// enable all breakpoints
+			for (auto i = 0; i < Debugger_num_breakpoints; i++) {
+				Debugger_breakpoints[i].m_enabled = enable;
+			}
+		}
+		else {
+			int i = atoi(token);
+			if (i >= 0 && i < Debugger_num_breakpoints) {
+				Debugger_breakpoints[i].m_enabled = enable;
+			}
+		}
+	}
+
+	// delete breakpoints
+	else if (!stricmp(token, "del")) {
+		token = strtok(nullptr, " ");
+		if (token == nullptr) {
+			// delete all  breakpoints
+			Debugger_num_breakpoints = 0;
+		}
+		else {
+			int i = atoi(token);
+			if (i >= 0 && i < Debugger_num_breakpoints) {
+				for (auto j = i + 1; j < Debugger_num_breakpoints; j++) {
+					Debugger_breakpoints[j - 1] = Debugger_breakpoints[j];
+				}
+				Debugger_num_breakpoints--;
+			}
+		}
+	}
+
+	// disassemble.  With no address, use current PC
+	// if address given, then disassemble at that adddress
+	else if (!stricmp(token, "dis")) {
+		uint16_t addr;
+
+		token = strtok(nullptr, " ");
+		if (token == nullptr) {
+			addr = cpu.get_pc();
+		}
+		else {
+			addr = (uint16_t)strtol(token, nullptr, 16);
+		}
+		debugger_disassemble(addr);
+	}
+
+	// quit
+	else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
+		debugger_shutdown();  // clears out curses changes to console
+		exit(-1);
+	}
+
+	// stop/start trace
+	else if (!stricmp(token, "trace")) {
+
+		Debugger_trace = !Debugger_trace;
+		if (Debugger_trace == true) {
+			debugger_start_trace();
+		}
+		else {
+			debugger_stop_trace();
+		}
+
+	}
 }
 
-static void debugger_display_registers(cpu_6502 &cpu)
+struct MemoryEditor
 {
-	uint32_t row = 1;
-	wclear(Debugger_register_window);
-	box(Debugger_register_window, 0, 0);
-	mvwprintw(Debugger_register_window, row++, 2, "A  = $%02X", cpu.get_acc());
-	mvwprintw(Debugger_register_window, row++, 2, "X  = $%02X", cpu.get_x());
-	mvwprintw(Debugger_register_window, row++, 2, "Y  = $%02X", cpu.get_y());
-	mvwprintw(Debugger_register_window, row++, 2, "PC = $%04X", cpu.get_pc());
-	mvwprintw(Debugger_register_window, row++, 2, "SP = $%04X", cpu.get_sp() + 0x100);
+	bool    Open;
+	bool    AllowEdits;
+	int     Rows;
+	int     DataEditingAddr;
+	bool    DataEditingTakeFocus;
+	char    DataInput[32];
+	char    AddrInput[32];
 
-	auto status = cpu.get_status();
-	mvwprintw(Debugger_register_window, ++row, 2, "Status = %c%c%c%c%c%c%c%c",
-		(status >> 7) & 1 ? 'S' : 's',
-		(status >> 6) & 1 ? 'V' : 'v',
-		(status >> 5) & 1 ? '1' : '0',
-		(status >> 4) & 1 ? 'B' : 'b',
-		(status >> 3) & 1 ? 'D' : 'd',
-		(status >> 2) & 1 ? 'I' : 'i',
-		(status >> 1) & 1 ? 'Z' : 'z',
-		(status >> 0) & 1 ? 'C' : 'c');
-	wrefresh(Debugger_register_window);
+	MemoryEditor()
+	{
+		Open = true;
+		Rows = 16;
+		DataEditingAddr = -1;
+		DataEditingTakeFocus = false;
+		strcpy(DataInput, "");
+		strcpy(AddrInput, "");
+		AllowEdits = false;
+	}
+
+	void Draw(const char* title, int mem_size, size_t base_display_addr = 0)
+	{
+		if (ImGui::Begin(title, nullptr, default_window_flags)) {
+			ImVec2 memory_pos(0.0f, (float)(Video_window_size.h) / 2.0f + 5.0f);
+			ImVec2 memory_size((float)(Video_window_size.w / 2.0f) - 80.0f, (float)Video_window_size.h / 2.0f - 5.0f);
+			ImGui::SetWindowPos(memory_pos);
+			ImGui::SetWindowSize(memory_size);
+
+			ImGui::BeginChild("##scrolling", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()));
+
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+
+			int addr_digits_count = 0;
+			for (int n = base_display_addr + mem_size - 1; n > 0; n >>= 4)
+				addr_digits_count++;
+
+			float glyph_width = ImGui::CalcTextSize("F").x;
+			float cell_width = glyph_width * 3; // "FF " we include trailing space in the width to easily catch clicks everywhere
+
+			float line_height = ImGui::GetTextLineHeight();
+			int line_total_count = (int)((mem_size + Rows-1) / Rows);
+			ImGuiListClipper clipper(line_total_count, line_height);
+			int visible_start_addr = clipper.DisplayStart * Rows;
+			int visible_end_addr = clipper.DisplayEnd * Rows;
+
+			bool data_next = false;
+
+			if (!AllowEdits || DataEditingAddr >= mem_size)
+				DataEditingAddr = -1;
+
+			int data_editing_addr_backup = DataEditingAddr;
+			if (DataEditingAddr != -1)
+			{
+				if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)) && DataEditingAddr >= Rows)                   { DataEditingAddr -= Rows; DataEditingTakeFocus = true; }
+				else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)) && DataEditingAddr < mem_size - Rows)  { DataEditingAddr += Rows; DataEditingTakeFocus = true; }
+				else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) && DataEditingAddr > 0)                { DataEditingAddr -= 1; DataEditingTakeFocus = true; }
+				else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow)) && DataEditingAddr < mem_size - 1)    { DataEditingAddr += 1; DataEditingTakeFocus = true; }
+			}
+			if ((DataEditingAddr / Rows) != (data_editing_addr_backup / Rows))
+			{
+				// Track cursor movements
+				float scroll_offset = ((DataEditingAddr / Rows) - (data_editing_addr_backup / Rows)) * line_height;
+				bool scroll_desired = (scroll_offset < 0.0f && DataEditingAddr < visible_start_addr + Rows*2) || (scroll_offset > 0.0f && DataEditingAddr > visible_end_addr - Rows*2);
+				if (scroll_desired)
+					ImGui::SetScrollY(ImGui::GetScrollY() + scroll_offset);
+			}
+
+			bool draw_separator = true;
+			for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) // display only visible items
+			{
+				uint16_t addr = (uint16_t)(line_i * Rows);
+				ImGui::Text("%0*X: ", addr_digits_count, base_display_addr+addr);
+				ImGui::SameLine();
+
+				// Draw Hexadecimal
+				float line_start_x = ImGui::GetCursorPosX();
+				for (int n = 0; n < Rows && addr < mem_size; n++, addr++)
+				{
+					ImGui::SameLine(line_start_x + cell_width * n);
+
+					if (DataEditingAddr == addr)
+					{
+						// Display text input on current byte
+						ImGui::PushID(addr);
+						struct FuncHolder
+						{
+							// FIXME: We should have a way to retrieve the text edit cursor position more easily in the API, this is rather tedious.
+							static int Callback(ImGuiTextEditCallbackData* data)
+							{
+								int* p_cursor_pos = (int*)data->UserData;
+								if (!data->HasSelection())
+									*p_cursor_pos = data->CursorPos;
+								return 0;
+							}
+						};
+						int cursor_pos = -1;
+						bool data_write = false;
+						if (DataEditingTakeFocus)
+						{
+							ImGui::SetKeyboardFocusHere();
+							sprintf(AddrInput, "%0*X", addr_digits_count, base_display_addr+addr);
+							sprintf(DataInput, "%02X", memory_read(addr));
+						}
+						ImGui::PushItemWidth(ImGui::CalcTextSize("FF").x);
+						ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsHexadecimal|ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_AutoSelectAll|ImGuiInputTextFlags_NoHorizontalScroll|ImGuiInputTextFlags_AlwaysInsertMode|ImGuiInputTextFlags_CallbackAlways;
+						if (ImGui::InputText("##data", DataInput, 32, flags, FuncHolder::Callback, &cursor_pos))
+							data_write = data_next = true;
+						else if (!DataEditingTakeFocus && !ImGui::IsItemActive())
+							DataEditingAddr = -1;
+						DataEditingTakeFocus = false;
+						ImGui::PopItemWidth();
+						if (cursor_pos >= 2)
+							data_write = data_next = true;
+						//if (data_write)
+						//{
+						//	int data;
+						//	if (sscanf(DataInput, "%X", &data) == 1)
+						//		memory_write(addr, data);
+						//}
+						ImGui::PopID();
+					}
+					else
+					{
+						ImGui::Text("%02X ", memory_read(addr));
+						if (AllowEdits && ImGui::IsItemHovered() && ImGui::IsMouseClicked(0))
+						{
+							DataEditingTakeFocus = true;
+							DataEditingAddr = addr;
+						}
+					}
+				}
+
+				ImGui::SameLine(line_start_x + cell_width * Rows + glyph_width * 2);
+
+				if (draw_separator)
+				{
+					ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+					ImGui::GetWindowDrawList()->AddLine(ImVec2(screen_pos.x - glyph_width, screen_pos.y - 9999), ImVec2(screen_pos.x - glyph_width, screen_pos.y + 9999), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Border]));
+					draw_separator = false;
+				}
+
+				// Draw ASCII values
+				addr = (uint16_t)(line_i * Rows);
+				for (int n = 0; n < Rows && addr < mem_size; n++, addr++)
+				{
+					if (n > 0) ImGui::SameLine();
+					int c = memory_read(addr);
+					ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
+				}
+			}
+			clipper.End();
+			ImGui::PopStyleVar(2);
+
+			ImGui::EndChild();
+
+			if (data_next && DataEditingAddr < mem_size)
+			{
+				DataEditingAddr = DataEditingAddr + 1;
+				DataEditingTakeFocus = true;
+			}
+
+			ImGui::Separator();
+
+			ImGui::AlignFirstTextHeightToWidgets();
+			ImGui::SameLine();
+			ImGui::Text("Range %0*X..%0*X", addr_digits_count, (int)base_display_addr, addr_digits_count, (int)base_display_addr+mem_size-1);
+			ImGui::SameLine();
+			ImGui::PushItemWidth(70);
+			if (ImGui::InputText("##addr", AddrInput, 32, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				int goto_addr;
+				if (sscanf(AddrInput, "%X", &goto_addr) == 1)
+				{
+					goto_addr -= base_display_addr;
+					if (goto_addr >= 0 && goto_addr < mem_size)
+					{
+						ImGui::BeginChild("##scrolling");
+						ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + (goto_addr / Rows) * ImGui::GetTextLineHeight());
+						ImGui::EndChild();
+						DataEditingAddr = goto_addr;
+						DataEditingTakeFocus = true;
+					}
+				}
+			}
+			ImGui::PopItemWidth();
+		}
+		ImGui::End();
+	}
+};
+
+static void debugger_display_memory()
+{
+	static MemoryEditor memory_editor;
+
+	memory_editor.Draw("Memory", 0x10000, 0);
+}
+
+static void debugger_display_registers()
+{
+	ImGuiWindowFlags flags = default_window_flags | ImGuiWindowFlags_NoInputs;
+	if (ImGui::Begin("Registers", nullptr, flags)) {
+		ImVec2 register_pos((float)(Video_window_size.w/2.0f) + 5.0f, 5.0f);
+		ImVec2 register_size((float)(Video_window_size.w/3.0f) , (float)Video_window_size.h/2.0f);
+		ImGui::SetWindowPos(register_pos);
+		ImGui::SetWindowSize(register_size);
+
+		ImGui::Text("A  = $%02X", cpu.get_acc());
+		ImGui::Text("X  = $%02X", cpu.get_x());
+		ImGui::Text("Y  = $%02X", cpu.get_y());
+		ImGui::Text("PC = $%04X", cpu.get_pc());
+		ImGui::Text("SP = $%04X", cpu.get_sp() + 0x100);
+	}
+	ImGui::End();
 }
 
 // display the disassembly in the disassembly window
-static void debugger_display_disasm(cpu_6502 &cpu)
+static void debugger_display_disasm()
 {
-	wclear(Debugger_disasm_window);
-	box(Debugger_disasm_window, 0, 0);
-	// for now, just disassm from the current pc
 	auto addr = cpu.get_pc();
-	auto row = 1;
-	wattron(Debugger_disasm_window, A_REVERSE);
-	for (auto i = 0; i < Debugger_disasm_num_lines - 2; i++) {
-		auto size = debugger_get_disassembly(cpu, addr);
-		// see if there is breakpoint at given line and show that in red
-		for (auto j = 0; j < Debugger_num_breakpoints; j++) {
-			if (Debugger_breakpoints[j].m_addr == addr && Debugger_breakpoints[j].m_enabled) {
-				wattron(Debugger_disasm_window, A_BOLD);
+	if (ImGui::Begin("Disassembly", nullptr, default_window_flags)) {
+		ImVec2 disassembly_pos((float)(Video_window_size.w/2.0f) - 75.0f, (float)(Video_window_size.h) / 2.0f + 5.0f);
+		ImVec2 disassembly_size((float)(Video_window_size.w / 3.0f), (float)Video_window_size.h / 2.0f - 5.0f);
+		ImGui::SetWindowPos(disassembly_pos);
+		ImGui::SetWindowSize(disassembly_size);
+
+		ImGui::BeginChild("##scrolling", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+
+		float line_height = ImGui::GetTextLineHeight();
+		int line_total_count = 1000;
+		ImGuiListClipper clipper(line_total_count, line_height);
+
+		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) // display only visible items
+		{
+			if (addr == cpu.get_pc()) {
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
 			}
+			auto size = debugger_get_disassembly(addr);
+			ImGui::Text(Debugger_disassembly_line);
+			if (addr == cpu.get_pc()) {
+				ImGui::PopStyleColor();
+			}
+			addr += size;
 		}
-		mvwprintw(Debugger_disasm_window, row++, 2, "%s", Debugger_disassembly_line);
-		wattroff(Debugger_disasm_window, A_REVERSE | A_BOLD);
-		addr += size;
+		clipper.End();
+		ImGui::PopStyleVar(2);
+
+		ImGui::EndChild();
+
+		ImGui::Separator();
+
+		ImGui::AlignFirstTextHeightToWidgets();
+		ImGui::SameLine();
+		ImGui::Text("Command: ");
+		ImGui::SameLine();
+		ImGui::PushItemWidth(250);
+
+		if (ImGui::InputText("##addr", Debugger_input, Max_input, ImGuiInputTextFlags_EnterReturnsTrue)) {
+			// process commands here
+			debugger_process_commands();
+			Debugger_input[0] = '\0';
+		}
+		ImGui::PopItemWidth();
 	}
-	wrefresh(Debugger_disasm_window);
+	ImGui::End();
+
 }
 
 // display ll breakpoints
 static void debugger_display_breakpoints()
 {
+#if 0
 	wclear(Debugger_breakpoint_window);
 	box(Debugger_breakpoint_window, 0, 0);
 	// for now, just disassm from the current pc
@@ -414,240 +726,97 @@ static void debugger_display_breakpoints()
 
 	}
 	wrefresh(Debugger_breakpoint_window);
+#endif
 }
 
 static void debugger_display_status()
 {
-	wclear(Debugger_status_window);
-	box(Debugger_status_window, 0, 0);
-
-	auto row = 1;
-	wmove(Debugger_status_window, row++, 1);
-	waddstr(Debugger_status_window, "$c050: ");
-	if (Video_mode & VIDEO_MODE_TEXT) {
-		waddstr(Debugger_status_window, "Graphics/");
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Text");
-		wattroff(Debugger_status_window, A_REVERSE);
-	}
-	else {
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Graphics");
-		wattroff(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "/Text");
-	}
-	wmove(Debugger_status_window, row++, 1);
-	waddstr(Debugger_status_window, "$c052: ");
-	if (Video_mode & VIDEO_MODE_MIXED) {
-		waddstr(Debugger_status_window, "Not Mixed/");
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Mixed");
-		wattroff(Debugger_status_window, A_REVERSE);
-	}
-	else {
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Not Mixed");
-		wattroff(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "/Mixed");
-	}
-	wmove(Debugger_status_window, row++, 1);
-	waddstr(Debugger_status_window, "$c054: ");
-	if (!(Video_mode & VIDEO_MODE_PAGE2)) {
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Primary");
-		wattroff(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "/Secondary");
-	}
-	else {
-		waddstr(Debugger_status_window, "Primary/");
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Secondary");
-		wattroff(Debugger_status_window, A_REVERSE);
-	}
-	wmove(Debugger_status_window, row++, 1);
-	waddstr(Debugger_status_window, "$c056: ");
-	if (Video_mode & VIDEO_MODE_HIRES) {
-		waddstr(Debugger_status_window, "Lores/");
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Hires");
-		wattroff(Debugger_status_window, A_REVERSE);
-	}
-	else {
-		wattron(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "Lores");
-		wattroff(Debugger_status_window, A_REVERSE);
-		waddstr(Debugger_status_window, "/Hires");
-	}
-
-	wrefresh(Debugger_status_window);
-}
-
-// processes a command for the debugger.  Returns true when control
-// should return back to CPU
-static void debugger_process_commands(cpu_6502 &cpu)
-{
-	char input[Max_input];
-
-	while (1) {
-
-		// dump memory into memory window
-		debugger_display_memory();
-		debugger_display_registers(cpu);
-		debugger_display_disasm(cpu);
-		debugger_display_breakpoints();
-		debugger_display_status();
-
-		debugger_get_status(cpu);
-		debugger_get_disassembly(cpu, cpu.get_pc());
-
-		//wprintw(Debugger_command_window, "%s %s\n", Debugger_status_line, Debugger_disassembly_line);
-		wprintw(Debugger_command_window, "> ");
-		wgetstr(Debugger_command_window, input);
-
-		// parse the debugger commands
-		char *token = strtok(input, " ");
-		if (token == nullptr) {
-			//wprintw(Debugger_command_window, "\n");
-			continue;
+	ImGuiWindowFlags flags = default_window_flags | ImGuiWindowFlags_NoInputs;
+	if (ImGui::Begin("Video/Memory flags", nullptr, flags)) {
+		ImVec2 status_pos((float)(Video_window_size.w * 2.0f /3.0f) + 120.0f, (float)(Video_window_size.h) / 2.0f + 5.0f);
+		ImVec2 status_size((float)(Video_window_size.w / 3.0f - 125.0f), (float)Video_window_size.h / 2.0f - 5.0f);
+		ImGui::SetWindowPos(status_pos);
+		ImGui::SetWindowSize(status_size);
+		ImGui::Text("$c01a: ");
+		ImGui::SameLine();
+		if (Video_mode & VIDEO_MODE_TEXT) {
+			ImGui::Text("Graphics/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Text");
 		}
-
-		// step to next statement
-		if (!stricmp(token, "s") || !stricmp(token, "step")) {
-			break;
-
-			// continue
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Graphics");
+			ImGui::SameLine();
+			ImGui::Text("/Text");
 		}
-		else if (!stricmp(token, "c") || !stricmp(token, "cont")) {
-			Debugger_stopped = false;
-			break;
-
-
-			// create a breakpoint
+		ImGui::Text("$c01b: ");
+		ImGui::SameLine();
+		if (Video_mode & VIDEO_MODE_MIXED) {
+			ImGui::Text("Not Mixed/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Mixed");
 		}
-		else if (!stricmp(token, "b") || !stricmp(token, "break") ||
-			!stricmp(token, "rw") || !stricmp(token, "rwatch") ||
-			!stricmp(token, "ww") || !stricmp(token, "wwatch")) {
-			// breakpoint at an address
-			breakpoint_type bp_type = breakpoint_type::INVALID;
-
-			if (token[0] == 'b') {
-				bp_type = breakpoint_type::BREAKPOINT;
-			}
-			else if (token[0] == 'r') {
-				bp_type = breakpoint_type::RWATCHPOINT;
-			}
-			else if (token[0] == 'w') {
-				bp_type = breakpoint_type::WWATCHPOINT;
-			}
-			ASSERT(bp_type != breakpoint_type::INVALID);
-
-			if (Debugger_num_breakpoints < Max_breakpoints) {
-				token = strtok(nullptr, " ");
-				if (token != nullptr) {
-					uint16_t address = (uint16_t)strtol(token, nullptr, 16);
-					if (address > 0xffff) {
-						printw("Address %x must be in range 0-0xffff\n", address);
-					}
-					else {
-						Debugger_breakpoints[Debugger_num_breakpoints].m_type = bp_type;
-						Debugger_breakpoints[Debugger_num_breakpoints].m_addr = address;
-						Debugger_breakpoints[Debugger_num_breakpoints].m_enabled = true;
-						Debugger_num_breakpoints++;
-					}
-				}
-			}
-			else {
-				printw("Maximum number of breakpoints reached (%d)\n", Max_breakpoints);
-			}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Not Mixed");
+			ImGui::SameLine();
+			ImGui::Text("/Mixed");
 		}
-
-		// enable and disable breakpoints
-		else if (!stricmp(token, "enable") || !stricmp(token, "disable")) {
-			bool enable = !stricmp(token, "enable");
-			token = strtok(nullptr, " ");
-			if (token == nullptr) {
-				// enable all breakpoints
-				for (auto i = 0; i < Debugger_num_breakpoints; i++) {
-					Debugger_breakpoints[i].m_enabled = enable;
-				}
-			}
-			else {
-				int i = atoi(token);
-				if (i >= 0 && i < Debugger_num_breakpoints) {
-					Debugger_breakpoints[i].m_enabled = enable;
-				}
-			}
+		ImGui::Text("$c01c: ");
+		ImGui::SameLine();
+		if (!(Video_mode & VIDEO_MODE_PAGE2)) {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Page 1");
+			ImGui::SameLine();
+			ImGui::Text("/Page 2");
 		}
-
-		// delete breakpoints
-		else if (!stricmp(token, "del")) {
-			token = strtok(nullptr, " ");
-			if (token == nullptr) {
-				// delete all  breakpoints
-				Debugger_num_breakpoints = 0;
-			}
-			else {
-				int i = atoi(token);
-				if (i >= 0 && i < Debugger_num_breakpoints) {
-					for (auto j = i + 1; j < Debugger_num_breakpoints; j++) {
-						Debugger_breakpoints[j - 1] = Debugger_breakpoints[j];
-					}
-					Debugger_num_breakpoints--;
-				}
-			}
+		else {
+			ImGui::Text("Page 1/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Page 2");
 		}
-
-		// disassemble.  With no address, use current PC
-		// if address given, then disassemble at that adddress
-		else if (!stricmp(token, "dis")) {
-			uint16_t addr;
-
-			token = strtok(nullptr, " ");
-			if (token == nullptr) {
-				addr = cpu.get_pc();
-			}
-			else {
-				addr = (uint16_t)strtol(token, nullptr, 16);
-			}
-			debugger_disassemble(cpu, addr);
+		ImGui::Text("$c01d: ");
+		ImGui::SameLine();
+		if (Video_mode & VIDEO_MODE_HIRES) {
+			ImGui::Text("Lores/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Hires");
 		}
-
-		// view memory
-		else if (!stricmp(token, "x") || !stricmp(token, "examine")) {
-			token = strtok(nullptr, " ");
-			if (token != nullptr) {
-				Debugger_memory_display_address = (uint16_t)strtol(token, nullptr, 16);
-			}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Lores");
+			ImGui::SameLine();
+			ImGui::Text("/Hires");
 		}
-
-		// quit
-		else if (!stricmp(token, "q") || !stricmp(token, "quit")) {
-			debugger_shutdown();  // clears out curses changes to console
-			exit(-1);
+		ImGui::Text("$c01e: ");
+		ImGui::SameLine();
+		if (Video_mode & VIDEO_MODE_ALTCHAR) {
+			ImGui::Text("Reg char set/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Alt char set");
 		}
-
-		// stop/start trace
-		else if (!stricmp(token, "trace")) {
-
-			Debugger_trace = !Debugger_trace;
-			if (Debugger_trace == true) {
-				debugger_start_trace();
-			}
-			else {
-				debugger_stop_trace();
-			}
-
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Reg char set");
+			ImGui::SameLine();
+			ImGui::Text("/Alt char set");
+		}
+		ImGui::Text("$c01f: ");
+		ImGui::SameLine();
+		if (Video_mode & VIDEO_MODE_80COL) {
+			ImGui::Text("40/");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "80");
+		}
+		else {
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "40");
+			ImGui::SameLine();
+			ImGui::Text("/80");
 		}
 
 	}
+	ImGui::End();
 }
 
 void debugger_enter()
 {
-	Debugger_active = true;
-	Debugger_stopped = true;
-
-	box(Debugger_register_window, 0, 0);
+	Debugger_state = debugger_state::WAITING_FOR_INPUT;
 }
 
 void debugger_exit()
@@ -656,50 +825,20 @@ void debugger_exit()
 
 void debugger_shutdown()
 {
-	endwin();
 }
 
 void debugger_init()
 {
-	Debugger_active = false;
-	Debugger_stopped = false;
+	Debugger_state = debugger_state::IDLE;
 	Debugger_num_breakpoints = 0;
-
-	// initialize curses for the debugging window
-	initscr();
-	scrollok(stdscr, true);
-
-	// debugger init might get called from reset, so make sure we don't keep creating
-	// debug windows
-	if (Debugger_memory_window == nullptr) {
-		// set the disassembly window size after initting the screen so we know
-		// how many lines and columns we have
-		Debugger_disasm_num_lines = LINES - Debugger_memory_num_lines - Debugger_command_num_lines;
-		Debugger_breakpoint_num_lines = (LINES - Debugger_register_num_lines) / 2;
-		Debugger_status_num_lines = Debugger_breakpoint_num_lines;
-
-		// create some windows for debugger use
-		int row = 0;
-		Debugger_memory_window = subwin(stdscr, Debugger_memory_num_lines, Debugger_column_one_width, row, 0);
-		row += Debugger_memory_num_lines;
-		Debugger_disasm_window = subwin(stdscr, Debugger_disasm_num_lines, Debugger_column_one_width, row, 0);
-		row += Debugger_disasm_num_lines;
-		Debugger_command_window = subwin(stdscr, Debugger_command_num_lines, Debugger_column_one_width, row, 0);
-		scrollok(Debugger_command_window, true);
-
-		row = 0;
-		Debugger_register_window = subwin(stdscr, Debugger_register_num_lines, Debugger_column_two_width, row, 81);
-		row += Debugger_register_num_lines;
-		Debugger_breakpoint_window = subwin(stdscr, Debugger_breakpoint_num_lines, Debugger_column_two_width, row, 81);
-		row += Debugger_breakpoint_num_lines;
-		Debugger_status_window = subwin(stdscr, Debugger_status_num_lines, Debugger_column_two_width, row, 81);
-	}
 }
 
-void debugger_process(cpu_6502 &cpu)
+bool debugger_process()
 {
+	bool continue_execution = true;
+
 	// check on breakpoints
-	if (Debugger_stopped == false) {
+	if (Debugger_state == debugger_state::IDLE) {
 		for (auto i = 0; i < Debugger_num_breakpoints; i++) {
 			if (Debugger_breakpoints[i].m_enabled == true) {
 				switch (Debugger_breakpoints[i].m_type) {
@@ -716,16 +855,40 @@ void debugger_process(cpu_6502 &cpu)
 			}
 		}
 	}
-	// if we are stopped, process any commands here in tight loop
-	if (Debugger_stopped) {
-		debugger_process_commands(cpu);
-		if (Debugger_stopped == false) {
-			debugger_exit();
-		}
+
+	else if (Debugger_state == debugger_state::WAITING_FOR_INPUT) {
+		continue_execution = false;
 	}
+
+	else if (Debugger_state == debugger_state::SINGLE_STEP) {
+		Debugger_state = debugger_state::WAITING_FOR_INPUT;
+	}
+
+	// if we are stopped, process any commands here in tight loop
+	//if (Debugger_stopped) {
+	//	//debugger_process_commands(cpu);
+	//	if (Debugger_stopped == false) {
+	//		debugger_exit();
+	//	}
+	//}
 
 	if (Debugger_trace_fp != nullptr) {
-		debugger_trace_line(cpu);
+		debugger_trace_line();
 	}
 
+	return continue_execution;
+}
+
+bool debugger_active()
+{
+	return Debugger_state != debugger_state::IDLE;
+}
+
+void debugger_render()
+{
+	debugger_display_memory();
+	debugger_display_registers();
+	debugger_display_disasm();
+	debugger_display_breakpoints();
+	debugger_display_status();
 }

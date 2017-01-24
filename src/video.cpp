@@ -99,14 +99,16 @@ uint16_t       Video_secondary_text_map[Num_vertical_cells];
 uint16_t       Video_hires_map[Num_vertical_cells];
 uint16_t       Video_hires_secondary_map[Num_vertical_cells];
 
-static GLfloat Mono_colors[static_cast<uint8_t>(video_display_types::NUM_MONO_TYPES)][3] =
+static GLfloat Video_tint_colors[static_cast<uint8_t>(video_tint_types::NUM_TINT_TYPES)][3] =
 {
 	{ 1.0f, 1.0f, 1.0f },
 	{ 1.0f, 0.5f, 0.0f },
 	{ 0.0f, 0.75f, 0.0f },
+	{ 1.0f, 1.0f, 1.0f },
 };
-static GLfloat *Mono_color;
-static video_display_types Video_display_mode = video_display_types::MONO_WHITE;
+
+static GLfloat *Video_tint_color = Video_tint_colors[0];
+static video_tint_types Video_tint_type = video_tint_types::MONO_WHITE;
 
 // values for lores colors
 // see http://mrob.com/pub/xapple2/colors.html
@@ -545,7 +547,7 @@ static void video_render()
 	}
 	else if (Video_mode & VIDEO_MODE_HIRES) {
 
-		if (Video_display_mode != video_display_types::COLOR) {
+		if (Video_tint_type != video_tint_types::COLOR) {
 			main_func = render_mono_hires_cell;
 		}
 		else {
@@ -674,7 +676,7 @@ bool video_create()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	sdl_window_flags |= SDL_WINDOW_OPENGL;
 
-	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)(Video_native_size.w * Video_scale_factor), (int)(Video_native_size.h * Video_scale_factor), sdl_window_flags);
+	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Video_window_size.w, Video_window_size.h, sdl_window_flags);
 	if (Video_window == nullptr) {
 		printf("Unable to create SDL window: %s\n", SDL_GetError());
 		return false;
@@ -767,7 +769,7 @@ bool video_init()
 			Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 		}
 
-		video_set_mono_type(video_display_types::MONO_WHITE);
+		//video_set_tint(video_tint_types::MONO_WHITE);
 	}
 
 	// create the splash screen
@@ -856,9 +858,9 @@ void video_render_frame()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	if (Video_display_mode != video_display_types::COLOR) {
-		glColor3fv(Mono_color);
-	}
+	//if (Video_tint_type != video_tint_type::COLOR) {
+	//	glColor3fv(Mono_color);
+	//}
 
 	// render texture to window.  Just render the texture to the
 	// full screen (using normalized device coordinates)
@@ -886,9 +888,14 @@ void video_render_frame()
 	SDL_GL_SwapWindow(Video_window);
 }
 
-void video_set_mono_type(video_display_types type)
+void video_set_tint(video_tint_types type)
 {
-	Video_display_mode = type;
-	Mono_color = Mono_colors[static_cast<uint8_t>(type)];
+	Video_tint_type = type;
+	Video_tint_color = Video_tint_colors[static_cast<uint8_t>(type)];
+}
+
+GLfloat *video_get_tint()
+{
+	return Video_tint_color;
 }
 

@@ -229,22 +229,27 @@ int main(int argc, char* argv[])
 			while (true) {
 				// process debugger (before opcode processing so that we can break on
 				// specific addresses properly
-				debugger_process(cpu);
+				bool next_statement = debugger_process();
 
-				uint32_t cycles = cpu.process_opcode();
-				Total_cycles_this_frame += cycles;
-				Total_cycles += cycles;
+				if (next_statement) {
+					uint32_t cycles = cpu.process_opcode();
+					Total_cycles_this_frame += cycles;
+					Total_cycles += cycles;
 
-				if (Total_cycles_this_frame > cycles_per_frame) {
-					// this is essentially number of cycles for one redraw cycle
-					// for TV/monitor.  Around 17030 cycles I believe
-					Total_cycles_this_frame -= cycles_per_frame;
+					if (Total_cycles_this_frame > cycles_per_frame) {
+						// this is essentially number of cycles for one redraw cycle
+						// for TV/monitor.  Around 17030 cycles I believe
+						Total_cycles_this_frame -= cycles_per_frame;
+						SDL_SemWait(cpu_sem);
+						break;
+					}
+				} else {
 					SDL_SemWait(cpu_sem);
 					break;
 				}
 			}
 		} else {
-			debugger_process(cpu);
+			debugger_process();
 		}
 
 		{

@@ -31,6 +31,7 @@ SOFTWARE.
 #include "memory.h"
 
 void debugger_enter();
+void debugger_exit();
 void debugger_init();
 void debugger_shutdown();
 bool debugger_process();

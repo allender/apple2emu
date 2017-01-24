@@ -38,6 +38,7 @@ SOFTWARE.
 #include "video.h"
 #include "font.h"
 #include "interface.h"
+#include "debugger.h"
 
 const int Num_vertical_cells = 24;
 const int Num_vertical_cells_mixed = 20;
@@ -820,6 +821,11 @@ bool Debug_show_bitmap = false;
 
 void video_render_frame()
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, Video_native_width, Video_native_height);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	// render to the framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
 	glViewport(0, 0, Video_native_width, Video_native_height);
@@ -855,31 +861,39 @@ void video_render_frame()
 	// back to main framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
+	glOrtho(0.0f, (float)Video_window_size.w, (float)Video_window_size.h, 0.0f, 0.0f, 1.0f);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	//if (Video_tint_type != video_tint_type::COLOR) {
-	//	glColor3fv(Mono_color);
-	//}
+	if (Video_tint_type != video_tint_types::COLOR) {
+		glColor3fv(Video_tint_color);
+	}
 
 	// render texture to window.  Just render the texture to the
 	// full screen (using normalized device coordinates)
-	//glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	//glBegin(GL_QUADS);
-	//glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
-	//glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
-	//glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
-	//glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
-	//glEnd();
-	//glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
+	glBegin(GL_QUADS);
+	if (debugger_active() == false) {
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w, Video_window_size.h);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w, 0);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
+	} else {
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h/2);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w/2, Video_window_size.h/2);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w/2, 0);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
+	}
+	glEnd();
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	if (Debug_show_bitmap) {
 		glBindTexture(GL_TEXTURE_2D, Hires_color_texture);
 		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
-		glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
-		glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
-		glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w, Video_window_size.h);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w, 0);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
 		glEnd();
 	}
 

@@ -52,9 +52,10 @@ void memory_init();
 void memory_shutdown();
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location);
 uint8_t memory_read_main(const uint16_t addr);
-uint8_t memory_read_aux(uint16_t addr);
-uint8_t memory_read(uint16_t addr);
-void memory_write(uint16_t addr, uint8_t val);
+uint8_t memory_read_aux(const uint16_t addr);
+uint8_t memory_read(const uint16_t addr, bool instruction = false);
+uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num);
+void memory_write(const uint16_t addr, uint8_t val);
 void memory_set_paging_tables();
 void memory_register_slot_handler(const uint8_t slot, soft_switch_function func, uint8_t *expansion_rom = nullptr);
 

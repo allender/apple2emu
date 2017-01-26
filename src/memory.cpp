@@ -53,7 +53,7 @@ static const int Memory_expansion_rom_size = (2 * 1024);
 
 static const uint16_t Memory_page_size = 256;
 
-// and page bvalues
+// and page values
 static const int Memory_num_main_pages = (Memory_main_size / Memory_page_size);
 static const int Memory_num_rom_pages = (Memory_rom_size / Memory_page_size);
 static const int Memory_num_bank_pages = (Memory_switched_bank_size / Memory_page_size);
@@ -81,9 +81,10 @@ static soft_switch_function m_soft_switch_handlers[256];
 class memory_page {
 
 private:
-	bool m_write_protected;
-	bool m_dirty;
-	uint8_t *m_ptr;
+	bool     m_write_protected;
+	bool     m_dirty;
+	uint8_t* m_ptr;
+    uint8_t  m_opcodes[Memory_page_size];
 
 public:
 	memory_page() {};
@@ -94,6 +95,9 @@ public:
 		m_ptr = ptr;
 		m_write_protected = write_protected;
 		m_dirty = true;
+        for (auto i = 0; i < Memory_page_size; i++) {
+            m_opcodes[i] = 0xff;
+        }
 	}
 
 	// returns write protect status
@@ -111,14 +115,24 @@ public:
 	}
 
 	// reads the value from the given page address
-	uint8_t read(uint8_t addr) {
-		return *(m_ptr + addr);
+	uint8_t read(const uint8_t addr, bool instruction = false) {
+        uint8_t val = *(m_ptr + addr);
+        if (instruction) {
+            m_opcodes[addr] = val;
+        }
+		return val;
 	}
 
+    // get the opcode value for the given address
+    uint8_t read_opcode(const uint8_t addr) { return m_opcodes[addr]; }
+
 	// writes out a value
-	void write(uint8_t addr, uint8_t val) {
+	void write(const uint8_t addr, uint8_t val) {
 		*(m_ptr + addr) = val;
 		m_dirty = true;
+
+        // change opcode back to invalid value
+        m_opcodes[addr] = 0xff;
 	}
 };
 
@@ -602,7 +616,7 @@ uint8_t memory_read_main(const uint16_t addr)
 	return Memory_main_pages[page].read(addr & 0xff);
 }
 
-uint8_t memory_read(const uint16_t addr)
+uint8_t memory_read(const uint16_t addr, bool instruction)
 {
 	auto page = (addr / Memory_page_size);
 
@@ -674,7 +688,34 @@ uint8_t memory_read(const uint16_t addr)
 	}
 
 	ASSERT(Memory_read_pages[page] != nullptr);
-	return Memory_read_pages[page]->read(addr & 0xff);
+	return Memory_read_pages[page]->read(addr & 0xff, instruction);
+}
+
+// finds the nth previous opcode from the current
+// address.
+uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
+{
+	auto page = (addr / Memory_page_size);
+    uint8_t mapped_addr = addr & 0xff;
+    while (page >= 0) {
+        for (int a = mapped_addr - 1; a >= 0; a--) {
+            uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
+            if (opcode != 0xff) {
+                num--;
+                if (num == 0) {
+                    return (page * 256) + a;
+                }
+            }
+        }
+        // go to previous page to the last memory location
+        page--;
+        mapped_addr = 0xff;
+    }
+
+    // ugh - we get here, then we have nothing, which would be really
+    // bad.  So let's return the largest value and disassembler
+    // can just deal with it there
+    return 0xffff;
 }
 
 // function to write value to memory.  Trapped here in order to
@@ -702,7 +743,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 	Memory_write_pages[page]->write(addr & 0xff, val);
 }
 
-void memory_register_soft_switch_handler(uint8_t addr, soft_switch_function func)
+void memory_register_soft_switch_handler(const uint8_t addr, soft_switch_function func)
 {
 	m_soft_switch_handlers[addr] = func;
 }

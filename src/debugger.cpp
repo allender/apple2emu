@@ -1033,7 +1033,7 @@ static void debugger_display_breakpoints()
 static void debugger_display_disasm()
 {
 	static bool column_set = false;
-	auto addr = cpu.get_pc();
+	auto cur_addr = cpu.get_pc();
 	if (ImGui::Begin("Disassembly", nullptr, default_window_flags)) {
 		ImGui::Columns(2);
 		if (column_set == false) {
@@ -1045,16 +1045,26 @@ static void debugger_display_disasm()
 		ImGui::BeginChild("##scrolling", ImVec2(0, 0));
 
 		float line_height = ImGui::GetTextLineHeight();
-		int line_total_count = 1000;
+		int line_total_count = 0xffff;
 		ImGuiListClipper clipper(line_total_count, line_height);
 
+        // scan backwards in memory until we find the opcode
+        // that will put current address in the middle of the screen
+        int middle_line = (clipper.DisplayEnd - clipper.DisplayStart) / 2;
+        auto addr = memory_find_previous_opcode_addr(cur_addr, middle_line); 
+
+        bool sanity_check = false;
 		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) {
-			if (addr == cpu.get_pc()) {
+            if (addr > cur_addr && sanity_check == false) {
+                ASSERT(0);
+            }
+			if (addr == cur_addr) {
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+                sanity_check = true;
 			}
 			auto size = debugger_get_disassembly(addr);
 			ImGui::Text("%s", Debugger_disassembly_line);
-			if (addr == cpu.get_pc()) {
+			if (addr == cur_addr) {
 				ImGui::PopStyleColor();
 			}
 			addr += size;

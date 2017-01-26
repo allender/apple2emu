@@ -501,7 +501,7 @@ uint32_t cpu_6502::process_opcode()
 
 	// get the opcode at the program counter and the just figure out what
 	// to do
-	uint8_t opcode = memory_read(m_pc++);
+	uint8_t opcode = memory_read(m_pc++, true);
 
 	// get addressing mode and then do appropriate work based on the mode
 	addr_mode mode = m_opcodes[opcode].m_addr_mode;

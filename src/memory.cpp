@@ -698,12 +698,12 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 	auto page = (addr / Memory_page_size);
     uint8_t mapped_addr = addr & 0xff;
     while (page >= 0) {
-        for (int a = mapped_addr - 1; a >= 0; a--) {
+        for (uint8_t a = mapped_addr - 1; a !=0xff; a--) {
             uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
             if (opcode != 0xff) {
                 num--;
                 if (num == 0) {
-                    return (page * 256) + a;
+                    return (uint16_t)((page * 256) + a);
                 }
             }
         }

@@ -36,6 +36,7 @@ SOFTWARE.
 #include "cpu.h"
 #include "assemble.h"
 #include "video.h"
+#include "memory.h"
 #include "disk.h"
 #include "keyboard.h"
 #include "joystick.h"

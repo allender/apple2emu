@@ -27,8 +27,30 @@ SOFTWARE.
 
 #pragma once
 
-#include "cpu.h"
-#include "memory.h"
+#include <vector>
+
+enum class debugger_state {
+	IDLE,
+	WAITING_FOR_INPUT,
+	SINGLE_STEP,
+	SHOW_ALL,
+};
+
+enum class breakpoint_type {
+	INVALID,
+	BREAKPOINT,
+	RWATCHPOINT,
+	WWATCHPOINT,
+};
+
+struct breakpoint {
+	breakpoint_type    m_type;
+	uint16_t           m_addr;
+	bool               m_enabled;
+};
+
+extern debugger_state Debugger_state;
+extern std::vector<breakpoint> Debugger_breakpoints;
 
 void debugger_enter();
 void debugger_exit();

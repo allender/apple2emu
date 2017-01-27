@@ -58,6 +58,23 @@ static debugger_disasm Debugger_disasm;
 
 // lambdas for console commands for debugger
 auto step_command = [](char *) { Debugger_state = debugger_state::SINGLE_STEP; };
+auto next_command = [](char *) {
+    // look at current opcode. If jsr, then get next opcode
+    // after jsr, store, and go into step over mode
+    cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(cpu.get_pc())];
+    if (opcode->m_mnemonic == 'JSR ') {
+		breakpoint b;
+
+		b.m_type = breakpoint_type::TEMPORARY;
+		b.m_addr = cpu.get_pc() + opcode->m_size;
+		b.m_enabled = true;
+		Debugger_breakpoints.push_back(b);
+        Debugger_state = debugger_state::STEP_OVER;
+    } else {
+        Debugger_state = debugger_state::SINGLE_STEP;
+    }
+    
+};
 auto continue_command = [](char *) { Debugger_state = debugger_state::SHOW_ALL; };
 auto stop_command = [](char *) { Debugger_state = debugger_state::SINGLE_STEP; };
 auto exit_command = [](char *) { Debugger_state = debugger_state::IDLE; };
@@ -333,6 +350,12 @@ static void debugger_display_breakpoints()
 	if (ImGui::Begin("Breakpoints", nullptr, default_window_flags)) {
 		// for now, just disassm from the current pc
 		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
+
+            // don't display temporary breakpoints as these are used
+            // for step over
+            if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
+                continue;
+            }
 			ImGui::Text("%-3lu", i);
 			ImGui::SameLine();
 			switch (Debugger_breakpoints[i].m_type) {
@@ -348,6 +371,7 @@ static void debugger_display_breakpoints()
 				ImGui::Text("%-5s", "Wwp");
 				break;
 
+			case breakpoint_type::TEMPORARY:
 			case breakpoint_type::INVALID:
 				break;
 			}
@@ -366,6 +390,7 @@ static void debugger_display_breakpoints()
 void debugger_enter()
 {
 	Debugger_state = debugger_state::WAITING_FOR_INPUT;
+    Debugger_disasm.set_break_addr(cpu.get_pc());
 }
 
 void debugger_exit()
@@ -384,6 +409,8 @@ void debugger_init()
 
 	// add in the debugger commands
 	Debugger_console.add_command("step", "Single step assembly", step_command);
+	Debugger_console.add_command("next",
+            "Next line in current stack frame", next_command);
 	Debugger_console.add_command("continue",
 		"Continue execution in debugger", continue_command);
 	Debugger_console.add_command("stop",
@@ -409,15 +436,18 @@ void debugger_init()
 bool debugger_process()
 {
 	bool continue_execution = true;
+    uint16_t pc = cpu.get_pc();
 
 	// check on breakpoints
 	if (Debugger_state == debugger_state::IDLE ||
-		Debugger_state == debugger_state::SHOW_ALL) {
+		Debugger_state == debugger_state::SHOW_ALL ||
+        Debugger_state == debugger_state::STEP_OVER) {
 		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
 			if (Debugger_breakpoints[i].m_enabled == true) {
 				switch (Debugger_breakpoints[i].m_type) {
 				case breakpoint_type::BREAKPOINT:
-					if (cpu.get_pc() == Debugger_breakpoints[i].m_addr) {
+				case breakpoint_type::TEMPORARY:
+					if (pc == Debugger_breakpoints[i].m_addr) {
 						debugger_enter();
 						continue_execution = false;
 					}
@@ -428,6 +458,14 @@ bool debugger_process()
 					break;
 				}
 			}
+            // no need to keep processing breakpoints if we have
+            // broken somewhere.  Remove temporary breakpoints
+            if (continue_execution == false) {
+                if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
+                    Debugger_breakpoints.erase(Debugger_breakpoints.begin() + i);
+                }
+                break;
+            }
 		}
 	}
 
@@ -435,9 +473,15 @@ bool debugger_process()
 		continue_execution = false;
 	}
 
+    // when single stepping, just go to input on the next opcode
 	else if (Debugger_state == debugger_state::SINGLE_STEP) {
 		Debugger_state = debugger_state::WAITING_FOR_INPUT;
 	}
+
+    // when stepping over, need to go to wait for input state
+    // when current pc hits the pc that was stored on the JSR
+    else if (Debugger_state == debugger_state::STEP_OVER) {
+    }
 
 	if (Debugger_trace_fp != nullptr) {
 		debugger_trace_line();
@@ -454,7 +498,7 @@ bool debugger_active()
 void debugger_render()
 {
 	Debugger_memory_editor.draw("Memory", 0x10000, 0);
-	Debugger_disasm.draw("Disassembly");
+	Debugger_disasm.draw("Disassembly", cpu.get_pc());
 	Debugger_console.draw("Console", nullptr);
 	debugger_display_breakpoints();
 	debugger_display_soft_switch();

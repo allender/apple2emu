@@ -45,10 +45,14 @@ class debugger_disasm
 	static const uint32_t m_disassembly_line_length = 256;
 	char m_disassembly_line[m_disassembly_line_length];
 
+    uint16_t m_break_addr;
+    uint16_t m_current_addr;
+
 public:
 	debugger_disasm();
 	~debugger_disasm();
 	uint8_t get_disassembly(uint16_t addr);
-	void draw(const char* title);
+	void draw(const char* title, uint16_t addr);
+    void set_break_addr(uint16_t addr);
 };
 

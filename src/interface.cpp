@@ -286,7 +286,7 @@ void ui_do_frame(SDL_Window *window)
 	if (debugger_active()) {
 		debugger_render();
 	}
-	//ImGui::ShowTestWindow();
+    //ImGui::ShowTestWindow();
 
 	ImGui::Render();
 }

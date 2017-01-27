@@ -76,7 +76,7 @@ void debugger_console::clear_log()
 	m_scroll_to_bottom = true;
 }
 
-void debugger_console::add_log(const char* fmt, ...) IM_PRINTFARGS(2)
+void debugger_console::add_log(const char* fmt, ...)
 {
 	char buf[max_line_size];
 

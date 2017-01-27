@@ -40,7 +40,7 @@
 
 class debugger_disasm
 {
-	static char *m_addressing_format_string[];
+	static const char *m_addressing_format_string[];
 
 	static const uint32_t m_disassembly_line_length = 256;
 	char m_disassembly_line[m_disassembly_line_length];

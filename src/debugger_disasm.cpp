@@ -37,7 +37,7 @@
 #include "memory.h"
 #include "imgui.h"
 
-char *debugger_disasm::m_addressing_format_string[] = {
+const char *debugger_disasm::m_addressing_format_string[] = {
 	"",           // NO_MODE
 	"",           // ACCUMULATOR_MODE
 	"#$%02X",     // IMMEDIATE_MODE

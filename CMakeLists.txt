@@ -60,6 +60,9 @@ set (EMU_SOURCES
    src/apple2emu.cpp
    src/cpu.cpp
    src/debugger.cpp
+   src/debugger_console.cpp
+   src/debugger_disasm.cpp
+   src/debugger_memory.cpp
    src/disk.cpp
    src/disk_image.cpp
    src/font.cpp

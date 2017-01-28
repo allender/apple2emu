@@ -59,6 +59,15 @@
       <Filter>debugger</Filter>
     </ClCompile>
     <ClCompile Include="src\apple2emu.cpp" />
+    <ClCompile Include="src\debugger_memory.cpp">
+      <Filter>debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="src\debugger_console.cpp">
+      <Filter>debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="src\debugger_disasm.cpp">
+      <Filter>debugger</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -131,6 +140,15 @@
       <Filter>debugger</Filter>
     </ClInclude>
     <ClInclude Include="src\apple2emu.h" />
+    <ClInclude Include="src\debugger_console.h">
+      <Filter>debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="src\debugger_memory.h">
+      <Filter>debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="src\debugger_disasm.h">
+      <Filter>debugger</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">

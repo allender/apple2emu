@@ -129,6 +129,9 @@
     <ClCompile Include="src\debugger.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\debugger_console.cpp" />
+    <ClCompile Include="src\debugger_disasm.cpp" />
+    <ClCompile Include="src\debugger_memory.cpp" />
     <ClCompile Include="src\disk.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -178,6 +181,9 @@
     </ClInclude>
     <ClInclude Include="src\cpu.h" />
     <ClInclude Include="src\debugger.h" />
+    <ClInclude Include="src\debugger_console.h" />
+    <ClInclude Include="src\debugger_disasm.h" />
+    <ClInclude Include="src\debugger_memory.h" />
     <ClInclude Include="src\disk.h" />
     <ClInclude Include="src\disk_image.h" />
     <ClInclude Include="src\font.h" />

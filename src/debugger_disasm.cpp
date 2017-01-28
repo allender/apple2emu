@@ -70,7 +70,7 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 	m_disassembly_line[0] = '\0';
 
 	// get the opcode at the address and from there we have the mode
-	cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(addr)];
+	cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(addr, true)];
 	if (opcode->m_mnemonic == '    ') {
 		// invalid opcode.  just print ?? and continue
 		strcpy(m_disassembly_line, "???");
@@ -232,7 +232,9 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
             } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
                 // get opcode size and move to new address
                 cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(m_current_addr)];
-                new_addr = m_current_addr + opcode->m_size;
+				if (cpu_6502::m_opcodes[memory_read(m_current_addr + opcode->m_size)].m_size > 0) {
+					new_addr = m_current_addr + opcode->m_size;
+				}
             }
             // only assign the new address if it is valid
             if (new_addr != 0xffff) {

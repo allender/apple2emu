@@ -697,15 +697,30 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 {
 	auto page = (addr / Memory_page_size);
     uint8_t mapped_addr = addr & 0xff;
+	auto last_valid_page = page;
+	int num_invalid = 0;
     while (page >= 0) {
+		uint8_t last_valid_address = mapped_addr;
         for (uint8_t a = mapped_addr - 1; a !=0xff; a--) {
             uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
             if (opcode != 0xff) {
                 num--;
+				last_valid_address = a;
+				last_valid_page = page;
+				num_invalid = 0;
                 if (num == 0) {
                     return (uint16_t)((page * 256) + a);
                 }
             }
+
+			// if we get 4 invalid opcodes, then we can't proceed any further
+			// back so return the last known good address that we had.
+			else {
+				num_invalid++;
+				if (num_invalid == 4) {
+					return (uint16_t)((last_valid_page * 256) + last_valid_address);
+				}
+			}
         }
         // go to previous page to the last memory location
         page--;

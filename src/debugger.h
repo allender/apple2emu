@@ -33,7 +33,7 @@ enum class debugger_state {
 	IDLE,
 	WAITING_FOR_INPUT,
 	SINGLE_STEP,
-    STEP_OVER,
+	STEP_OVER,
 	SHOW_ALL,
 };
 
@@ -42,7 +42,7 @@ enum class breakpoint_type {
 	BREAKPOINT,
 	RWATCHPOINT,
 	WWATCHPOINT,
-    TEMPORARY,
+	TEMPORARY,
 };
 
 struct breakpoint {

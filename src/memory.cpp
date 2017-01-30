@@ -84,7 +84,7 @@ private:
 	bool     m_write_protected;
 	bool     m_dirty;
 	uint8_t* m_ptr;
-    uint8_t  m_opcodes[Memory_page_size];
+	uint8_t  m_opcodes[Memory_page_size];
 
 public:
 	memory_page() {};
@@ -95,9 +95,9 @@ public:
 		m_ptr = ptr;
 		m_write_protected = write_protected;
 		m_dirty = true;
-        for (auto i = 0; i < Memory_page_size; i++) {
-            m_opcodes[i] = 0xff;
-        }
+		for (auto i = 0; i < Memory_page_size; i++) {
+			m_opcodes[i] = 0xff;
+		}
 	}
 
 	// returns write protect status
@@ -116,23 +116,23 @@ public:
 
 	// reads the value from the given page address
 	uint8_t read(const uint8_t addr, bool instruction = false) {
-        uint8_t val = *(m_ptr + addr);
-        if (instruction) {
-            m_opcodes[addr] = val;
-        }
+		uint8_t val = *(m_ptr + addr);
+		if (instruction) {
+			m_opcodes[addr] = val;
+		}
 		return val;
 	}
 
-    // get the opcode value for the given address
-    uint8_t read_opcode(const uint8_t addr) { return m_opcodes[addr]; }
+	// get the opcode value for the given address
+	uint8_t read_opcode(const uint8_t addr) { return m_opcodes[addr]; }
 
 	// writes out a value
 	void write(const uint8_t addr, uint8_t val) {
 		*(m_ptr + addr) = val;
 		m_dirty = true;
 
-        // change opcode back to invalid value
-        m_opcodes[addr] = 0xff;
+		// change opcode back to invalid value
+		m_opcodes[addr] = 0xff;
 	}
 };
 
@@ -696,22 +696,22 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 {
 	auto page = (addr / Memory_page_size);
-    uint8_t mapped_addr = addr & 0xff;
+	uint8_t mapped_addr = addr & 0xff;
 	auto last_valid_page = page;
 	int num_invalid = 0;
-    while (page >= 0) {
+	while (page >= 0) {
 		uint8_t last_valid_address = mapped_addr;
-        for (uint8_t a = mapped_addr - 1; a !=0xff; a--) {
-            uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
-            if (opcode != 0xff) {
-                num--;
+		for (uint8_t a = mapped_addr - 1; a !=0xff; a--) {
+			uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
+			if (opcode != 0xff) {
+				num--;
 				last_valid_address = a;
 				last_valid_page = page;
 				num_invalid = 0;
-                if (num == 0) {
-                    return (uint16_t)((page * 256) + a);
-                }
-            }
+				if (num == 0) {
+					return (uint16_t)((page * 256) + a);
+				}
+			}
 
 			// if we get 4 invalid opcodes, then we can't proceed any further
 			// back so return the last known good address that we had.
@@ -721,16 +721,16 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 					return (uint16_t)((last_valid_page * 256) + last_valid_address);
 				}
 			}
-        }
-        // go to previous page to the last memory location
-        page--;
-        mapped_addr = 0xff;
-    }
+		}
+		// go to previous page to the last memory location
+		page--;
+		mapped_addr = 0xff;
+	}
 
-    // ugh - we get here, then we have nothing, which would be really
-    // bad.  So let's return the largest value and disassembler
-    // can just deal with it there
-    return 0xffff;
+	// ugh - we get here, then we have nothing, which would be really
+	// bad.  So let's return the largest value and disassembler
+	// can just deal with it there
+	return 0xffff;
 }
 
 // function to write value to memory.  Trapped here in order to

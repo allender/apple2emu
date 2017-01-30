@@ -31,3 +31,4 @@ void ui_init();
 void ui_shutdown();
 void ui_do_frame(SDL_Window *window);
 void ui_toggle_main_menu();
+void ui_toggle_demo_window();

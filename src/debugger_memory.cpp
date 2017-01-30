@@ -54,11 +54,11 @@ debugger_memory_editor::~debugger_memory_editor()
 
 void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_display_addr)
 {
-	if (ImGui::Begin(title, nullptr, 0)) {
+	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders)) {
 		ImGui::BeginChild("##scrolling", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()));
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
 
 		int addr_digits_count = 0;
 		for (int n = base_display_addr + mem_size - 1; n > 0; n >>= 4) {

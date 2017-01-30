@@ -188,8 +188,12 @@ void keyboard_handle_event(SDL_Event &evt)
 		SDL_Keymod mods = SDL_GetModState();
 
 		// check for debugger
-		if (scancode == SDL_SCANCODE_F12) {
-			debugger_enter();
+        if (scancode == SDL_SCANCODE_F12) {
+            if (mods & (KMOD_LSHIFT | KMOD_RSHIFT)) {
+                ui_toggle_demo_window();
+            } else if (mods == 0) { 
+                debugger_enter();
+            }
 		}
 
 		// maybe bring up the main menu

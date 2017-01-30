@@ -210,19 +210,16 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 
 void debugger_disasm::draw(const char *title, uint16_t pc)
 {
-	static bool column_set = false;
     if (pc != m_break_addr) {
         m_break_addr = m_current_addr = pc;
     }
 
     // get the styling so we can get access to color values
     ImGuiStyle &style = ImGui::GetStyle();
-	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoScrollbar)) {
+	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders |
+				ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::Columns(2);
-		if (column_set == false) {
-			ImGui::SetColumnOffset(1, ImGui::GetColumnOffset(1) + 100.0f);
-			column_set = true;
-		}
+		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 120.0f);
 
         // if window is focued, processes arrow keys to move disassembly
         if (ImGui::IsWindowFocused()) {

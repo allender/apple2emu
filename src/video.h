@@ -59,7 +59,6 @@ void video_render_frame();
 void video_set_tint(video_tint_types type);
 GLfloat *video_get_tint();
 
-
 // called from soft switch reading/writing code in memory
 uint8_t video_set_state(uint16_t addr, uint8_t val, bool write);
 uint8_t video_get_state(uint16_t addr, uint8_t val, bool write);

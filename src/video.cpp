@@ -837,7 +837,8 @@ void video_render_frame()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0.0f, (float)Video_native_width, (float)Video_native_height, 0.0f, 0.0f, 1.0f);
+	//glOrtho(0.0f, (float)Video_native_width, (float)Video_native_height, 0.0f, 0.0f, 1.0f);
+	glOrtho(0.0f, (float)Video_native_width, 0.0f, (float)Video_native_height, 0.0f, 1.0f);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -865,6 +866,7 @@ void video_render_frame()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
+#if 0
 	if (Video_tint_type != video_tint_types::COLOR) {
 		glColor3fv(Video_tint_color);
 	}
@@ -896,6 +898,7 @@ void video_render_frame()
 		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
 		glEnd();
 	}
+#endif
 
 	ui_do_frame(Video_window);
 

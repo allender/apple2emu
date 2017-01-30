@@ -41,6 +41,7 @@ SOFTWARE.
 #include "debugger.h"
 
 static bool Show_main_menu = false;
+static bool Show_demo_window = false;
 static bool Menu_open_at_start = false;
 static bool Imgui_initialized = false;
 
@@ -266,27 +267,82 @@ void ui_toggle_main_menu()
 	Show_main_menu = !Show_main_menu;
 }
 
+void ui_toggle_demo_window() {
+    Show_demo_window = !Show_demo_window;
+}
+
 void ui_do_frame(SDL_Window *window)
 {
 	// initlialize imgui if it has not been initialized yet
 	if (Imgui_initialized == false) {
 		ImGui_ImplSdl_Init(window);
-
-		// maybe use apple 2 font here
-		//ImGuiIO& io = ImGui::GetIO();
-		//io.Fonts->AddFontFromFileTTF("printchar21.ttf", 8.0f);
 		Imgui_initialized = true;
 	}
 
 	ImGui_ImplSdl_NewFrame(window);
+
 	if (Show_main_menu) {
 		ui_show_main_menu();
 	}
 
-	if (debugger_active()) {
+    // show the main window for the emulator.  If the debugger
+    // is active, we'll wind up showing the emulator screen
+    // in imgui window that can be moved/resized.  Otherwise
+    // we'll show it fullscreen
+    GLfloat *tint_colors = video_get_tint();
+    ImVec4 tint(tint_colors[0], tint_colors[1], tint_colors[2], 0xff);
+    ImVec2 initial_size;
+    const char *title;
+    int flags = 0;
+
+	bool dbg_active = debugger_active();
+
+	if (dbg_active) {
 		debugger_render();
+
+        // set flags for rendering main window
+        title = "Emulator Debugger";
+        initial_size.x = Video_window_size.w/2;
+        initial_size.y = Video_window_size.h/2;
+        flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_ShowBorders;
+	} else {
+        title = "Emulator";
+        initial_size.x = Video_window_size.w;
+        initial_size.y = Video_window_size.h;
+        flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | 
+            ImGuiWindowFlags_NoResize;
+
+        // also need to set position here
+        ImVec2 pos(0.0f, 0.0f);
+        ImGui::SetNextWindowPos(pos, ImGuiSetCond_Always);
+    }
+
+	// with no debugger, turn off all padding in the window
+	if (dbg_active == false) {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 	}
-    //ImGui::ShowTestWindow();
+
+    if (ImGui::Begin(title, nullptr, initial_size, -1.0f, flags)) {
+		// use the content region for the window which will scale
+		// the texture apporpriately
+		ImVec2 content_region = ImGui::GetContentRegionAvail();
+        ImGui::Image((void *)(intptr_t)Video_framebuffer_texture,
+				content_region,
+				ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f),
+                tint);
+    }
+    ImGui::End();
+	if (dbg_active == false) {
+		ImGui::PopStyleVar(4);
+	}
+
+    if (Show_demo_window) {
+        ImGui::ShowTestWindow();
+        ImGui::ShowMetricsWindow();
+    }
 
 	ImGui::Render();
 }

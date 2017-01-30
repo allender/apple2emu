@@ -259,10 +259,11 @@ int main(int argc, char* argv[])
 			while (SDL_PollEvent(&evt)) {
 				ImGui_ImplSdl_ProcessEvent(&evt);
 				switch (evt.type) {
-				case SDL_KEYDOWN:
-				case SDL_KEYUP:
-					keyboard_handle_event(evt);
-					break;
+				// event types for keys will be handled by imgui
+				//case SDL_KEYDOWN:
+				//case SDL_KEYUP:
+				//	keyboard_handle_event(evt);
+				//	break;
 
 				case SDL_WINDOWEVENT:
 					if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {

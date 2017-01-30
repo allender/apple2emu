@@ -39,6 +39,7 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "nfd.h"
 #include "debugger.h"
+#include "keyboard.h"
 
 static bool Show_main_menu = false;
 static bool Show_demo_window = false;
@@ -268,7 +269,7 @@ void ui_toggle_main_menu()
 }
 
 void ui_toggle_demo_window() {
-    Show_demo_window = !Show_demo_window;
+	Show_demo_window = !Show_demo_window;
 }
 
 void ui_do_frame(SDL_Window *window)
@@ -285,37 +286,37 @@ void ui_do_frame(SDL_Window *window)
 		ui_show_main_menu();
 	}
 
-    // show the main window for the emulator.  If the debugger
-    // is active, we'll wind up showing the emulator screen
-    // in imgui window that can be moved/resized.  Otherwise
-    // we'll show it fullscreen
-    GLfloat *tint_colors = video_get_tint();
-    ImVec4 tint(tint_colors[0], tint_colors[1], tint_colors[2], 0xff);
-    ImVec2 initial_size;
-    const char *title;
-    int flags = 0;
+	// show the main window for the emulator.  If the debugger
+	// is active, we'll wind up showing the emulator screen
+	// in imgui window that can be moved/resized.  Otherwise
+	// we'll show it fullscreen
+	GLfloat *tint_colors = video_get_tint();
+	ImVec4 tint(tint_colors[0], tint_colors[1], tint_colors[2], 0xff);
+	ImVec2 initial_size;
+	const char *title;
+	int flags = 0;
 
 	bool dbg_active = debugger_active();
 
 	if (dbg_active) {
 		debugger_render();
 
-        // set flags for rendering main window
-        title = "Emulator Debugger";
-        initial_size.x = Video_window_size.w/2;
-        initial_size.y = Video_window_size.h/2;
-        flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_ShowBorders;
+		// set flags for rendering main window
+		title = "Emulator Debugger";
+		initial_size.x = (float)(Video_window_size.w/2);
+		initial_size.y = (float)(Video_window_size.h/2);
+		flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_ShowBorders;
 	} else {
-        title = "Emulator";
-        initial_size.x = Video_window_size.w;
-        initial_size.y = Video_window_size.h;
-        flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | 
-            ImGuiWindowFlags_NoResize;
+		title = "Emulator";
+		initial_size.x = (float)Video_window_size.w;
+		initial_size.y = (float)Video_window_size.h;
+		flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize;
 
-        // also need to set position here
-        ImVec2 pos(0.0f, 0.0f);
-        ImGui::SetNextWindowPos(pos, ImGuiSetCond_Always);
-    }
+		// also need to set position here
+		ImVec2 pos(0.0f, 0.0f);
+		ImGui::SetNextWindowPos(pos, ImGuiSetCond_Always);
+	}
 
 	// with no debugger, turn off all padding in the window
 	if (dbg_active == false) {
@@ -325,24 +326,38 @@ void ui_do_frame(SDL_Window *window)
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 	}
 
-    if (ImGui::Begin(title, nullptr, initial_size, -1.0f, flags)) {
+	if (ImGui::Begin(title, nullptr, initial_size, -1.0f, flags)) {
 		// use the content region for the window which will scale
 		// the texture apporpriately
 		ImVec2 content_region = ImGui::GetContentRegionAvail();
-        ImGui::Image((void *)(intptr_t)Video_framebuffer_texture,
+		ImGui::Image((void *)(intptr_t)Video_framebuffer_texture,
 				content_region,
 				ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f),
-                tint);
-    }
-    ImGui::End();
+				tint);
+	}
+	ImGui::End();
 	if (dbg_active == false) {
 		ImGui::PopStyleVar(4);
 	}
 
-    if (Show_demo_window) {
-        ImGui::ShowTestWindow();
-        ImGui::ShowMetricsWindow();
-    }
+	// see if we should be sending keys to the main window.  If
+	// want capture keyboard is false, then we should send the
+	// key information to the keyboard code since it wasn't
+	// used elsewhere in imgui
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.WantCaptureKeyboard == false) {
+		for (auto i = 0; i < 512; i++) {
+			if (io.KeysDown[i] && io.KeysDownDuration[i] == 0.0f) {
+				// key was just pressed, to add to keyboard buffer
+				keyboard_handle_event(i, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+			}
+		}
+	}
+
+	if (Show_demo_window) {
+		ImGui::ShowTestWindow();
+		ImGui::ShowMetricsWindow();
+	}
 
 	ImGui::Render();
 }

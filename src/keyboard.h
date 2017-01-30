@@ -29,8 +29,9 @@ SOFTWARE.
 
 #pragma once
 
+
 void keyboard_init();
 void keyboard_shutdown();
-void keyboard_handle_event(SDL_Event &evt);
+void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool super);
 uint8_t keyboard_read();
 uint8_t keyboard_clear();

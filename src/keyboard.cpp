@@ -114,44 +114,6 @@ static uint8_t keyboard_get_key()
 		// Advance past invalidated entries
 	} while (key_buffer[key_buffer_front] == 0 && key_buffer_front != key_buffer_end);
 
-	if (key & KEY_SHIFT) {
-		key &= 0xff;
-		key = key_shifted_ascii_table[key];
-	}
-	else if (key & KEY_CTRL) {
-		// send ctrl-A through ctrl-Z
-		key &= 0xff;
-		if ((key >= SDL_SCANCODE_A) && (key <= SDL_SCANCODE_Z)) {
-			key = key - SDL_SCANCODE_A + 1;
-		}
-		else {
-			key = 0;
-		}
-	}
-	else if (key == SDL_SCANCODE_RETURN) {
-		key = '\r';
-	}
-	else if (key == SDL_SCANCODE_BACKSPACE) {
-		key = '\b';
-	}
-	else if (key == SDL_SCANCODE_ESCAPE) {
-		key = 0x9b;
-	}
-	else if (key == SDL_SCANCODE_RIGHT) {
-		key = 0x95;
-	}
-	else if (key == SDL_SCANCODE_LEFT) {
-		key = 0x88;
-	}
-	else {
-		key = key_ascii_table[key];
-		if (key >= 'a' && key <= 'z') {
-			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
-				key -= 32;
-			}
-		}
-	}
-
 	ASSERT(key <= UINT8_MAX);
 	return static_cast<uint8_t>(key);
 }
@@ -176,67 +138,83 @@ void keyboard_shutdown()
 
 // process key event (could be key up or key down event)
 // We will put key downs into the keyboard buffer
-void keyboard_handle_event(SDL_Event &evt)
+void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool super)
 {
-	// for now, no key repeats
-	if (evt.key.repeat) {
-		return;
-	}
+	UNREFERENCED(alt);
+	UNREFERENCED(super);
 
-	if (evt.key.type == SDL_KEYDOWN) {
-		uint32_t scancode = evt.key.keysym.scancode;
-		SDL_Keymod mods = SDL_GetModState();
-
-		// check for debugger
-        if (scancode == SDL_SCANCODE_F12) {
-            if (mods & (KMOD_LSHIFT | KMOD_RSHIFT)) {
-                ui_toggle_demo_window();
-            } else if (mods == 0) { 
-                debugger_enter();
-            }
-		}
-
-		// maybe bring up the main menu
-		if (scancode == SDL_SCANCODE_F1) {
-			ui_toggle_main_menu();
-		}
-
-		// if the caps lock key was down, change toggle internal
-		// caps lock setting (for non apple2 machines)
-		if (scancode == SDL_SCANCODE_CAPSLOCK) {
-			Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
-		}
-
-		if (scancode == SDL_SCANCODE_F9) {
-			extern bool Debug_show_bitmap;
-			Debug_show_bitmap = !Debug_show_bitmap;
-		}
-
-		if (scancode == SDL_SCANCODE_PAUSE) {
-			if (Emulator_state == emulator_state::EMULATOR_STARTED) {
-				Emulator_state = emulator_state::EMULATOR_PAUSED;
-			} else {
-				Emulator_state = emulator_state::EMULATOR_STARTED;
-			}
-		}
-
-		// we should only be putting keys into the keyboard buffer that are printable
-		// (i.e. in the apple ][ character set), or control keys.
-		if (scancode < 256) {
-			if (scancode == SDL_SCANCODE_LCTRL || scancode == SDL_SCANCODE_RCTRL ||
-				scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT ||
-				scancode == SDL_SCANCODE_CAPSLOCK ) {
-				return;
-			}
-			if (mods & KMOD_SHIFT) {
-				scancode |= KEY_SHIFT;
-			}
-			else if (mods & KMOD_CTRL) {
-				scancode |= KEY_CTRL;
-			}
-			keyboard_insert_key(scancode);
+	// check for debugger
+	if (key == SDL_SCANCODE_F12) {
+		if (shift == true) {
+			ui_toggle_demo_window();
+		} else {
+			debugger_enter();
 		}
 	}
+
+	// maybe bring up the main menu
+	if (key == SDL_SCANCODE_F1) {
+		ui_toggle_main_menu();
+	}
+
+	// if the caps lock key was down, change toggle internal
+	// caps lock setting (for non apple2 machines)
+	if (key == SDL_SCANCODE_CAPSLOCK) {
+		Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
+	}
+
+	if (key == SDL_SCANCODE_F9) {
+		extern bool Debug_show_bitmap;
+		Debug_show_bitmap = !Debug_show_bitmap;
+	}
+
+	if (key == SDL_SCANCODE_PAUSE) {
+		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+			Emulator_state = emulator_state::EMULATOR_PAUSED;
+		} else {
+			Emulator_state = emulator_state::EMULATOR_STARTED;
+		}
+	}
+
+	// figure out the actual keyvalue to put onto the keyboard
+	// buffer
+	if (key == SDL_SCANCODE_RETURN) {
+		key = '\r';
+	}
+	else if (key == SDL_SCANCODE_BACKSPACE) {
+		key = '\b';
+	}
+	else if (key == SDL_SCANCODE_ESCAPE) {
+		key = 0x9b;
+	}
+	else if (key == SDL_SCANCODE_RIGHT) {
+		key = 0x95;
+	}
+	else if (key == SDL_SCANCODE_LEFT) {
+		key = 0x88;
+	}
+	else if (ctrl == true) {
+		// send ctrl-A through ctrl-Z
+		if ((key >= SDL_SCANCODE_A) && (key <= SDL_SCANCODE_Z)) {
+			key = key - SDL_SCANCODE_A + 1;
+		}
+		else {
+			key = 0;
+		}
+	}
+	else if (shift == true) {
+		key = key_shifted_ascii_table[key];
+	}
+	else {
+		key = key_ascii_table[key];
+		if (key >= 'a' && key <= 'z') {
+			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
+				key -= 32;
+			}
+		}
+	}
+
+	keyboard_insert_key(key);
 }
 
 static uint8_t last_key = 0;

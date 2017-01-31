@@ -140,15 +140,15 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 				if (opcode->m_mnemonic != 'JSR ') {
 					sprintf(internal_buffer, "\t$%04X", addressing_val);
 					strcat(m_disassembly_line, internal_buffer);
-                    if (((addressing_val >> 8) & 0xff) != 0xc0) {
-                        mem_value = memory_read(addressing_val);
-                        sprintf(internal_buffer, ": %02X", mem_value);
-					    strcat(m_disassembly_line, internal_buffer);
-                        if (isprint(mem_value)) {
-                            sprintf(internal_buffer, " (%c)", mem_value);
-                            strcat(m_disassembly_line, internal_buffer);
-                        }
-                    }
+					if (((addressing_val >> 8) & 0xff) != 0xc0) {
+						mem_value = memory_read(addressing_val);
+						sprintf(internal_buffer, ": %02X", mem_value);
+						strcat(m_disassembly_line, internal_buffer);
+						if (isprint(mem_value)) {
+							sprintf(internal_buffer, " (%c)", mem_value);
+							strcat(m_disassembly_line, internal_buffer);
+						}
+					}
 				}
 				break;
 
@@ -157,25 +157,25 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE:
 			case cpu_6502::addr_mode::Y_INDEXED_MODE:
 			case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
-                if (mode == cpu_6502::addr_mode::X_INDEXED_MODE ||
-                        mode == cpu_6502::addr_mode::ZP_INDEXED_MODE) {
-                    addressing_val += cpu.get_x();
-                } else {
-                    addressing_val += cpu.get_y();
-                }
+				if (mode == cpu_6502::addr_mode::X_INDEXED_MODE ||
+						mode == cpu_6502::addr_mode::ZP_INDEXED_MODE) {
+					addressing_val += cpu.get_x();
+				} else {
+					addressing_val += cpu.get_y();
+				}
 
-                // don't print out memory value if this is softswitch area
-                sprintf(internal_buffer, "\t$%04X", addressing_val);
-                strcat(m_disassembly_line, internal_buffer);
-                if (((addressing_val >> 8) & 0xff) != 0xc0) {
-                    mem_value = memory_read(addressing_val);
-                    sprintf(internal_buffer, ": %02X", mem_value);
-                    strcat(m_disassembly_line, internal_buffer);
-                    if (isprint(mem_value)) {
-                        sprintf(internal_buffer, " (%c)", mem_value);
-                        strcat(m_disassembly_line, internal_buffer);
-                    }
-                }
+				// don't print out memory value if this is softswitch area
+				sprintf(internal_buffer, "\t$%04X", addressing_val);
+				strcat(m_disassembly_line, internal_buffer);
+				if (((addressing_val >> 8) & 0xff) != 0xc0) {
+					mem_value = memory_read(addressing_val);
+					sprintf(internal_buffer, ": %02X", mem_value);
+					strcat(m_disassembly_line, internal_buffer);
+					if (isprint(mem_value)) {
+						sprintf(internal_buffer, " (%c)", mem_value);
+						strcat(m_disassembly_line, internal_buffer);
+					}
+				}
 				break;
 
 			case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
@@ -210,34 +210,34 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 
 void debugger_disasm::draw(const char *title, uint16_t pc)
 {
-    if (pc != m_break_addr) {
-        m_break_addr = m_current_addr = pc;
-    }
+	if (pc != m_break_addr) {
+		m_break_addr = m_current_addr = pc;
+	}
 
-    // get the styling so we can get access to color values
-    ImGuiStyle &style = ImGui::GetStyle();
+	// get the styling so we can get access to color values
+	ImGuiStyle &style = ImGui::GetStyle();
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders |
 				ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::Columns(2);
 		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 120.0f);
 
-        // if window is focued, processes arrow keys to move disassembly
-        if (ImGui::IsWindowFocused()) {
-            uint16_t new_addr = 0xffff;
-            if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) {
-                new_addr = memory_find_previous_opcode_addr(m_current_addr, 1);
-            } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
-                // get opcode size and move to new address
-                cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(m_current_addr)];
+		// if window is focued, processes arrow keys to move disassembly
+		if (ImGui::IsWindowFocused()) {
+			uint16_t new_addr = 0xffff;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) {
+				new_addr = memory_find_previous_opcode_addr(m_current_addr, 1);
+			} else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
+				// get opcode size and move to new address
+				cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(m_current_addr)];
 				if (cpu_6502::m_opcodes[memory_read(m_current_addr + opcode->m_size)].m_size > 0) {
 					new_addr = m_current_addr + opcode->m_size;
 				}
-            }
-            // only assign the new address if it is valid
-            if (new_addr != 0xffff) {
-                m_current_addr = new_addr;
-            }
-        }
+			}
+			// only assign the new address if it is valid
+			if (new_addr != 0xffff) {
+				m_current_addr = new_addr;
+			}
+		}
 
 		float line_height = ImGui::GetTextLineHeightWithSpacing();
 		int line_total_count = 0xffff;
@@ -251,14 +251,14 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) {
 			auto size = get_disassembly(addr);
 
-            // determine color to use
+			// determine color to use
 			if (addr == m_break_addr) {
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
 			} else if (addr == m_current_addr) {
 				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text]);
-            } else {
-                ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
-            }
+			} else {
+				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
+			}
 			ImGui::Text("%s", m_disassembly_line);
 			ImGui::PopStyleColor();
 			addr += size;
@@ -290,40 +290,40 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 
 void debugger_disasm::set_break_addr(uint16_t addr)
 {
-    m_current_addr = m_break_addr = addr;
+	m_current_addr = m_break_addr = addr;
 
-    // when setting the breakpoint address, disassemble
-    // from that address backwards a "fair distance"
-    // and then make sure that all opcodes for the
-    // memory locations are filled in to make disassmebly
-    // scrolling better.  Due to branches, it's possible
-    // for opcode table not to be fully filled in resulting
-    // in uneven scrolling.  This code is an attempt to
-    // minimize that issue
-    static const int num_opcodes = 25;
-    uint16_t a = 0xffff;
+	// when setting the breakpoint address, disassemble
+	// from that address backwards a "fair distance"
+	// and then make sure that all opcodes for the
+	// memory locations are filled in to make disassmebly
+	// scrolling better.  Due to branches, it's possible
+	// for opcode table not to be fully filled in resulting
+	// in uneven scrolling.  This code is an attempt to
+	// minimize that issue
+	static const int num_opcodes = 25;
+	uint16_t a = 0xffff;
 
-    for (auto i = num_opcodes; i >= 0; i--) {
-	    a = memory_find_previous_opcode_addr(m_current_addr, num_opcodes);
-        if (a != 0xffff) {
-            break;
-        }
-    }
-    ASSERT(a != 0xffff);
+	for (auto i = num_opcodes; i >= 0; i--) {
+		a = memory_find_previous_opcode_addr(m_current_addr, num_opcodes);
+		if (a != 0xffff) {
+			break;
+		}
+	}
+	ASSERT(a != 0xffff);
 
-    // starting at the address, disassembly to the current breakpoint
-    // address, reading the opcode from memory to fill in
-    // the opcode table
-    while (a < m_current_addr) {
-        cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(a, true)];
-        if (opcode->m_size) {
-            a += opcode->m_size;
-        } else {
-            a++;
-        }
-    }
+	// starting at the address, disassembly to the current breakpoint
+	// address, reading the opcode from memory to fill in
+	// the opcode table
+	while (a < m_current_addr) {
+		cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(a, true)];
+		if (opcode->m_size) {
+			a += opcode->m_size;
+		} else {
+			a++;
+		}
+	}
 
-    // check to see if we've accurately done the work!
-    ASSERT(a == m_current_addr);
+	// check to see if we've accurately done the work!
+	ASSERT(a == m_current_addr);
 }
 

@@ -504,3 +504,8 @@ void debugger_render()
 	debugger_display_breakpoints();
 	debugger_display_soft_switch();
 }
+
+void debugger_print_char_to_console(uint8_t c)
+{
+	Debugger_console.add_log("%c", c);
+}

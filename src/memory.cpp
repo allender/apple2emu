@@ -127,7 +127,7 @@ public:
 	uint8_t read_opcode(const uint8_t addr) { return m_opcodes[addr]; }
 
 	// writes out a value
-	void write(const uint8_t addr, uint8_t val) {
+	void write(const uint16_t addr, uint8_t val) {
 		*(m_ptr + addr) = val;
 		m_dirty = true;
 
@@ -530,11 +530,13 @@ void memory_set_paging_tables()
 
 	// set up c000 - 0xc7ff.  Set to internal rom (apple 2e) or
 	// slot rom depending on slot flag
-	for (auto page = 0xc0; page < 0xc8; page++) {
+	for (auto page = 0xc0; page < 0xd0; page++) {
 		if (Memory_state & RAM_SLOTCX_ROM) {
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
+			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
 		} else {
 			Memory_read_pages[page] = &Memory_internal_rom_pages[page - 0xc0];
+			Memory_write_pages[page] = &Memory_internal_rom_pages[page - 0xc0];
 		}
 	}
 
@@ -697,10 +699,10 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 {
 	auto page = (addr / Memory_page_size);
 	uint8_t mapped_addr = addr & 0xff;
+	uint8_t last_valid_address = mapped_addr;
 	auto last_valid_page = page;
 	int num_invalid = 0;
 	while (page >= 0) {
-		uint8_t last_valid_address = mapped_addr;
 		for (uint8_t a = mapped_addr - 1; a !=0xff; a--) {
 			uint8_t opcode = Memory_read_pages[page]->read_opcode(a);
 			if (opcode != 0xff) {
@@ -782,7 +784,13 @@ void memory_register_slot_handler(const uint8_t slot, soft_switch_function func,
 
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
 {
-	memcpy(&(Memory_buffer[location]), buffer, size);
+	// move the buffer into memory.  The problem here is that
+	// the memory pages have already been set up, including
+	// read/write status of the pages
+	for (int addr = location; addr < location + size; addr++) {
+		auto page = (addr / Memory_page_size);
+		Memory_write_pages[page]->write(addr & 0xff, buffer[addr - location]);
+	}
 	return true;
 }
 

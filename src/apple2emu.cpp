@@ -204,6 +204,8 @@ int main(int argc, char* argv[])
 		fclose(fp);
 		memory_load_buffer(buffer, (uint16_t)buffer_size, load_addr);
 		cpu.set_pc(prog_start);
+		Emulator_state = emulator_state::EMULATOR_TEST;
+		debugger_enter();
 	}
 
 	bool quit = false;
@@ -226,7 +228,8 @@ int main(int argc, char* argv[])
 
 
 		// process the next opcode
-		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+		if (Emulator_state == emulator_state::EMULATOR_STARTED ||
+			Emulator_state == emulator_state::EMULATOR_TEST) {
 			while (true) {
 				// process debugger (before opcode processing so that we can break on
 				// specific addresses properly

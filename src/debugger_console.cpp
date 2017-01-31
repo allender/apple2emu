@@ -113,6 +113,10 @@ void debugger_console::draw(const char* title, bool* p_open)
 		else if (strncmp(item, "# ", 2) == 0) col = ImColor(1.0f, 0.78f, 0.58f, 1.0f);
 		ImGui::PushStyleColor(ImGuiCol_Text, col);
 		ImGui::TextUnformatted(item);
+		if (item[0] != '\n') {
+			ImGui::SameLine();
+		}
+
 		ImGui::PopStyleColor();
 	}
 	if (m_scroll_to_bottom) {
@@ -155,7 +159,7 @@ void debugger_console::draw(const char* title, bool* p_open)
 
 void debugger_console::execute_command()
 {
-	add_log("# %s\n", m_input_buf);
+	//add_log("# %s\n", m_input_buf);
 
 	// Insert into history. First find match and delete it  so it can
 	// be pushed to the back. This isn't trying to be smart or optimal.

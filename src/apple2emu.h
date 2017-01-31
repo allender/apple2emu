@@ -33,6 +33,7 @@ enum class emulator_state : uint8_t {
 	EMULATOR_STARTED,
 	EMULATOR_DEBUGGER,
 	EMULATOR_PAUSED,
+	EMULATOR_TEST,
 };
 
 enum class emulator_type: uint8_t {

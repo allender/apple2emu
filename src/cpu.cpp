@@ -25,11 +25,14 @@ SOFTWARE.
 
 */
 
+#define FUNCTIONAL_TESTS
+
 /*
 *  Source file for 6502 emulation layer
 */
 #include "apple2emu_defs.h"
 #include "string.h"
+#include "debugger.h"
 
 #include "cpu.h"
 #include "memory.h"
@@ -771,14 +774,14 @@ uint32_t cpu_6502::process_opcode()
 	{
 #if defined(FUNCTIONAL_TESTS)
 		if (src == 0xf001) {
-			printf("%c", m_acc);
+			debugger_print_char_to_console(m_acc);
 		}
 		else if (src == 0xf004) {
-			m_acc = _getch();
+//			m_acc = _getch();
 		}
 		else {
-			memory_read(0x100 + m_sp--) = ((m_pc - 1) >> 8);
-			memory_read(0x100 + m_sp--) = (m_pc - 1) & 0xff;
+			memory_write(0x100 + m_sp--, ((m_pc - 1) >> 8));
+			memory_write(0x100 + m_sp--, (m_pc - 1) & 0xff);
 			m_pc = src;
 		}
 #else

@@ -34,6 +34,11 @@ SOFTWARE.
 
 class cpu_6502 {
 public:
+	enum class cpu_mode {
+		CPU_6502,
+		CPU_65C02,
+	};
+
 	enum class register_bit : uint8_t {
 		CARRY_BIT = 0,
 		ZERO_BIT,
@@ -73,14 +78,16 @@ public:
 		addr_func   m_addr_func;
 	} opcode_info;
 
+private:
 	/*
 	*  Table for all opcodes and their relevant data
 	*/
-	static opcode_info m_opcodes[256];
+	static opcode_info m_6502_opcodes[256];
+	static opcode_info m_65c02_opcodes[256];
 
 public:
 	cpu_6502() { }
-	void init();
+	void init(cpu_6502::cpu_mode mode);
 	uint32_t process_opcode();
 	void set_pc(uint16_t pc) { m_pc = pc; }
 
@@ -92,6 +99,8 @@ public:
 	uint8_t  get_sp() { return m_sp; }
 	uint8_t  get_status() { return m_status_register; }
 
+	cpu_6502::opcode_info *get_opcode(uint8_t opcode);
+
 private:
 	uint16_t         m_pc;
 	uint8_t          m_sp;
@@ -100,6 +109,8 @@ private:
 	uint8_t          m_yindex;
 	uint8_t          m_status_register;
 	uint8_t          m_extra_cycles;
+
+	opcode_info*     m_opcodes;   // these are the currently valid opcodes
 
 	void set_flag(register_bit bit, uint8_t val) { m_status_register = (m_status_register & ~(1 << static_cast<uint8_t>(bit))) | (!!val << static_cast<uint8_t>(bit)); }
 	uint8_t get_flag(register_bit bit) { return (m_status_register >> static_cast<uint8_t>(bit)) & 0x1; }

@@ -70,7 +70,7 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 	m_disassembly_line[0] = '\0';
 
 	// get the opcode at the address and from there we have the mode
-	cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(addr, true)];
+	cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(addr, true));
 	if (opcode->m_mnemonic == '    ') {
 		// invalid opcode.  just print ?? and continue
 		strcpy(m_disassembly_line, "???");
@@ -228,8 +228,8 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 				new_addr = memory_find_previous_opcode_addr(m_current_addr, 1);
 			} else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
 				// get opcode size and move to new address
-				cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(m_current_addr)];
-				if (cpu_6502::m_opcodes[memory_read(m_current_addr + opcode->m_size)].m_size > 0) {
+				cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(m_current_addr));
+				if (cpu.get_opcode(memory_read(m_current_addr + opcode->m_size))->m_size > 0) {
 					new_addr = m_current_addr + opcode->m_size;
 				}
 			}
@@ -315,7 +315,7 @@ void debugger_disasm::set_break_addr(uint16_t addr)
 	// address, reading the opcode from memory to fill in
 	// the opcode table
 	while (a < m_current_addr) {
-		cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(a, true)];
+		cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(a, true));
 		if (opcode->m_size) {
 			a += opcode->m_size;
 		} else {

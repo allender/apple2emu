@@ -137,9 +137,16 @@ bool dissemble_6502(const char *filename)
 
 void reset_machine()
 {
+	cpu_6502::cpu_mode mode;
+
+	if (Emulator_type == emulator_type::APPLE2E_ENHANCED) {
+		mode = cpu_6502::cpu_mode::CPU_65C02;
+	} else {
+		mode = cpu_6502::cpu_mode::CPU_6502;
+	}
 	ui_init();
 	memory_init();
-	cpu.init();
+	cpu.init(mode);
 	debugger_init();
 	speaker_init();
 	keyboard_init();

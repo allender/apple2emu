@@ -61,7 +61,7 @@ auto step_command = [](char *) { Debugger_state = debugger_state::SINGLE_STEP; }
 auto next_command = [](char *) {
     // look at current opcode. If jsr, then get next opcode
     // after jsr, store, and go into step over mode
-    cpu_6502::opcode_info *opcode = &cpu_6502::m_opcodes[memory_read(cpu.get_pc())];
+    cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(cpu.get_pc()));
     if (opcode->m_mnemonic == 'JSR ') {
 		breakpoint b;
 

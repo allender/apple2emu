@@ -37,33 +37,324 @@ SOFTWARE.
 #include "cpu.h"
 #include "memory.h"
 
-cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
-	// 0x00 - 0x0f
-{ 'BRK ', 1, 7, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
-{ 'ORA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ 'ORA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
-{ 'ASL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ 'PHP ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
-{ 'ORA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
-{ 'ASL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ 'ORA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
-{ 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+cpu_6502::opcode_info cpu_6502::m_6502_opcodes[] = {
+ // 0x00 - 0x0f
+ { 'BRK ', 1, 7, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ORA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'ASL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'PHP ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ORA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'ASL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
 
-// 0x10 -
-{ 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
-{ 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ '    ', 0, 0, addr_mode::NO_MODE, nullptr },
-{ 'ORA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
-{ 'ASL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ // 0x10 -
+ { 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'ASL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CLC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ORA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'ASL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x20 -
+ { 'JSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'AND ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'BIT ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'AND ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'ROL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'PLP ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'AND ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'ROL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'BIT ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'AND ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ROL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+
+ // 0x30 -
+ { 'BMI ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'AND ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'AND ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'ROL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'SEC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'AND ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'AND ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'ROL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x40 -
+ { 'RTI ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'EOR ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'EOR ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'LSR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode  },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'PHA ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'EOR ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'LSR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'JMP ', 3, 3, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'EOR ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'LSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x50 -
+ { 'BVC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'EOR ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'EOR ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'LSR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CLI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'EOR ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'EOR ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'LSR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x60 -
+ { 'RTS ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ADC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ADC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'ROR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'PLA ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ADC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'ROR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'JMP ', 3, 5, addr_mode::INDIRECT_MODE, &cpu_6502::indirect_mode },
+ { 'ADC ', 0, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ROR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x70 -
+ { 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ADC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'ROR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'SEI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ADC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ADC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'ROR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x80 -
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'STA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'STY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'STA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'STX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'DEY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'TXA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'STY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'STA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'STX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x90 -
+ { 'BCC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'STA ', 2, 6, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'STY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'STA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'STX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'TYA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'STA ', 3, 5, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_mode },
+ { 'TXS ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'STA ', 3, 5, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xa0 -
+ { 'LDY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'LDA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { 'LDX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'LDY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'LDA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'LDX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'TAY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'LDA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'TAX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'LDY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'LDA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'LDX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xb0 -
+ { 'BCS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'LDA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'LDY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'LDA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'LDX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CLV ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'LDA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { 'TSX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'LDY ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'LDA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'LDX ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xc0 -
+ { 'CPY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'CMP ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CPY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'CMP ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'DEC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'INY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'CMP ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'DEX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CPY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'CMP ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'DEC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xd0 -
+ { 'BNE ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'CMP ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CMP ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'DEC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CLD ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'CMP ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CMP ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'DEC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xe0 -
+ { 'CPX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'SBC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CPX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'SBC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'INC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'INX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'SBC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'NOP ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'CPX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'SBC ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'INC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0xf0 -
+ { 'BEQ ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'SBC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'SBC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'INC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'SED ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'SBC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'SBC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
+ { 'INC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+};
+
+cpu_6502::opcode_info cpu_6502::m_65c02_opcodes[] = {
+ // 0x00 - 0x0f
+ { 'BRK ', 1, 7, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ORA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { 'ASL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'PHP ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
+ { 'ORA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
+ { 'ASL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+
+ // 0x10 -
+ { 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
+ { 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { 'ORA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
+ { 'ASL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
  { 'CLC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ORA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
@@ -329,7 +620,7 @@ cpu_6502::opcode_info cpu_6502::m_opcodes[] = {
 };
 
 
-void cpu_6502::init()
+void cpu_6502::init(cpu_6502::cpu_mode mode)
 {
 	m_pc = 0;
 	m_sp = 0xff;
@@ -339,8 +630,20 @@ void cpu_6502::init()
 	m_status_register = 0xff;
 	set_flag(register_bit::NOT_USED_BIT, 1);
 
+	// set the opcodes based on what cpu we are emulating
+	if (mode == cpu_6502::cpu_mode::CPU_6502) {
+		m_opcodes = m_6502_opcodes;
+	} else {
+		m_opcodes = m_65c02_opcodes;
+	}
+
 	// start vector
 	set_pc(memory_read(0xfffc) | memory_read(0xfffd) << 8);
+}
+
+cpu_6502::opcode_info *cpu_6502::get_opcode(uint8_t val)
+{
+	return &m_opcodes[val];
 }
 
 inline int16_t cpu_6502::accumulator_mode()

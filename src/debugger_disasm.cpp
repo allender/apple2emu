@@ -38,6 +38,8 @@
 #include "memory.h"
 #include "imgui.h"
 
+// these string formats need to match the addressing modes
+// defined in cpu.h
 const char *debugger_disasm::m_addressing_format_string[] = {
 	"",           // NO_MODE
 	"",           // ACCUMULATOR_MODE
@@ -47,11 +49,13 @@ const char *debugger_disasm::m_addressing_format_string[] = {
 	"$%04X  ",    // ABSOLUTE_MODE
 	"$%02X    ",  // ZERO_PAGE_MODE
 	"$(%04X)",    // INDIRECT_MODE
+	"$(%02X)",    // INDIRECT_ZP_MODE
 	"$%04X,X",    // X_INDEXED_MODE
 	"$%04X,Y",    // Y_INDEXED_MODE
 	"$%02X,X",    // ZERO_PAGES_INDEXED_MODE
 	"$%02X,Y",    // ZERO_PAGED_INDEXED_MODE_Y
-	"($%02X,X)",  // INDEXED_INDIRECT_MODE
+	"($%02X,X)",  // INDEXED_INDIRECT_MODE'
+	"",           // ABSOLUTE_INDEXED_INDIRECT_MODE
 	"$(%02X),Y",  // INDIRECT_INDEXED_MODE
 };
 
@@ -275,7 +279,7 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		ImGui::NewLine();
 		ImGui::NewLine();
 		uint8_t status = cpu.get_status();
-		ImGui::Text("%c %c %c %c %c %c %c %c",
+		ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = %2x",
 			(status >> 7) & 1 ? 'S' : 's',
 			(status >> 6) & 1 ? 'V' : 'v',
 			(status >> 5) & 1 ? '1' : '0',
@@ -283,7 +287,16 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 			(status >> 3) & 1 ? 'D' : 'd',
 			(status >> 2) & 1 ? 'I' : 'i',
 			(status >> 1) & 1 ? 'Z' : 'z',
-			(status >> 0) & 1 ? 'C' : 'c');
+			(status >> 0) & 1 ? 'C' : 'c',
+			(status >> 7) & 1,
+			(status >> 6) & 1,
+			(status >> 5) & 1,
+			(status >> 4) & 1,
+			(status >> 3) & 1,
+			(status >> 2) & 1,
+			(status >> 1) & 1,
+			(status & 1),
+			status);
 	}
 	ImGui::End();
 }

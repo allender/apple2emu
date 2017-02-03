@@ -71,7 +71,11 @@ bool Auto_start = false;
 emulator_state Emulator_state = emulator_state::SPLASH_SCREEN;
 emulator_type Emulator_type = emulator_type::APPLE2;
 
-const char *Disk_image_filename = nullptr;
+static const char *Disk_image_filename = nullptr;
+static const char *Binary_image_filename = nullptr;
+static int32_t Program_start_addr = -1;
+static int32_t Program_load_addr = -1;
+
 
 uint32_t Total_cycles, Total_cycles_this_frame;
 
@@ -139,12 +143,15 @@ void reset_machine()
 {
 	cpu_6502::cpu_mode mode;
 
+	// ui_init() will load up settings.  Need this before
+	// we set the opcodes we need
+
+	ui_init();
 	if (Emulator_type == emulator_type::APPLE2E_ENHANCED) {
 		mode = cpu_6502::cpu_mode::CPU_65C02;
 	} else {
 		mode = cpu_6502::cpu_mode::CPU_6502;
 	}
-	ui_init();
 	memory_init();
 	cpu.init(mode);
 	debugger_init();
@@ -153,46 +160,11 @@ void reset_machine()
 	joystick_init();
 	disk_init();
 	video_init();
-}
 
-int main(int argc, char* argv[])
-{
-	// configure logging before anything else
-	configure_logging();
-
-	// grab some needed command line options
-	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");  // will always go to drive one for now
-
-	// initialize SDL before everything else
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
-		printf("Error initializing SDL: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	reset_machine();
-	if (Auto_start == true) {
-		Emulator_state = emulator_state::EMULATOR_STARTED;
-	}
-
-	uint16_t prog_start = 0x600;
-	uint16_t load_addr = 0x0;
-
-	const char *prog_start_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
-	if (prog_start_string != nullptr) {
-		prog_start = (uint16_t)strtol(prog_start_string, nullptr, 16);
-	}
-
-	const char *load_addr_string = get_cmdline_option(argv, argv + argc, "-b", "--base");
-	if (load_addr_string != nullptr) {
-		load_addr = (uint16_t)strtol(load_addr_string, nullptr, 16);
-	}
-
-	const char *binary_file = nullptr;
-	binary_file = get_cmdline_option(argv, argv + argc, "-b", "--binary");
-	if (binary_file != nullptr) {
-		FILE *fp = fopen(binary_file, "rb");
+	if (Binary_image_filename != nullptr && Program_start_addr != -1) {
+		FILE *fp = fopen(Binary_image_filename, "rb");
 		if (fp == nullptr) {
-			printf("Unable to open %s for reading: %d\n", binary_file, errno);
+			printf("Unable to open %s for reading: %d\n", Binary_image_filename, errno);
 			exit(-1);
 		}
 		fseek(fp, 0, SEEK_END);
@@ -209,10 +181,41 @@ int main(int argc, char* argv[])
 		}
 		fread(buffer, 1, buffer_size, fp);
 		fclose(fp);
-		memory_load_buffer(buffer, (uint16_t)buffer_size, load_addr);
-		cpu.set_pc(prog_start);
+		memory_load_buffer(buffer, (uint16_t)buffer_size, (uint16_t)Program_load_addr);
+		cpu.set_pc((uint16_t)Program_start_addr);
 		Emulator_state = emulator_state::EMULATOR_TEST;
 		debugger_enter();
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	// configure logging before anything else
+	configure_logging();
+
+	// grab some needed command line options
+	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");
+	Binary_image_filename = get_cmdline_option(argv, argv + argc, "-b", "--binary");
+
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
+
+	const char *addr_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
+	if (addr_string != nullptr) {
+		Program_start_addr = (uint16_t)strtol(addr_string, nullptr, 16);
+	}
+
+	addr_string = get_cmdline_option(argv, argv + argc, "-b", "--base");
+	if (addr_string != nullptr) {
+		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
+	}
+
+	reset_machine();
+	if (Auto_start == true) {
+		Emulator_state = emulator_state::EMULATOR_STARTED;
 	}
 
 	bool quit = false;

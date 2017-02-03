@@ -26,7 +26,7 @@ SOFTWARE.
 */
 
 #if !defined(HEADER_6502)
-#define HEADER_6502 
+#define HEADER_6502
 
 #include <functional>
 #include <stdint.h>
@@ -59,11 +59,13 @@ public:
 		ABSOLUTE_MODE,
 		ZERO_PAGE_MODE,
 		INDIRECT_MODE,
+		INDIRECT_ZP_MODE,
 		X_INDEXED_MODE,
 		Y_INDEXED_MODE,
 		ZP_INDEXED_MODE,
 		ZP_INDEXED_MODE_Y,
 		INDEXED_INDIRECT_MODE,
+		ABSOLUTE_INDEXED_INDIRECT_MODE,
 		INDIRECT_INDEXED_MODE,
 		NUM_ADDRESSING_MODES
 	};
@@ -132,7 +134,9 @@ private:
 	int16_t absolute_y_check_boundary_mode();
 	int16_t zero_page_indexed_mode();
 	int16_t zero_page_indexed_mode_y();
+	int16_t zero_page_indirect();
 	int16_t indexed_indirect_mode();
+	int16_t absolute_indexed_indirect_mode();
 	int16_t indirect_indexed_mode();
 	int16_t indirect_indexed_check_boundary_mode();
 

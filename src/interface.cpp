@@ -150,7 +150,8 @@ static void ui_show_general_options()
 	// if the emulator type changed, then reset the machine (if we haven't
 	// started yet.  Otherwise tell user that we need to reset machine
 	// for this change to take effect
-	if (old_type != type && Emulator_state == emulator_state::SPLASH_SCREEN) {
+	if (old_type != type && (Emulator_state == emulator_state::SPLASH_SCREEN ||
+		Emulator_state == emulator_state::EMULATOR_TEST)) {
 		Emulator_type = static_cast<emulator_type>(type);
 		reset_machine();
 	} else {

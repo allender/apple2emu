@@ -59,20 +59,20 @@ static debugger_disasm Debugger_disasm;
 // lambdas for console commands for debugger
 auto step_command = [](char *) { Debugger_state = debugger_state::SINGLE_STEP; };
 auto next_command = [](char *) {
-    // look at current opcode. If jsr, then get next opcode
-    // after jsr, store, and go into step over mode
-    cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(cpu.get_pc()));
-    if (opcode->m_mnemonic == 'JSR ') {
+	// look at current opcode. If jsr, then get next opcode
+	// after jsr, store, and go into step over mode
+	cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(cpu.get_pc()));
+	if (opcode->m_mnemonic == 'JSR ') {
 		breakpoint b;
 
 		b.m_type = breakpoint_type::TEMPORARY;
 		b.m_addr = cpu.get_pc() + opcode->m_size;
 		b.m_enabled = true;
 		Debugger_breakpoints.push_back(b);
-        Debugger_state = debugger_state::STEP_OVER;
-    } else {
-        Debugger_state = debugger_state::SINGLE_STEP;
-    }
+		Debugger_state = debugger_state::STEP_OVER;
+	} else {
+		Debugger_state = debugger_state::SINGLE_STEP;
+	}
 
 };
 auto continue_command = [](char *) { Debugger_state = debugger_state::SHOW_ALL; };
@@ -199,7 +199,7 @@ static void debugger_trace_line()
 
 static void debugger_display_soft_switch()
 {
-    ImGuiStyle &style = ImGui::GetStyle();
+	ImGuiStyle &style = ImGui::GetStyle();
 	if (ImGui::Begin("Soft Switches", nullptr, default_window_flags)) {
 		if (Memory_state & RAM_CARD_BANK2) {
 			ImGui::Text("%-15s", "Bank1");
@@ -352,11 +352,11 @@ static void debugger_display_breakpoints()
 		// for now, just disassm from the current pc
 		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
 
-            // don't display temporary breakpoints as these are used
-            // for step over
-            if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
-                continue;
-            }
+			// don't display temporary breakpoints as these are used
+			// for step over
+			if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
+				continue;
+			}
 			ImGui::Text("%-3lu", i);
 			ImGui::SameLine();
 			switch (Debugger_breakpoints[i].m_type) {
@@ -391,7 +391,7 @@ static void debugger_display_breakpoints()
 void debugger_enter()
 {
 	Debugger_state = debugger_state::WAITING_FOR_INPUT;
-    Debugger_disasm.set_break_addr(cpu.get_pc());
+	Debugger_disasm.set_break_addr(cpu.get_pc());
 }
 
 void debugger_exit()
@@ -411,7 +411,7 @@ void debugger_init()
 	// add in the debugger commands
 	Debugger_console.add_command("step", "Single step assembly", step_command);
 	Debugger_console.add_command("next",
-            "Next line in current stack frame", next_command);
+			"Next line in current stack frame", next_command);
 	Debugger_console.add_command("continue",
 		"Continue execution in debugger", continue_command);
 	Debugger_console.add_command("stop",
@@ -437,20 +437,23 @@ void debugger_init()
 bool debugger_process()
 {
 	bool continue_execution = true;
-    uint16_t pc = cpu.get_pc();
+	static breakpoint *active_breakpoint  = nullptr;
+	uint16_t pc = cpu.get_pc();
 
 	// check on breakpoints
 	if (Debugger_state == debugger_state::IDLE ||
 		Debugger_state == debugger_state::SHOW_ALL ||
-        Debugger_state == debugger_state::STEP_OVER) {
+		Debugger_state == debugger_state::STEP_OVER) {
 		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
-			if (Debugger_breakpoints[i].m_enabled == true) {
+			if (Debugger_breakpoints[i].m_enabled == true &&
+				active_breakpoint != &Debugger_breakpoints[i]) {
 				switch (Debugger_breakpoints[i].m_type) {
 				case breakpoint_type::BREAKPOINT:
 				case breakpoint_type::TEMPORARY:
 					if (pc == Debugger_breakpoints[i].m_addr) {
 						debugger_enter();
 						continue_execution = false;
+						active_breakpoint = &Debugger_breakpoints[i];
 					}
 					break;
 				case breakpoint_type::RWATCHPOINT:
@@ -459,14 +462,14 @@ bool debugger_process()
 					break;
 				}
 			}
-            // no need to keep processing breakpoints if we have
-            // broken somewhere.  Remove temporary breakpoints
-            if (continue_execution == false) {
-                if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
-                    Debugger_breakpoints.erase(Debugger_breakpoints.begin() + i);
-                }
-                break;
-            }
+			// no need to keep processing breakpoints if we have
+			// broken somewhere.  Remove temporary breakpoints
+			if (continue_execution == false) {
+				if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
+					Debugger_breakpoints.erase(Debugger_breakpoints.begin() + i);
+				}
+				break;
+			}
 		}
 	}
 
@@ -474,15 +477,20 @@ bool debugger_process()
 		continue_execution = false;
 	}
 
-    // when single stepping, just go to input on the next opcode
+	// when single stepping, just go to input on the next opcode
 	else if (Debugger_state == debugger_state::SINGLE_STEP) {
 		Debugger_state = debugger_state::WAITING_FOR_INPUT;
 	}
 
-    // when stepping over, need to go to wait for input state
-    // when current pc hits the pc that was stored on the JSR
-    else if (Debugger_state == debugger_state::STEP_OVER) {
-    }
+	// when stepping over or continuing, we need to move off of the
+	// current line if we are sitting on the active breakpoint
+	// and haven't done anything else
+	if ((Debugger_state == debugger_state::STEP_OVER ||
+		Debugger_state == debugger_state::SHOW_ALL) &&
+		active_breakpoint != nullptr) {
+		active_breakpoint = nullptr;
+		continue_execution = true;
+	}
 
 	if (Debugger_trace_fp != nullptr) {
 		debugger_trace_line();

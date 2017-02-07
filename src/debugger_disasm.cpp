@@ -127,6 +127,8 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			case cpu_6502::addr_mode::INDIRECT_MODE:
 			case cpu_6502::addr_mode::NO_MODE:
 			case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
+			case cpu_6502::addr_mode::ABSOLUTE_INDEXED_INDIRECT_MODE:
+			case cpu_6502::addr_mode::INDIRECT_ZP_MODE:
 				break;
 
 				// relative mode is relative to current PC.  figure out if we need to

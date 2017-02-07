@@ -44,9 +44,9 @@ class debugger_console
 	};
 
 	char                                   m_input_buf[max_line_size];
-	ImVector<char*>                        m_items;
+	std::vector<char*>                     m_items;
 	bool                                   m_scroll_to_bottom;
-	ImVector<char*>                        m_history;
+	std::vector<char*>                     m_history;
 	int                                    m_history_pos;    // -1: new line, 0..History.Size-1 browsing history.
 	std::map<std::string, console_command> m_commands;
 

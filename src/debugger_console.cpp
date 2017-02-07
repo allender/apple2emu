@@ -53,7 +53,7 @@ debugger_console::debugger_console()
 debugger_console::~debugger_console()
 {
 	clear_log();
-	for (int i = 0; i < m_history.Size; i++) {
+	for (int i = 0; i < m_history.size(); i++) {
 		free(m_history[i]);
 	}
 }
@@ -69,7 +69,7 @@ void debugger_console::add_command(const char *name, const char *help, std::func
 
 void debugger_console::clear_log()
 {
-	for (int i = 0; i < m_items.Size; i++) {
+	for (int i = 0; i < m_items.size(); i++) {
 		free(m_items[i]);
 	}
 	m_items.clear();
@@ -106,7 +106,7 @@ void debugger_console::draw(const char* title, bool* p_open)
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
-	for (int i = 0; i < m_items.Size; i++) {
+	for (int i = 0; i < m_items.size(); i++) {
 		const char* item = m_items[i];
 		ImVec4 col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 		if (strstr(item, "[error]")) col = ImColor(1.0f, 0.4f, 0.4f, 1.0f);
@@ -159,19 +159,13 @@ void debugger_console::draw(const char* title, bool* p_open)
 
 void debugger_console::execute_command()
 {
-	//add_log("# %s\n", m_input_buf);
-
-	// Insert into history. First find match and delete it  so it can
-	// be pushed to the back. This isn't trying to be smart or optimal.
 	m_history_pos = -1;
-	for (int i = m_history.Size - 1; i >= 0; i--) {
-		if (stricmp(m_history[i], m_input_buf) == 0) {
-			free(m_history[i]);
-			m_history.erase(m_history.begin() + i);
-			break;
-		}
+
+	// don't insert duplicate items into history.  Acts like
+	// ignoredupes in bash.  
+	if (m_history.size() == 0 || stricmp(m_history[m_history.size()-1], m_input_buf)) {
+		m_history.push_back(strdup(m_input_buf));
 	}
-	m_history.push_back(strdup(m_input_buf));
 
 	// parse the debugger commands
 	char *token = strtok(m_input_buf, " ");
@@ -179,27 +173,6 @@ void debugger_console::execute_command()
 	if (m_commands.find(token) != m_commands.end()) {
 		m_commands[token].m_func(m_input_buf);
 	}
-
-	// step to next statement
-	// enable and disable breakpoints
-
-	//if ( !stricmp(token, "rwatch") ||
-	//	!stricmp(token, "wwatch")) {
-	//	// breakpoint at an address
-	//	breakpoint_type bp_type = breakpoint_type::INVALID;
-
-	//	if (token[0] == 'b') {
-	//		bp_type = breakpoint_type::BREAKPOINT;
-	//	}
-	//	else if (token[0] == 'r') {
-	//		bp_type = breakpoint_type::RWATCHPOINT;
-	//	}
-	//	else if (token[0] == 'w') {
-	//		bp_type = breakpoint_type::WWATCHPOINT;
-	//	}
-	//	ASSERT(bp_type != breakpoint_type::INVALID);
-
-	//}
 }
 
 int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
@@ -220,17 +193,17 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 		}
 
 		// Build a list of candidates
-		ImVector<const char*> candidates;
+		std::vector<const char*> candidates;
 		for (auto cmd : m_commands) {
 			if (strnicmp(cmd.first.c_str(), word_start, (int)(word_end - word_start)) == 0) {
 				candidates.push_back(cmd.first.c_str());
 			}
 		}
 
-		if (candidates.Size == 0) {
+		if (candidates.size() == 0) {
 			// No match
 			add_log("No match for \"%.*s\"!\n", (int)(word_end - word_start), word_start);
-		} else if (candidates.Size == 1) {
+		} else if (candidates.size() == 1) {
 			// Single match. Delete the beginning of the word
 			// and replace it entirely so we've got nice casing
 			data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
@@ -244,7 +217,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 			for (;;) {
 				int c = 0;
 				bool all_candidates_matches = true;
-				for (int i = 0; i < candidates.Size && all_candidates_matches; i++) {
+				for (int i = 0; i < candidates.size() && all_candidates_matches; i++) {
 					if (i == 0) {
 						c = toupper(candidates[i][match_len]);
 					}
@@ -265,7 +238,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 
 			// List matches
 			add_log("Possible matches:\n");
-			for (int i = 0; i < candidates.Size; i++)
+			for (int i = 0; i < candidates.size(); i++)
 				add_log("- %s\n", candidates[i]);
 		}
 
@@ -277,7 +250,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 		const int prev_history_pos = m_history_pos;
 		if (data->EventKey == ImGuiKey_UpArrow) {
 			if (m_history_pos == -1) {
-				m_history_pos = m_history.Size - 1;
+				m_history_pos = m_history.size() - 1;
 			}
 			else if (m_history_pos > 0) {
 				m_history_pos--;
@@ -285,7 +258,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 		}
 		else if (data->EventKey == ImGuiKey_DownArrow) {
 			if (m_history_pos != -1) {
-				if (++m_history_pos >= m_history.Size) {
+				if (++m_history_pos >= m_history.size()) {
 					m_history_pos = -1;
 				}
 			}

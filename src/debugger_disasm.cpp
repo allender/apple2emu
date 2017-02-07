@@ -222,25 +222,31 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 
 	// get the styling so we can get access to color values
 	ImGuiStyle &style = ImGui::GetStyle();
+	ImGuiIO &io = ImGui::GetIO();
+	
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders |
-				ImGuiWindowFlags_NoScrollbar)) {
+				ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoScrollWithMouse)) {
 		ImGui::Columns(2);
 		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 120.0f);
 
 		// if window is focued, processes arrow keys to move disassembly
 		if (ImGui::IsWindowFocused()) {
 			uint16_t new_addr = 0xffff;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) {
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ||
+					(ImGui::IsWindowHovered() && io.MouseWheel > 0.0f)) {
 				new_addr = memory_find_previous_opcode_addr(m_current_addr, 1);
-			} else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
+				if (new_addr == m_current_addr) {
+					new_addr = m_current_addr - 1;
+				}
+				m_current_addr = new_addr;
+			} else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)) ||
+					(ImGui::IsWindowHovered() && io.MouseWheel < 0.0f)) {
 				// get opcode size and move to new address
 				cpu_6502::opcode_info *opcode = cpu.get_opcode(memory_read(m_current_addr));
 				if (cpu.get_opcode(memory_read(m_current_addr + opcode->m_size))->m_size > 0) {
 					new_addr = m_current_addr + opcode->m_size;
 				}
-			}
-			// only assign the new address if it is valid
-			if (new_addr != 0xffff) {
 				m_current_addr = new_addr;
 			}
 		}
@@ -281,7 +287,7 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		ImGui::NewLine();
 		ImGui::NewLine();
 		uint8_t status = cpu.get_status();
-		ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = %2x",
+		ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = $%2x",
 			(status >> 7) & 1 ? 'S' : 's',
 			(status >> 6) & 1 ? 'V' : 'v',
 			(status >> 5) & 1 ? '1' : '0',

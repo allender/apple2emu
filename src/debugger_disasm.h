@@ -40,13 +40,21 @@
 
 class debugger_disasm
 {
-	static const char *m_addressing_format_string[];
-
 	static const uint32_t m_disassembly_line_length = 256;
-	char m_disassembly_line[m_disassembly_line_length];
+
+private:
+
+	// definitions for symbol tables
+	typedef std::map<uint16_t, const char *> symtable_map;
+	std::vector<symtable_map> m_symbol_tables;
 
     uint16_t m_break_addr;
     uint16_t m_current_addr;
+
+	static const char *m_addressing_format_string[];
+	char m_disassembly_line[m_disassembly_line_length];
+	void add_symtable(const char *filename);
+	const char *find_symbol(uint16_t addr);
 
 public:
 	debugger_disasm();

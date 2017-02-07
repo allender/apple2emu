@@ -38,6 +38,9 @@
 #include "memory.h"
 #include "imgui.h"
 
+
+static const int Max_symtable_line = 256;
+
 // these string formats need to match the addressing modes
 // defined in cpu.h
 const char *debugger_disasm::m_addressing_format_string[] = {
@@ -59,9 +62,61 @@ const char *debugger_disasm::m_addressing_format_string[] = {
 	"$(%02X),Y",  // INDIRECT_INDEXED_MODE
 };
 
+void debugger_disasm::add_symtable(const char *filename)
+{
+	symtable_map table;
+	FILE *fp = fopen(filename, "rt");
+	if (fp != nullptr) {
+		int line_num = 0;
+		int prev_val = -1;
+		while (!feof(fp)) {
+			line_num++;
+			char line[Max_symtable_line], *ptr;
+			ptr = fgets(line, Max_symtable_line, fp);
+			if (ptr != nullptr) {
+				while (isspace(*ptr)) {
+					ptr++;
+				}
+				char *addr = strtok(ptr, "\t ");
+				char *label = strtok(nullptr, " \t\n");
+				if (addr == nullptr || label == nullptr) {
+					continue;
+				}
+				uint16_t val = (uint16_t)strtol(addr, nullptr, 16);
+				if (prev_val != -1 && val < prev_val) {
+					printf("invalid valud at line %d - less than previous value\n", line_num);
+					continue;
+				}
+				table[val] = strdup(label);
+				prev_val = val;
+			}
+		}
+		fclose(fp);
+	}
+	m_symbol_tables.push_back(table);
+}
+
+const char *debugger_disasm::find_symbol(uint16_t addr)
+{
+	if (Debugger_use_sym_tables == false) {
+		return nullptr;
+	}
+
+	for (auto table: m_symbol_tables) {
+		auto element = table.find(addr);
+		if (element != table.end()) {
+			return element->second;
+		}
+	}
+	return nullptr;
+}
+
 debugger_disasm::debugger_disasm()
 {
+	// load in symbol tables
+	add_symtable("symtables/apple2e_sym.txt");
 }
+
 
 debugger_disasm::~debugger_disasm()
 {
@@ -124,7 +179,6 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			case cpu_6502::addr_mode::ACCUMULATOR_MODE:
 			case cpu_6502::addr_mode::IMMEDIATE_MODE:
 			case cpu_6502::addr_mode::IMPLIED_MODE:
-			case cpu_6502::addr_mode::INDIRECT_MODE:
 			case cpu_6502::addr_mode::NO_MODE:
 			case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
 			case cpu_6502::addr_mode::ABSOLUTE_INDEXED_INDIRECT_MODE:
@@ -141,22 +195,41 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 				//}
 				break;
 
+			case cpu_6502::addr_mode::INDIRECT_MODE:
+				addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
+				sprintf(internal_buffer, "\t$%04X", addressing_val);
+				strcat(m_disassembly_line, internal_buffer);
+				break;
+
 			case cpu_6502::addr_mode::ABSOLUTE_MODE:
 			case cpu_6502::addr_mode::ZERO_PAGE_MODE:
-				if (opcode->m_mnemonic != 'JSR ') {
-					sprintf(internal_buffer, "\t$%04X", addressing_val);
-					strcat(m_disassembly_line, internal_buffer);
-					if (((addressing_val >> 8) & 0xff) != 0xc0) {
+			{
+				const char *mem_str = find_symbol(addressing_val);
+				if (opcode->m_mnemonic != 'JSR ' && opcode->m_mnemonic != 'JMP ') {
+					if (mem_str != nullptr) {
+						sprintf(internal_buffer, "\t%s", mem_str);
+						strcat(m_disassembly_line, internal_buffer);
+					} else {
+						sprintf(internal_buffer, "\t$%04X", addressing_val);
+						strcat(m_disassembly_line, internal_buffer);
+					}
+					if (((addressing_val >> 8) & 0xff) != 0xc0 && mem_str == nullptr) {
 						mem_value = memory_read(addressing_val);
-						sprintf(internal_buffer, ": %02X", mem_value);
+						sprintf(internal_buffer, ": $%02X", mem_value);
 						strcat(m_disassembly_line, internal_buffer);
 						if (isprint(mem_value)) {
 							sprintf(internal_buffer, " (%c)", mem_value);
 							strcat(m_disassembly_line, internal_buffer);
 						}
 					}
+				} else {
+					if (mem_str != nullptr) {
+						sprintf(internal_buffer, "\t%s", mem_str);
+						strcat(m_disassembly_line, internal_buffer);
+					}
 				}
 				break;
+			}
 
 				// indexed and zero page indexed are the same
 			case cpu_6502::addr_mode::X_INDEXED_MODE:
@@ -175,7 +248,7 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 				strcat(m_disassembly_line, internal_buffer);
 				if (((addressing_val >> 8) & 0xff) != 0xc0) {
 					mem_value = memory_read(addressing_val);
-					sprintf(internal_buffer, ": %02X", mem_value);
+					sprintf(internal_buffer, ": $%02X", mem_value);
 					strcat(m_disassembly_line, internal_buffer);
 					if (isprint(mem_value)) {
 						sprintf(internal_buffer, " (%c)", mem_value);
@@ -197,15 +270,15 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 				break;
 
 			case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
-				//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
-				//addressing_val += cpu.get_y();
-				//mem_value = mem[addressing_val];
-				//sprintf(internal_buffer, "\t\t%04X: 0x%02X", addressing_val, mem_value);
-				//strcat(Debugger_disassembly_line, internal_buffer);
-				//if (isprint(mem_value)) {
-				//	sprintf(internal_buffer, " (%c)", mem_value);
-				//	strcat(Debugger_disassembly_line, internal_buffer);
-				//}
+				addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
+				addressing_val += cpu.get_y();
+				mem_value = memory_read(addressing_val);
+				sprintf(internal_buffer, "\t$%04X: $%02X", addressing_val, mem_value);
+				strcat(m_disassembly_line, internal_buffer);
+				if (isprint(mem_value)) {
+					sprintf(internal_buffer, " (%c)", mem_value);
+					strcat(m_disassembly_line, internal_buffer);
+				}
 				break;
 			}
 		}
@@ -219,6 +292,9 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 	if (pc != m_break_addr) {
 		m_break_addr = m_current_addr = pc;
 	}
+
+	ImGui::SetNextWindowSize(ImVec2(546, 578), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(570, 8), ImGuiSetCond_FirstUseEver);
 
 	// get the styling so we can get access to color values
 	ImGuiStyle &style = ImGui::GetStyle();

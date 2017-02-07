@@ -42,6 +42,10 @@
 #include "debugger_disasm.h"
 
 debugger_state Debugger_state = debugger_state::IDLE;
+
+// globals for interface code
+bool Debugger_use_sym_tables = true;
+
 std::vector<breakpoint> Debugger_breakpoints;
 
 static const uint32_t Debugger_status_line_length = 256;
@@ -199,6 +203,10 @@ static void debugger_trace_line()
 
 static void debugger_display_soft_switch()
 {
+	ImGui::SetNextWindowSize(ImVec2(224, 269), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(5, 401), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowCollapsed(true,ImGuiSetCond_FirstUseEver);
+
 	ImGuiStyle &style = ImGui::GetStyle();
 	if (ImGui::Begin("Soft Switches", nullptr, default_window_flags)) {
 		if (Memory_state & RAM_CARD_BANK2) {
@@ -348,6 +356,10 @@ static void debugger_display_soft_switch()
 // display breakpoints
 static void debugger_display_breakpoints()
 {
+	ImGui::SetNextWindowSize(ImVec2(265, 88), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(245, 88), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowCollapsed(true,ImGuiSetCond_FirstUseEver);
+
 	if (ImGui::Begin("Breakpoints", nullptr, default_window_flags)) {
 		// for now, just disassm from the current pc
 		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
@@ -390,6 +402,11 @@ static void debugger_display_breakpoints()
 // display the disassembly in the disassembly window
 void debugger_enter()
 {
+	// might need to go into debugging state if we started emulator
+	// from debugger
+	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
+		Emulator_state = emulator_state::EMULATOR_STARTED;
+	}
 	Debugger_state = debugger_state::WAITING_FOR_INPUT;
 	Debugger_disasm.set_break_addr(cpu.get_pc());
 }
@@ -432,6 +449,7 @@ void debugger_init()
 		"Toggle trace to file.  (trace <filename> - filename"
 		" is optional and if not specified, output will be to 'trace.log'",
 		trace_command);
+
 }
 
 bool debugger_process()
@@ -495,6 +513,7 @@ bool debugger_process()
 	if (Debugger_trace_fp != nullptr) {
 		debugger_trace_line();
 	}
+
 
 	return continue_execution;
 }

@@ -103,6 +103,9 @@ static void ui_load_settings()
 			else if (setting == "speed") {
 				Speed_multiplier = (int)strtol(value.c_str(), nullptr, 10);
 			}
+			else if (setting == "sym_tables") {
+				Debugger_use_sym_tables = strtol(value.c_str(), nullptr, 10) ? true : false;
+			}
 		}
 	}
 }
@@ -121,6 +124,7 @@ static void ui_save_settings()
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
 	fprintf(fp, "speed = %d\n", Speed_multiplier);
+	fprintf(fp, "sym_tables = %d\n", Debugger_use_sym_tables);
 
 	fclose(fp);
 }
@@ -215,6 +219,12 @@ static void ui_show_video_output_menu()
 	video_set_tint(static_cast<video_tint_types>(Video_color_type));
 }
 
+static void ui_show_debugger_menu()
+{
+	ImGui::Text("Debugger Options");
+	ImGui::Checkbox("Use Symbol Tables", &Debugger_use_sym_tables);
+}
+
 static void ui_show_speed_menu()
 {
 	if (ImGui::SliderInt("Emulator Speed", (int *)&Speed_multiplier, 1, 100) == true) {
@@ -238,6 +248,10 @@ static void ui_show_main_menu()
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Sound")) {
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Debugger")) {
+			ui_show_debugger_menu();
 			ImGui::EndMenu();
 		}
 

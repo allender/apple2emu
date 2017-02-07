@@ -52,7 +52,7 @@ struct breakpoint {
 };
 
 extern debugger_state Debugger_state;
-extern std::vector<breakpoint> Debugger_breakpoints;
+extern bool Debugger_use_sym_tables;
 
 void debugger_enter();
 void debugger_exit();

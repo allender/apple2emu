@@ -91,7 +91,8 @@ void debugger_console::add_log(const char* fmt, ...)
 
 void debugger_console::draw(const char* title, bool* p_open)
 {
-	ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(546, 165), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(570, 596), ImGuiSetCond_FirstUseEver);
 	if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_ShowBorders)) {
 		ImGui::End();
 		return;

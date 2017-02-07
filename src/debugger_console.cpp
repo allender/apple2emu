@@ -53,7 +53,7 @@ debugger_console::debugger_console()
 debugger_console::~debugger_console()
 {
 	clear_log();
-	for (int i = 0; i < m_history.size(); i++) {
+	for (size_t i = 0; i < m_history.size(); i++) {
 		free(m_history[i]);
 	}
 }
@@ -69,7 +69,7 @@ void debugger_console::add_command(const char *name, const char *help, std::func
 
 void debugger_console::clear_log()
 {
-	for (int i = 0; i < m_items.size(); i++) {
+	for (size_t i = 0; i < m_items.size(); i++) {
 		free(m_items[i]);
 	}
 	m_items.clear();
@@ -107,7 +107,7 @@ void debugger_console::draw(const char* title, bool* p_open)
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
-	for (int i = 0; i < m_items.size(); i++) {
+	for (size_t i = 0; i < m_items.size(); i++) {
 		const char* item = m_items[i];
 		ImVec4 col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 		if (strstr(item, "[error]")) col = ImColor(1.0f, 0.4f, 0.4f, 1.0f);
@@ -163,7 +163,7 @@ void debugger_console::execute_command()
 	m_history_pos = -1;
 
 	// don't insert duplicate items into history.  Acts like
-	// ignoredupes in bash.  
+	// ignoredupes in bash.
 	if (m_history.size() == 0 || stricmp(m_history[m_history.size()-1], m_input_buf)) {
 		m_history.push_back(strdup(m_input_buf));
 	}
@@ -218,7 +218,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 			for (;;) {
 				int c = 0;
 				bool all_candidates_matches = true;
-				for (int i = 0; i < candidates.size() && all_candidates_matches; i++) {
+				for (size_t i = 0; i < candidates.size() && all_candidates_matches; i++) {
 					if (i == 0) {
 						c = toupper(candidates[i][match_len]);
 					}
@@ -239,7 +239,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 
 			// List matches
 			add_log("Possible matches:\n");
-			for (int i = 0; i < candidates.size(); i++)
+			for (size_t i = 0; i < candidates.size(); i++)
 				add_log("- %s\n", candidates[i]);
 		}
 
@@ -259,7 +259,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 		}
 		else if (data->EventKey == ImGuiKey_DownArrow) {
 			if (m_history_pos != -1) {
-				if (++m_history_pos >= m_history.size()) {
+				if (++m_history_pos >= (int)m_history.size()) {
 					m_history_pos = -1;
 				}
 			}

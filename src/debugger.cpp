@@ -356,8 +356,8 @@ static void debugger_display_soft_switch()
 // display breakpoints
 static void debugger_display_breakpoints()
 {
-	ImGui::SetNextWindowSize(ImVec2(265, 88), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(245, 88), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(265, 881), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(245, 401), ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowCollapsed(true,ImGuiSetCond_FirstUseEver);
 
 	if (ImGui::Begin("Breakpoints", nullptr, default_window_flags)) {

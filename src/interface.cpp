@@ -321,6 +321,7 @@ void ui_do_frame(SDL_Window *window)
 		initial_size.x = (float)(Video_window_size.w/2);
 		initial_size.y = (float)(Video_window_size.h/2);
 		flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_ShowBorders;
+		ImGui::SetNextWindowPos(ImVec2(5.0f, 6.0f), ImGuiSetCond_FirstUseEver);
 	} else {
 		title = "Emulator";
 		initial_size.x = (float)Video_window_size.w;

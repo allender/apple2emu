@@ -40,12 +40,15 @@ SOFTWARE.
 // turn off deprecated warnings
 #pragma warning(disable:4996)
 
+// turn off warnings for unused functions
+#pragma warning(disable:4505)
+
 
 #endif
 
 // define for helping to clear out unreferenced
 // parameter warmings
-#define UNREFERENCED(X) (X=X)
+#define UNREFERENCED(X) X
 
 // defines for asserts
 #define ASSERT(x)    \

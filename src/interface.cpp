@@ -175,6 +175,20 @@ static void ui_get_disk_image(uint8_t slot_num)
 
 static void ui_show_disk_menu()
 {
+	// total hack.  double mouse clicks (at least on windows)
+	// is causing menu to lose focus when dialog goes away
+	// because SDL is picking up mouse clikc from dialog and
+	// that mouse click brings focus to the emulator window.
+	// This code eats that mouse click for this case to keep
+	// focus on the menu
+	static bool new_image = false;
+	if (new_image == true) {
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.MouseClicked[0]) {
+			io.MouseClicked[0] = false;
+		}
+		new_image = false;
+	}
 	ImGui::Text("Disk Drive Options:");
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -187,6 +201,7 @@ static void ui_show_disk_menu()
 	ImGui::SameLine();
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(1);
+		new_image = true;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Eject")) {
@@ -202,6 +217,7 @@ static void ui_show_disk_menu()
 	ImGui::SameLine();
 	if (ImGui::Button(filename.c_str())) {
 		ui_get_disk_image(2);
+		new_image = true;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Eject")) {

@@ -48,7 +48,7 @@ SOFTWARE.
 
 // define for helping to clear out unreferenced
 // parameter warmings
-#define UNREFERENCED(X) X
+#define UNREFERENCED(X) (void)X
 
 // defines for asserts
 #define ASSERT(x)    \

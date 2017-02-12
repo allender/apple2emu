@@ -197,7 +197,7 @@ static void debugger_trace_line()
 	// print out the info the trace file
 	debugger_get_short_status();
 	Debugger_disasm.get_disassembly(cpu.get_pc());
-	//fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disassembly_line);
+	fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disasm.get_disassembly_line());
 }
 
 

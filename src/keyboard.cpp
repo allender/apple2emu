@@ -144,7 +144,7 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	UNREFERENCED(super);
 
 	// check for debugger
-	if (key == SDL_SCANCODE_F12) {
+	if (key == SDL_SCANCODE_F11) {
 		if (shift == true) {
 			ui_toggle_demo_window();
 		} else {

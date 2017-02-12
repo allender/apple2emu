@@ -104,7 +104,7 @@ void disk_drive::init(bool warm_init)
 void disk_drive::readwrite()
 {
 	if (m_track_data == nullptr) {
-		m_track_data = new uint8_t[disk_image::m_nibbilized_size];
+		m_track_data = new uint8_t[10000];
 		if (m_track_data == nullptr) {
 			return;
 		}
@@ -160,9 +160,8 @@ bool disk_drive::insert_disk(const char *filename)
 {
 	eject_disk();
 
-	m_disk_image = new disk_image();
-	m_disk_image->init();
-	m_disk_image->load_image(filename);
+	m_disk_image = disk_image::load_image(filename);
+	//m_disk_image->init();
 	return true;
 }
 

@@ -223,7 +223,7 @@ static char character_conv_2e[] = {
 	'`', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
 	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $E8	*/
 	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $F0	*/
-	'x', 'y', 'z', '{', '|', '}', '~', '?',     /* $F8	*/
+	'x', 'y', 'z', '{', '|', '}', '~', 0x7f,    /* $F8	*/
 };
 
 // callback for flashing characters

@@ -158,7 +158,31 @@ static void ui_show_general_options()
 		Emulator_state == emulator_state::EMULATOR_TEST)) {
 		Emulator_type = static_cast<emulator_type>(type);
 		reset_machine();
-	} else {
+	} else if (old_type != type) {
+		// show popup and potentially restart the emulator
+		ImGui::OpenPopup("Restart");
+	}
+
+	// show the popup if active
+	if (ImGui::BeginPopupModal("Restart", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("Changing the machine type during\nemulation requires emulator restart\n");
+		ImGui::Separator();
+
+		if (ImGui::Button("Restart", ImVec2(120, 0))) {
+			// with a restart, set the emulator type,, reset the machine, and for now
+			// go to the splash screen
+			Emulator_type = static_cast<emulator_type>(type);
+			Emulator_state = emulator_state::SPLASH_SCREEN;
+			reset_machine();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+			type = static_cast<uint8_t>(Emulator_type);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 }
 

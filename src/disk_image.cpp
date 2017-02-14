@@ -119,7 +119,7 @@ disk_image *disk_image::load_image(const char *filename)
 	// load disk into buffer
 	FILE *fp = fopen(filename, "rb");
 	if (fp == nullptr) {
-		return false;
+		return nullptr;
 	}
 
 	fseek(fp, 0, SEEK_END);

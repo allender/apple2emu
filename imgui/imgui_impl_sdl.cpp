@@ -224,11 +224,14 @@ bool    ImGui_ImplSdl_Init(SDL_Window* window)
 	(void)window;
 #endif
 
+	SDL_StartTextInput();
+
 	return true;
 }
 
 void ImGui_ImplSdl_Shutdown()
 {
+	SDL_StopTextInput();
 	ImGui_ImplSdl_InvalidateDeviceObjects();
 	ImGui::Shutdown();
 }

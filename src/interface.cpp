@@ -426,8 +426,24 @@ void ui_do_frame(SDL_Window *window)
 		ImGui::PopStyleVar(4);
 	}
 
-	// add keys to keyboard handler if we are not focused somewhere else
+	// send keys to the emulator (if they haven't been used by any of the other
+	// imgui windows.  Data needs to be pulled from the input buffer (not not just
+	// from the keydown events) because SDL can only disciminate a 1 from a ! (for
+	// instance) in the textinput event.  In order to handle various keyboards
+	// we'll grab the data from the textinput event (which is stored in
+	// the InputCharacters array in the imgui IO structure.  We will need to
+	// also use keydown events for ctrl characters, esc, and a few other
+	// characters that the emulator will need
 	if (io.WantCaptureKeyboard == false) {
+		for (auto i = 0; i < 8; i++) {
+			uint16_t utf8_char = io.InputCharacters[i];
+			if (utf8_char != 0 && utf8_char < 128) {
+				keyboard_handle_event(io.InputCharacters[i], false, false, false, false);
+			}
+		}
+
+		// send keys that are down (which we need for control keys  backspace
+		// etc.  The underlying code will figure out what it needs to keep
 		for (auto i = 0; i < 512; i++) {
 			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
 			if (ImGui::IsKeyPressed(i)) {

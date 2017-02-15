@@ -143,7 +143,29 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 {
 	UNREFERENCED(alt);
 	UNREFERENCED(super);
+	UNREFERENCED(shift);
 
+	// skip processing if we have plain modifier keys
+	if (key == SDLK_LSHIFT || key == SDLK_RSHIFT ||
+		key == SDLK_LALT   || key == SDLK_RALT   ||
+		key == SDLK_LCTRL  || key == SDLK_RCTRL  ||
+		key == SDLK_LGUI   || key == SDLK_RGUI ) {
+		return;
+	}
+
+	// keys with shift, alt or super pushed can be ignored.  Shift can be
+	// ignored because we will get they actual shifted key for output
+	// in the key value itself (which comes from the imgui
+	//
+	if (shift == true || alt == true || super == true) {
+		return;
+	}
+
+	// if control key is down, only allow control characters
+	// from a-z
+	if (ctrl == true && !(key >= 'a' && key <= 'z')) {
+		return;
+	}
 
 	// if the caps lock key was down, change toggle internal
 	// caps lock setting (for non apple2 machines)
@@ -167,7 +189,7 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	}
 	else if (key == SDLK_LEFT) {
 		key = 0x88;
-	} 
+	}
 	else if (ctrl == true) {
 		// send ctrl-A through ctrl-Z
 		if ((key >= SDLK_a) && (key <= SDLK_z)) {
@@ -176,11 +198,9 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 		else {
 			key = 0;
 		}
-	} else {
-		if (key >= SDLK_a && key <= SDLK_z) {
-			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
-				key -= 32;
-			}
+	} else if (key >= SDLK_a && key <= SDLK_z) {
+		if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
+			key -= 32;
 		}
 	}
 

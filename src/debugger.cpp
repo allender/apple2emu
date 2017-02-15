@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #include "apple2emu.h"
 #include "apple2emu_defs.h"
@@ -59,6 +60,11 @@ static ImGuiWindowFlags default_window_flags = ImGuiWindowFlags_ShowBorders;
 static debugger_console Debugger_console;
 static debugger_memory_editor Debugger_memory_editor;
 static debugger_disasm Debugger_disasm;
+
+const char *step_command_name = "step";
+const char *next_command_name = "next";
+const char *continue_command_name = "continue";
+const char *break_command_name = "break";
 
 // lambdas for console commands for debugger
 auto step_command = [](char *) { Debugger_state = debugger_state::SINGLE_STEP; };
@@ -93,10 +99,20 @@ auto break_command = [](char *) {
 		uint16_t address = (uint16_t)strtol(token, nullptr, 16);
 		breakpoint b;
 
-		b.m_type = breakpoint_type::BREAKPOINT;
-		b.m_addr = address;
-		b.m_enabled = true;
-		Debugger_breakpoints.push_back(b);
+		// remove this breakpoint if it's already active
+		auto remove_it = std::remove_if(Debugger_breakpoints.begin(), Debugger_breakpoints.end(),
+			[address](const breakpoint &bp) {
+			return ((address == bp.m_addr) && (bp.m_type == breakpoint_type::BREAKPOINT));
+		});
+
+		if (remove_it != Debugger_breakpoints.end()) {
+			Debugger_breakpoints.erase(remove_it);
+		} else {
+			b.m_type = breakpoint_type::BREAKPOINT;
+			b.m_addr = address;
+			b.m_enabled = true;
+			Debugger_breakpoints.push_back(b);
+		}
 	}
 };
 
@@ -424,12 +440,13 @@ void debugger_init()
 {
 	Debugger_state = debugger_state::IDLE;
 	Debugger_breakpoints.clear();
+	Debugger_disasm.attach_console(&Debugger_console);
 
 	// add in the debugger commands
-	Debugger_console.add_command("step", "Single step assembly", step_command);
-	Debugger_console.add_command("next",
+	Debugger_console.add_command(step_command_name, "Single step assembly", step_command);
+	Debugger_console.add_command(next_command_name,
 			"Next line in current stack frame", next_command);
-	Debugger_console.add_command("continue",
+	Debugger_console.add_command(continue_command_name,
 		"Continue execution in debugger", continue_command);
 	Debugger_console.add_command("stop",
 		"Stop execution when in debugger", stop_command);
@@ -472,6 +489,9 @@ bool debugger_process()
 						debugger_enter();
 						continue_execution = false;
 						active_breakpoint = &Debugger_breakpoints[i];
+
+						Debugger_console.add_log("Stopped at breakpoint: %04x\n",
+							active_breakpoint->m_addr);
 					}
 					break;
 				case breakpoint_type::RWATCHPOINT:

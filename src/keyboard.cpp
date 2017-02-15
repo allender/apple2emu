@@ -143,70 +143,42 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	UNREFERENCED(alt);
 	UNREFERENCED(super);
 
-	// check for debugger
-	if (key == SDL_SCANCODE_F11) {
-		if (shift == true) {
-			ui_toggle_demo_window();
-		} else {
-			debugger_enter();
-		}
-	}
-
-	// maybe bring up the main menu
-	if (key == SDL_SCANCODE_F1) {
-		ui_toggle_main_menu();
-	}
 
 	// if the caps lock key was down, change toggle internal
 	// caps lock setting (for non apple2 machines)
-	if (key == SDL_SCANCODE_CAPSLOCK) {
+	if (key == SDLK_CAPSLOCK) {
 		Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
-	}
-
-	if (key == SDL_SCANCODE_F9) {
-		extern bool Debug_show_bitmap;
-		Debug_show_bitmap = !Debug_show_bitmap;
-	}
-
-	if (key == SDL_SCANCODE_PAUSE) {
-		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
-			Emulator_state = emulator_state::EMULATOR_PAUSED;
-		} else {
-			Emulator_state = emulator_state::EMULATOR_STARTED;
-		}
 	}
 
 	// figure out the actual keyvalue to put onto the keyboard
 	// buffer
-	if (key == SDL_SCANCODE_RETURN) {
+	if (key == SDLK_RETURN) {
 		key = '\r';
 	}
-	else if (key == SDL_SCANCODE_BACKSPACE) {
+	else if (key == SDLK_BACKSPACE) {
 		key = '\b';
 	}
-	else if (key == SDL_SCANCODE_ESCAPE) {
+	else if (key == SDLK_ESCAPE) {
 		key = 0x9b;
 	}
-	else if (key == SDL_SCANCODE_RIGHT) {
+	else if (key == SDLK_RIGHT) {
 		key = 0x95;
 	}
-	else if (key == SDL_SCANCODE_LEFT) {
+	else if (key == SDLK_LEFT) {
 		key = 0x88;
 	}
 	else if (ctrl == true) {
 		// send ctrl-A through ctrl-Z
-		if ((key >= SDL_SCANCODE_A) && (key <= SDL_SCANCODE_Z)) {
-			key = key - SDL_SCANCODE_A + 1;
+		if ((key >= SDLK_a) && (key <= SDLK_z)) {
+			key = key - SDLK_a + 1;
 		}
 		else {
 			key = 0;
 		}
 	}
 	else if (shift == true) {
-		key = key_shifted_ascii_table[key];
-	}
-	else {
-		key = key_ascii_table[key];
+		key -= 32;
+	} else {
 		if (key >= 'a' && key <= 'z') {
 			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
 				key -= 32;

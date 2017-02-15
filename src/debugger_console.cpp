@@ -114,7 +114,9 @@ void debugger_console::draw(const char* title, bool* p_open)
 		else if (strncmp(item, "# ", 2) == 0) col = ImColor(1.0f, 0.78f, 0.58f, 1.0f);
 		ImGui::PushStyleColor(ImGuiCol_Text, col);
 		ImGui::TextUnformatted(item);
-		if (item[0] != '\n') {
+		if (item[strlen(item)-1] == '\n') {
+			ImGui::NewLine();
+		} else if (item[0] != '\n') {
 			ImGui::SameLine();
 		}
 
@@ -158,21 +160,28 @@ void debugger_console::draw(const char* title, bool* p_open)
 	ImGui::End();
 }
 
-void debugger_console::execute_command()
+void debugger_console::execute_command(const char *command)
 {
 	m_history_pos = -1;
 
 	// don't insert duplicate items into history.  Acts like
 	// ignoredupes in bash.
-	if (m_history.size() == 0 || stricmp(m_history[m_history.size()-1], m_input_buf)) {
+	if (command == nullptr && (m_history.size() == 0 || stricmp(m_history[m_history.size()-1], m_input_buf))) {
 		m_history.push_back(strdup(m_input_buf));
 	}
 
 	// parse the debugger commands
-	char *token = strtok(m_input_buf, " ");
+	const char *token = nullptr;
+	if (command != nullptr) {
+		strcpy(m_input_buf, command);
+	}
+	token = strtok(m_input_buf, " ");
 
 	if (m_commands.find(token) != m_commands.end()) {
 		m_commands[token].m_func(m_input_buf);
+	}
+	if (command != nullptr) {
+		m_input_buf[0] = '\0';
 	}
 }
 

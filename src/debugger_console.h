@@ -57,10 +57,10 @@ public:
 	void draw(const char* title, bool* p_open);
 	void add_log(const char* fmt, ...) IM_PRINTFARGS(2);
 	void add_command(const char *command, const char *help, std::function<void(char*)>);
+	void execute_command(const char *command = nullptr);
 
 private:
 	void clear_log();
-	void execute_command();
 	int text_edit_callback_stub(ImGuiTextEditCallbackData* data);
 
 };

@@ -337,6 +337,36 @@ void ui_do_frame(SDL_Window *window)
 
 	ImGui_ImplSdl_NewFrame(window);
 
+	// handle key presses.  Some keys are global and some
+	// will be specific to the window that is current in focus
+	ImGuiIO& io = ImGui::GetIO();
+
+	// process high level keys (regardless of which window has focus)
+	if (ImGui::IsKeyPressed(SDL_SCANCODE_F11, false)) {
+		io.WantCaptureKeyboard = true;
+		if (io.KeyShift == true) {
+			ui_toggle_demo_window();
+		} else {
+			debugger_enter();
+		}
+	}
+
+	// maybe bring up the main menu
+	if (ImGui::IsKeyPressed(SDL_SCANCODE_F1, false)) {
+		io.WantCaptureKeyboard = true;
+		ui_toggle_main_menu();
+	}
+
+
+	if (ImGui::IsKeyPressed(SDL_SCANCODE_PAUSE, false)) {
+		io.WantCaptureKeyboard = true;
+		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+			Emulator_state = emulator_state::EMULATOR_PAUSED;
+		} else {
+			Emulator_state = emulator_state::EMULATOR_STARTED;
+		}
+	}
+
 	if (Show_main_menu) {
 		ui_show_main_menu();
 	}
@@ -396,15 +426,10 @@ void ui_do_frame(SDL_Window *window)
 		ImGui::PopStyleVar(4);
 	}
 
-	// see if we should be sending keys to the main window.  If
-	// want capture keyboard is false, then we should send the
-	// key information to the keyboard code since it wasn't
-	// used elsewhere in imgui
-	ImGuiIO& io = ImGui::GetIO();
+	// add keys to keyboard handler if we are not focused somewhere else
 	if (io.WantCaptureKeyboard == false) {
 		for (auto i = 0; i < 512; i++) {
-			if (io.KeysDown[i] && io.KeysDownDuration[i] == 0.0f) {
-				// key was just pressed, to add to keyboard buffer
+			if (ImGui::IsKeyPressed(i)) {
 				keyboard_handle_event(i, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
 			}
 		}

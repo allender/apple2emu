@@ -429,8 +429,9 @@ void ui_do_frame(SDL_Window *window)
 	// add keys to keyboard handler if we are not focused somewhere else
 	if (io.WantCaptureKeyboard == false) {
 		for (auto i = 0; i < 512; i++) {
+			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
 			if (ImGui::IsKeyPressed(i)) {
-				keyboard_handle_event(i, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+				keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
 			}
 		}
 	}

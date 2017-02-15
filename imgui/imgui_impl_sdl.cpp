@@ -138,12 +138,14 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
 	case SDL_KEYDOWN:
 	case SDL_KEYUP:
 	{
-		int key = event->key.keysym.sym & ~SDLK_SCANCODE_MASK;
-		io.KeysDown[key] = (event->type == SDL_KEYDOWN);
-		io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-		io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-		io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
-		io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+		int scancode = SDL_GetScancodeFromKey(event->key.keysym.sym);
+		if (scancode < 512) {
+			io.KeysDown[scancode] = (event->type == SDL_KEYDOWN);
+			io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+			io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+			io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+			io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+		}
 		return true;
 	}
 	}

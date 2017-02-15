@@ -45,6 +45,7 @@ static int key_buffer_front, key_buffer_end;
 static int key_buffer[Keybuffer_size];
 
 // SDL scancode to ascii values
+#if 0
 static uint8_t key_ascii_table[256] =
 { 0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',   // 0x00 - 0x0f
  'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',   // 0x10 - 0x1f
@@ -84,7 +85,7 @@ static uint8_t key_shifted_ascii_table[256] =
 	0,   0,   0,   0,    0,   0,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,   // 0xe0 - 0xef
 	0,   0,   0,   0,    0,   0,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,   // 0xf0 - 0xff
 };
-
+#endif
 
 // inserts a key into the keyboard buffer
 static void keyboard_insert_key(uint32_t code)
@@ -166,7 +167,7 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	}
 	else if (key == SDLK_LEFT) {
 		key = 0x88;
-	}
+	} 
 	else if (ctrl == true) {
 		// send ctrl-A through ctrl-Z
 		if ((key >= SDLK_a) && (key <= SDLK_z)) {
@@ -175,11 +176,8 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 		else {
 			key = 0;
 		}
-	}
-	else if (shift == true) {
-		key -= 32;
 	} else {
-		if (key >= 'a' && key <= 'z') {
+		if (key >= SDLK_a && key <= SDLK_z) {
 			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
 				key -= 32;
 			}

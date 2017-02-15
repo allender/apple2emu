@@ -137,8 +137,10 @@ void keyboard_shutdown()
 {
 }
 
-// process key event (could be key up or key down event)
-// We will put key downs into the keyboard buffer
+// put get into the emulator buffer.  Code gets the key from the interface
+// code which will send the key along when it isnt' used by some other
+// UI element.  Code needs to make sure that we only queue keys that
+// that the emulator needs
 void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool super)
 {
 	UNREFERENCED(alt);
@@ -166,6 +168,7 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	if (ctrl == true && !(key >= 'a' && key <= 'z')) {
 		return;
 	}
+
 
 	// if the caps lock key was down, change toggle internal
 	// caps lock setting (for non apple2 machines)
@@ -202,6 +205,12 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 		if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
 			key -= 32;
 		}
+	}
+
+	// finally throw away any keys that aren't ASCII (which will get rid of
+	// non-printable keys like function keys) that might get queued
+	if (key > 127) {
+		return;
 	}
 
 	keyboard_insert_key(key);

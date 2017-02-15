@@ -545,7 +545,7 @@ void memory_set_paging_tables()
 
 	// set up c000 - 0xc7ff.  Set to internal rom (apple 2e) or
 	// slot rom depending on slot flag
-	for (auto page = 0xc0; page < 0xd0; page++) {
+	for (auto page = 0xc0; page < 0xc8; page++) {
 		if (Memory_state & RAM_SLOTCX_ROM) {
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
 			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];

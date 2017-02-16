@@ -45,6 +45,7 @@ static int key_buffer_front, key_buffer_end;
 static int key_buffer[Keybuffer_size];
 
 // SDL scancode to ascii values
+#if 0
 static uint8_t key_ascii_table[256] =
 { 0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',   // 0x00 - 0x0f
  'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',   // 0x10 - 0x1f
@@ -84,7 +85,7 @@ static uint8_t key_shifted_ascii_table[256] =
 	0,   0,   0,   0,    0,   0,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,   // 0xe0 - 0xef
 	0,   0,   0,   0,    0,   0,   0,   0,   0,  0,   0,   0,   0,   0,   0,   0,   // 0xf0 - 0xff
 };
-
+#endif
 
 // inserts a key into the keyboard buffer
 static void keyboard_insert_key(uint32_t code)
@@ -136,82 +137,80 @@ void keyboard_shutdown()
 {
 }
 
-// process key event (could be key up or key down event)
-// We will put key downs into the keyboard buffer
+// put get into the emulator buffer.  Code gets the key from the interface
+// code which will send the key along when it isnt' used by some other
+// UI element.  Code needs to make sure that we only queue keys that
+// that the emulator needs
 void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool super)
 {
 	UNREFERENCED(alt);
 	UNREFERENCED(super);
+	UNREFERENCED(shift);
 
-	// check for debugger
-	if (key == SDL_SCANCODE_F12) {
-		if (shift == true) {
-			ui_toggle_demo_window();
-		} else {
-			debugger_enter();
-		}
+	// skip processing if we have plain modifier keys
+	if (key == SDLK_LSHIFT || key == SDLK_RSHIFT ||
+		key == SDLK_LALT   || key == SDLK_RALT   ||
+		key == SDLK_LCTRL  || key == SDLK_RCTRL  ||
+		key == SDLK_LGUI   || key == SDLK_RGUI ) {
+		return;
 	}
 
-	// maybe bring up the main menu
-	if (key == SDL_SCANCODE_F1) {
-		ui_toggle_main_menu();
+	// keys with shift, alt or super pushed can be ignored.  Shift can be
+	// ignored because we will get they actual shifted key for output
+	// in the key value itself (which comes from the imgui
+	//
+	if (shift == true || alt == true || super == true) {
+		return;
 	}
+
+	// if control key is down, only allow control characters
+	// from a-z
+	if (ctrl == true && !(key >= 'a' && key <= 'z')) {
+		return;
+	}
+
 
 	// if the caps lock key was down, change toggle internal
 	// caps lock setting (for non apple2 machines)
-	if (key == SDL_SCANCODE_CAPSLOCK) {
+	if (key == SDLK_CAPSLOCK) {
 		Keyboard_caps_lock_on = !Keyboard_caps_lock_on;
-	}
-
-	if (key == SDL_SCANCODE_F9) {
-		extern bool Debug_show_bitmap;
-		Debug_show_bitmap = !Debug_show_bitmap;
-	}
-
-	if (key == SDL_SCANCODE_PAUSE) {
-		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
-			Emulator_state = emulator_state::EMULATOR_PAUSED;
-		} else {
-			Emulator_state = emulator_state::EMULATOR_STARTED;
-		}
 	}
 
 	// figure out the actual keyvalue to put onto the keyboard
 	// buffer
-	if (key == SDL_SCANCODE_RETURN) {
+	if (key == SDLK_RETURN) {
 		key = '\r';
 	}
-	else if (key == SDL_SCANCODE_BACKSPACE) {
+	else if (key == SDLK_BACKSPACE) {
 		key = '\b';
 	}
-	else if (key == SDL_SCANCODE_ESCAPE) {
+	else if (key == SDLK_ESCAPE) {
 		key = 0x9b;
 	}
-	else if (key == SDL_SCANCODE_RIGHT) {
+	else if (key == SDLK_RIGHT) {
 		key = 0x95;
 	}
-	else if (key == SDL_SCANCODE_LEFT) {
+	else if (key == SDLK_LEFT) {
 		key = 0x88;
 	}
 	else if (ctrl == true) {
 		// send ctrl-A through ctrl-Z
-		if ((key >= SDL_SCANCODE_A) && (key <= SDL_SCANCODE_Z)) {
-			key = key - SDL_SCANCODE_A + 1;
+		if ((key >= SDLK_a) && (key <= SDLK_z)) {
+			key = key - SDLK_a + 1;
 		}
 		else {
 			key = 0;
 		}
-	}
-	else if (shift == true) {
-		key = key_shifted_ascii_table[key];
-	}
-	else {
-		key = key_ascii_table[key];
-		if (key >= 'a' && key <= 'z') {
-			if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
-				key -= 32;
-			}
+	} else if (key >= SDLK_a && key <= SDLK_z) {
+		if (Emulator_type < emulator_type::APPLE2E || Keyboard_caps_lock_on) {
+			key -= 32;
 		}
+	}
+
+	// finally throw away any keys that aren't ASCII (which will get rid of
+	// non-printable keys like function keys) that might get queued
+	if (key > 127) {
+		return;
 	}
 
 	keyboard_insert_key(key);

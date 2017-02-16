@@ -55,7 +55,6 @@ const int Video_cell_height = Video_native_height / 24;
 static int Video_scale_factor = 2;
 static SDL_Rect Video_native_size;
 
-static SDL_Surface *Splash_screen_surface;
 static GLuint Splash_screen_texture;
 
 // information about internally built textures
@@ -149,6 +148,45 @@ static GLubyte Hires_colors[4][3] = {
 };
 
 static char character_conv[] = {
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $00	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $08	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $10	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $18	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $20	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $28	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $30	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $38	*/
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $40	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $48	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $50	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $58	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $60	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $68	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $70	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $78	*/
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $80	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $88	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $90	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $98	*/
+	' ', '!', '"', '#', '$', '%', '&', '\'',	/* $A0	*/
+	'(', ')', '*', '+', ',', '-', '.', '/',		/* $A8	*/
+	'0', '1', '2', '3', '4', '5', '6', '7',		/* $B0	*/
+	'8', '9', ':', ';', '<', '=', '>', '?',		/* $B8	*/
+
+	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $C0	*/
+	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $C8	*/
+	'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',		/* $D0	*/
+	'X', 'Y', 'Z', '[', '\\',']', '^', '_',		/* $D8	*/
+	'`', 'a', 'b', 'c', 'd', 'e', 'f', 'g',		/* $E0	*/
+	'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',		/* $E8	*/
+	'p', 'q', 'r', 's', 't', 'u', 'v', 'w',		/* $F0	*/
+	'x', 'y', 'z', '{', '|', '}', '~', '?',     /* $F8	*/
+};
+
+static char character_conv_2e[] = {
 
 	'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',		/* $00	*/
 	'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',		/* $08	*/
@@ -366,6 +404,7 @@ static void video_render()
 	bool primary = (!(Video_mode & VIDEO_MODE_PAGE2) || (Video_mode & VIDEO_MODE_80COL)) ? true : false;
 	uint16_t *gr_addr_map = nullptr;
 	uint16_t *text_addr_map = nullptr;
+	char *conv_array = nullptr;
 
 	text_addr_map = primary ? Video_primary_text_map : Video_secondary_text_map;
 	if (!(Video_mode & VIDEO_MODE_HIRES)) {
@@ -375,7 +414,14 @@ static void video_render()
 		gr_addr_map = primary ? Video_hires_map : Video_hires_secondary_map;
 	}
 
-	auto render_text_cell = [text_addr_map](uint16_t x, uint16_t y) -> void {
+	// figure out which chracter set based on emulator type
+	if (Emulator_type <= emulator_type::APPLE2_PLUS) {
+		conv_array = character_conv;
+	} else {
+		conv_array = character_conv_2e;
+	}
+
+	auto render_text_cell = [text_addr_map, conv_array](uint16_t x, uint16_t y) -> void {
 		font *cur_font;
 		uint16_t addr = text_addr_map[y] + x;
 		uint8_t c1 = memory_read(addr);
@@ -398,7 +444,7 @@ static void video_render()
 		// value from memory and then subtract out the first character in our
 		// font (as we need to be 0-based from that point).  Then we can get
 		// the row/col in the bitmap sheet where the character is
-		uint8_t c = character_conv[c1];
+		uint8_t c = conv_array[c1];
 		c -= cur_font->m_header.m_char_offset;
 
 		glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
@@ -412,7 +458,7 @@ static void video_render()
 		glBindTexture(GL_TEXTURE_2D, 0);
 	};
 
-	auto render_text80_cell = [text_addr_map](uint16_t x, uint16_t y) -> void {
+	auto render_text80_cell = [text_addr_map, conv_array](uint16_t x, uint16_t y) -> void {
 		font *cur_font;
 		uint16_t addr = text_addr_map[y] + x;
 		uint8_t character[2];
@@ -438,7 +484,7 @@ static void video_render()
 			// value from memory and then subtract out the first character in our
 			// font (as we need to be 0-based from that point).  Then we can get
 			// the row/col in the bitmap sheet where the character is
-			uint8_t c = character_conv[character[i]];
+			uint8_t c = conv_array[character[i]];
 			c -= cur_font->m_header.m_char_offset;
 
 			glBindTexture(GL_TEXTURE_2D, cur_font->m_texture_id);
@@ -741,7 +787,7 @@ bool video_create()
 // intialize the SDL system
 bool video_init()
 {
-	IMG_Init(IMG_INIT_JPG);
+	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
 
 	if (Video_window == nullptr) {
 		Video_native_size.x = 0;
@@ -774,27 +820,23 @@ bool video_init()
 	}
 
 	// create the splash screen
-	// load up the interface screen if needed
-	if (Splash_screen_surface != nullptr) {
-		SDL_FreeSurface(Splash_screen_surface);
-	}
 
-	Splash_screen_surface = IMG_Load("splash.jpg");
-	if (Splash_screen_surface == nullptr) {
-		printf("Unable to load splash screen: %s\n", SDL_GetError());
-	}
-   int mode = GL_RGB;
-   if (Splash_screen_surface->format->BytesPerPixel == 4) {
-	  mode = GL_RGBA;
-   }
+	SDL_Surface *surface = IMG_Load("interface/splash.jpg");
+	if (surface != nullptr) {
+		int mode = GL_RGB;
+		if (surface->format->BytesPerPixel == 4) {
+		  mode = GL_RGBA;
+		}
 
-	glGenTextures(1, &Splash_screen_texture);
-	glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, mode, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
+		glGenTextures(1, &Splash_screen_texture);
+		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
+		SDL_FreeSurface(surface);
+	}
 
 	return true;
 }
@@ -804,10 +846,6 @@ void video_shutdown()
 	ui_shutdown();
 
 	// free the splash screen
-	if (Splash_screen_surface != nullptr) {
-		SDL_FreeSurface(Splash_screen_surface);
-	}
-
 	// free the pixels used for the hires texture patterns
 	for (auto i = 0; i < Num_hires_mono_patterns; i++) {
 		delete Hires_mono_pixels[i];

@@ -104,7 +104,7 @@ void disk_drive::init(bool warm_init)
 void disk_drive::readwrite()
 {
 	if (m_track_data == nullptr) {
-		m_track_data = new uint8_t[disk_image::m_nibbilized_size];
+		m_track_data = new uint8_t[10000];
 		if (m_track_data == nullptr) {
 			return;
 		}
@@ -160,9 +160,8 @@ bool disk_drive::insert_disk(const char *filename)
 {
 	eject_disk();
 
-	m_disk_image = new disk_image();
-	m_disk_image->init();
-	m_disk_image->load_image(filename);
+	m_disk_image = disk_image::load_image(filename);
+	//m_disk_image->init();
 	return true;
 }
 
@@ -343,4 +342,16 @@ void disk_shutdown()
 const char *disk_get_mounted_filename(const uint32_t slot)
 {
 	return Disk_drives[slot - 1].get_mounted_filename();
+}
+
+bool disk_is_on(const uint32_t slot)
+{
+	return Disk_drives[slot - 1].m_motor_on;
+}
+
+bool disk_get_track_and_sector(uint32_t slot, uint32_t &track, uint32_t &sector)
+{
+	track = Disk_drives[slot - 1].m_current_track;
+	sector = Disk_drives[slot - 1].m_current_byte / 256;
+	return true;
 }

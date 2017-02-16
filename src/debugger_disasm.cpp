@@ -31,12 +31,14 @@
 #include <vector>
 #include <map>
 
+#include "SDL_scancode.h"
 #include "apple2emu.h"
 #include "apple2emu_defs.h"
 #include "debugger.h"
 #include "debugger_disasm.h"
 #include "memory.h"
 #include "imgui.h"
+#include "keyboard.h"
 
 
 static const int Max_symtable_line = 256;
@@ -111,7 +113,7 @@ const char *debugger_disasm::find_symbol(uint16_t addr)
 	return nullptr;
 }
 
-debugger_disasm::debugger_disasm()
+debugger_disasm::debugger_disasm () : m_console(nullptr)
 {
 	// load in symbol tables
 	add_symtable("symtables/apple2e_sym.txt");
@@ -299,7 +301,7 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 	// get the styling so we can get access to color values
 	ImGuiStyle &style = ImGui::GetStyle();
 	ImGuiIO &io = ImGui::GetIO();
-	
+
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders |
 				ImGuiWindowFlags_NoScrollbar |
 				ImGuiWindowFlags_NoScrollWithMouse)) {
@@ -309,6 +311,8 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		// if window is focued, processes arrow keys to move disassembly
 		if (ImGui::IsWindowFocused()) {
 			uint16_t new_addr = 0xffff;
+
+			// take care of key presses
 			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ||
 					(ImGui::IsWindowHovered() && io.MouseWheel > 0.0f)) {
 				new_addr = memory_find_previous_opcode_addr(m_current_addr, 1);
@@ -325,8 +329,24 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 				}
 				m_current_addr = new_addr;
 			}
-		}
 
+			// commands that get sent to console (if one is attached)
+			if (m_console != nullptr) {
+				if (ImGui::IsKeyPressed(SDL_SCANCODE_F5)) {
+					m_console->execute_command(continue_command_name);
+				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F6)) {
+					// step over (or next)
+					m_console->execute_command(step_command_name);
+				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F7)) {
+					// step into (or just step)
+					m_console->execute_command(next_command_name);
+				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F9)) {
+					char command[256];
+					sprintf(command, "%s %x", break_command_name, m_current_addr);
+					m_console->execute_command(command);
+				}
+			}
+		}
 		float line_height = ImGui::GetTextLineHeightWithSpacing();
 		int line_total_count = 0xffff;
 		ImGuiListClipper clipper(line_total_count, line_height);
@@ -338,12 +358,22 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 
 		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) {
 			auto size = get_disassembly(addr);
+			auto f = std::find_if(Debugger_breakpoints.begin(),
+				Debugger_breakpoints.end(),
+				[addr](breakpoint &bp) { return bp.m_addr == addr; });
 
-			// determine color to use
-			if (addr == m_break_addr) {
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
-			} else if (addr == m_current_addr) {
+			// determine color to use.  Breakpoints show in red (lighter red
+			// for disabled ones, current broken on address in bright white
+			// and then eveyrhtnig else.  Always display current line
+			// in bold white
+			if (addr == m_current_addr) {
 				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text]);
+			} else if (f != Debugger_breakpoints.end() && f->m_enabled == true) {
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			} else if (f != Debugger_breakpoints.end() && f->m_enabled == false) {
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.0f, 0.0f, 1.0f));
+			} else if (addr == m_break_addr) {
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
 			} else {
 				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
 			}
@@ -422,5 +452,10 @@ void debugger_disasm::set_break_addr(uint16_t addr)
 
 	// check to see if we've accurately done the work!
 	ASSERT(a == m_current_addr);
+}
+
+void debugger_disasm::attach_console(debugger_console *console)
+{
+	m_console = console;
 }
 

@@ -271,9 +271,9 @@ uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 	uint8_t return_val = 0;
 
 	addr = addr & 0x0f;
-	// WOOHOO -- c000 is used as keyboard read so let's just deal with that
+	// WOOHOO -- c00X is used as keyboard read so let's just deal with that
 	// here
-	if (addr == 0x0 && write == false) {
+	if (write == false) {
 		return keyboard_read();
 	}
 
@@ -329,12 +329,15 @@ uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 	return return_val;
 }
 
-// handler for reading memory status
+// handler for reading memory status.  This handles 0xc010 to 0xc018
 uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 {
-	UNREFERENCED(write);
-
 	uint8_t return_val = 0;
+
+	// writes to 0xc01x reset the keyboard strobe
+	if (write == true) {
+		return keyboard_clear();
+	}
 
 	addr = addr & 0xff;
 	switch(addr) {
@@ -368,7 +371,15 @@ uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 	case 0x18:   // 80STORE switch
 		return_val = Memory_state & RAM_80STORE ? 1 : 0;
 		break;
-
+	case 0x19:
+	case 0x1a:
+	case 0x1b:
+	case 0x1c:
+	case 0x1d:
+	case 0x1e:
+	case 0x1f:
+		return_val = video_get_state(addr, val, write);
+		break;
 	}
 
 	if (return_val) {
@@ -438,6 +449,7 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 		else {
 			last_access = 1;
 		}
+		break;
 
 		// cases for bank 1
 	case 0x88:
@@ -479,6 +491,9 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 		else {
 			last_access = 1;
 		}
+		break;
+	default:
+		ASSERT(0);
 	}
 
 	// set write protect on ramcard pages if necessary.  Total of 48 pages
@@ -530,7 +545,7 @@ void memory_set_paging_tables()
 
 	// set up c000 - 0xc7ff.  Set to internal rom (apple 2e) or
 	// slot rom depending on slot flag
-	for (auto page = 0xc0; page < 0xd0; page++) {
+	for (auto page = 0xc0; page < 0xc8; page++) {
 		if (Memory_state & RAM_SLOTCX_ROM) {
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
 			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
@@ -952,13 +967,8 @@ void memory_init()
 	}
 
 	// register handler for reading memory status
-	for (uint8_t i = 0x10; i < 0x19; i++) {
+	for (uint8_t i = 0x10; i < 0x20; i++) {
 		memory_register_soft_switch_handler(i, memory_get_state);
-	}
-
-	// reading video status
-	for (uint8_t i = 0x19; i < 0x20; i++) {
-		memory_register_soft_switch_handler(i, video_get_state);
 	}
 
 	// register 0xc030 for the speaker

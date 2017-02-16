@@ -36,4 +36,6 @@ void disk_shutdown();
 bool disk_insert(const char *disk_image_filename, const uint32_t slot);
 void disk_eject(const uint32_t slot);
 const char *disk_get_mounted_filename(const uint32_t slot);
+bool disk_is_on(const uint32_t slot);
+bool disk_get_track_and_sector(uint32_t slot, uint32_t &track, uint32_t &sector);
 

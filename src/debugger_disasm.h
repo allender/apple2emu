@@ -50,6 +50,8 @@ private:
 
     uint16_t m_break_addr;
     uint16_t m_current_addr;
+	debugger_console *m_console;
+
 
 	static const char *m_addressing_format_string[];
 	char m_disassembly_line[m_disassembly_line_length];
@@ -62,5 +64,7 @@ public:
 	uint8_t get_disassembly(uint16_t addr);
 	void draw(const char* title, uint16_t addr);
     void set_break_addr(uint16_t addr);
+	char *get_disassembly_line() { return m_disassembly_line; }
+	void attach_console(debugger_console *console);
 };
 

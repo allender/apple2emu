@@ -25,7 +25,7 @@ SOFTWARE.
 
 */
 
-#define FUNCTIONAL_TESTS
+//#define FUNCTIONAL_TESTS
 
 /*
 *  Source file for 6502 emulation layer
@@ -41,291 +41,291 @@ cpu_6502::opcode_info cpu_6502::m_6502_opcodes[] = {
  // 0x00 - 0x0f
  { 'BRK ', 1, 7, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ORA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'TSB ', 2, 5, addr_mode::INDIRECT_ZP_MODE, &cpu_6502::zero_page_indirect },
  { 'ORA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'ASL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'PHP ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ORA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'ASL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'TSB ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'ORA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'ASL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x10 -
  { 'BPL ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'ORA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'ORA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'ASL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CLC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ORA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'ORA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'ASL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x20 -
  { 'JSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'AND ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'BIT ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'AND ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'ROL ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'PLP ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'AND ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'ROL ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'BIT ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'AND ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'ROL ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
 
  // 0x30 -
  { 'BMI ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'AND ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'AND ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'ROL ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'SEC ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'AND ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'AND ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'ROL ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x40 -
  { 'RTI ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'EOR ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'EOR ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'LSR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode  },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'PHA ', 1, 3, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'EOR ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'LSR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'JMP ', 3, 3, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'EOR ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'LSR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x50 -
  { 'BVC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'EOR ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'EOR ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'LSR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CLI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'EOR ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'EOR ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'LSR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x60 -
  { 'RTS ', 1, 6, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ADC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'ADC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'ROR ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'PLA ', 1, 4, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ADC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'ROR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'JMP ', 3, 5, addr_mode::INDIRECT_MODE, &cpu_6502::indirect_mode },
- { 'ADC ', 0, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ADC ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'ROR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x70 -
  { 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'ADC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'ROR ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'SEI ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'ADC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'ADC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'ROR ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x80 -
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'STA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'STY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'STA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'STX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'DEY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'TXA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'STY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'STA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'STX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0x90 -
  { 'BCC ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'STA ', 2, 6, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'STY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'STA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'STX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'TYA ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'STA ', 3, 5, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_mode },
  { 'TXS ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'STA ', 3, 5, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xa0 -
  { 'LDY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'LDA ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
  { 'LDX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'LDY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'LDA ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'LDX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'TAY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'LDA ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'TAX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'LDY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'LDA ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'LDX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xb0 -
  { 'BCS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'LDA ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'LDY ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'LDA ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'LDX ', 2, 4, addr_mode::ZP_INDEXED_MODE_Y, &cpu_6502::zero_page_indexed_mode_y },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CLV ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'LDA ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
  { 'TSX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'LDY ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'LDA ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'LDX ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xc0 -
  { 'CPY ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'CMP ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CPY ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'CMP ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'DEC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'INY ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'CMP ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'DEX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CPY ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'CMP ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'DEC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xd0 -
  { 'BNE ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'CMP ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CMP ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'DEC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CLD ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'CMP ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CMP ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'DEC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xe0 -
  { 'CPX ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'SBC ', 2, 6, addr_mode::INDEXED_INDIRECT_MODE, &cpu_6502::indexed_indirect_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CPX ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'SBC ', 2, 3, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
  { 'INC ', 2, 5, addr_mode::ZERO_PAGE_MODE, &cpu_6502::zero_page_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'INX ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'SBC ', 2, 2, addr_mode::IMMEDIATE_MODE, &cpu_6502::immediate_mode },
  { 'NOP ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'CPX ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'SBC ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'INC ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 
  // 0xf0 -
  { 'BEQ ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
  { 'SBC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'SBC ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
  { 'INC ', 2, 6, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'SED ', 1, 2, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'SBC ', 3, 4, addr_mode::Y_INDEXED_MODE, &cpu_6502::absolute_y_check_boundary_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { 'SBC ', 3, 4, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_check_boundary_mode },
  { 'INC ', 3, 7, addr_mode::X_INDEXED_MODE, &cpu_6502::absolute_x_mode },
- { '    ', 0, 0, addr_mode::NO_MODE, nullptr },
+ { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
 };
 
 ////////////////
@@ -455,7 +455,7 @@ cpu_6502::opcode_info cpu_6502::m_65c02_opcodes[] = {
  { 'ROR ', 1, 2, addr_mode::ACCUMULATOR_MODE, &cpu_6502::accumulator_mode },
  { 'NOP ', 1, 1, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'JMP ', 3, 5, addr_mode::INDIRECT_MODE, &cpu_6502::indirect_mode },
- { 'ADC ', 0, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
+ { 'ADC ', 3, 4, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'ROR ', 3, 6, addr_mode::ABSOLUTE_MODE, &cpu_6502::absolute_mode },
  { 'NOP ', 1, 1, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
 
@@ -845,27 +845,43 @@ uint32_t cpu_6502::process_opcode()
 		uint8_t val = memory_read(src);
 		uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
 		uint32_t sum = (uint32_t)m_acc + (uint32_t)val + carry_bit;
-		set_flag(register_bit::CARRY_BIT, sum > 0xff);
-		set_flag(register_bit::OVERFLOW_BIT, ~(m_acc ^ val) & (m_acc ^ sum) & 0x80);
 		if (get_flag(register_bit::DECIMAL_BIT)) {
-			int32_t l = (m_acc & 0x0f) + (val & 0x0f) + carry_bit;
-			int32_t h = (m_acc & 0xf0) + (val & 0xf0);
-			if (l >= 0xa) {
-				l = (l + 0x06) & 0xf;
-				h += 0x10;
-			}
+			// decimal mode - see http://www.6502.org/tutorials/decimal_mode.html#3.2.2
+			// for detailed information on BCD and flags.  One of the
+			// most trickieest parts of the opcode set
 
-			set_flag(register_bit::CARRY_BIT, 0);
-			if (h >= 0xa0) {
-				h += 0x60;
-				set_flag(register_bit::CARRY_BIT, 1);
+			// set the zero bit flag for 6502 as it is based
+			// on the binary sum as done before the consitionals
+			set_flag(register_bit::ZERO_BIT, ((sum & 0xff) == 0));
+			set_flag(register_bit::OVERFLOW_BIT, ~(m_acc ^ val) & (m_acc ^ sum) & 0x80);
+
+			int32_t al = (m_acc & 0xf) + (val & 0xf) + carry_bit;
+			if (al >= 0x0a) {
+				al = ((al + 0x06) & 0x0f) + 0x10;
 			}
-			sum = h | l;
-			//printf ("adc: %x + %x + %x = %x\n", m_acc, val, carry_bit, sum);
+			sum = (m_acc & 0xf0) + (val & 0xf0) + al;
+			set_flag(register_bit::SIGN_BIT, (sum & 0x80));
+
+			if (sum >= 0xa0) {
+				sum += 0x60;
+			}
+			set_flag(register_bit::CARRY_BIT, (sum >= 0x100));
+
+			m_acc = sum & 0xff;
+
+			// sign bit is different on 6502 and 65c02
+			if (m_opcodes == m_65c02_opcodes) {
+				set_flag(register_bit::ZERO_BIT, ((sum & 0xff) == 0));
+				set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
+				set_flag(register_bit::OVERFLOW_BIT, (sum >= 128));
+			}
+		} else {
+			set_flag(register_bit::CARRY_BIT, sum > 0xff);
+			set_flag(register_bit::OVERFLOW_BIT, ~(m_acc ^ val) & (m_acc ^ sum) & 0x80);
+			m_acc = sum & 0xff;
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+			set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
 		}
-		m_acc = sum & 0xff;
-		set_flag(register_bit::ZERO_BIT, (m_acc == 0));
-		set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
 		break;
 	}
 
@@ -1127,8 +1143,9 @@ uint32_t cpu_6502::process_opcode()
 		}
 		else if (src == 0xf004) {
 //			m_acc = _getch();
-		}
-		else {
+//		} else if (src == 0x43bf) {
+			//debug_break();
+		} else {
 			memory_write(0x100 + m_sp--, ((m_pc - 1) >> 8));
 			memory_write(0x100 + m_sp--, (m_pc - 1) & 0xff);
 			m_pc = src;
@@ -1307,36 +1324,55 @@ uint32_t cpu_6502::process_opcode()
 	case 'SBC ':
 	{
 		uint8_t val = memory_read(src);
-		uint32_t sum;
+		int32_t sum;
 		uint32_t carry_bit = get_flag(register_bit::CARRY_BIT);
 		sum = m_acc + (~val & 0xff) + carry_bit;
-		set_flag(register_bit::CARRY_BIT, sum > 0xff);
-		set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
 		if (get_flag(register_bit::DECIMAL_BIT)) {
 			// decimal mode.
-			int32_t l = (m_acc & 0x0f) + (~val & 0x0f) + carry_bit;
-			int32_t h = (m_acc & 0xf0) + (~val & 0xf0);
-			if (l < 0x10) {
-				l -= 0x06;
-			}
-			else {
-				h += 0x10;
-				l -= 0x10;
-			}
 
-			if (h < 0x100) {
-				h -= 0x60;
-				set_flag(register_bit::CARRY_BIT, 0);
+			// behavior of ADC is slightly different on 6502 and 65c02.
+			// just split it out into separate conditionals to make code
+			// easier to understand
+			if (m_opcodes == m_6502_opcodes) {
+				set_flag(register_bit::CARRY_BIT, sum > 0xff);
+				set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
+				int32_t al = (m_acc & 0x0f) - (val & 0x0f) + carry_bit - 1;
+				if (al < 0) {
+					al = ((al - 0x06) & 0x0f) - 0x10;
+				}
+				sum = (m_acc & 0xf0) - (val & 0xf0) + al;
+				if (sum < 0) {
+					sum = sum - 0x60;
+				}
+				m_acc = sum & 0xff;
+
+				// flags are set as they are in binary arithmetic mode
+				set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+				set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
+			} else {
+				set_flag(register_bit::CARRY_BIT, sum > 0xff);
+				set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
+				int32_t al = (m_acc & 0x0f) - (val & 0x0f) + carry_bit - 1;
+				sum = m_acc - val + carry_bit - 1;
+				if (sum < 0) {
+					sum = sum - 0x60;
+				}
+				if (al < 0) {
+					sum = sum - 0x06;
+				}
+				m_acc = sum & 0xff;
+
+				// flags are set as they are in binary arithmetic mode
+				set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+				set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
 			}
-			else {
-				set_flag(register_bit::CARRY_BIT, 1);
-			}
-			sum = h | l;
-			//printf ("sbc: %x - %x + %x = %x\n", m_acc, val, carry_bit, sum);
+		} else {
+			set_flag(register_bit::CARRY_BIT, sum > 0xff);
+			set_flag(register_bit::OVERFLOW_BIT, (m_acc ^ val) & (m_acc ^ sum) & 0x80);
+			m_acc = sum & 0xff;
+			set_flag(register_bit::ZERO_BIT, (m_acc == 0));
+			set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
 		}
-		m_acc = sum & 0xff;
-		set_flag(register_bit::ZERO_BIT, (m_acc == 0));
-		set_flag(register_bit::SIGN_BIT, (m_acc & 0x80));
 		break;
 	}
 	case 'SEC ':

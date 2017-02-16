@@ -22,16 +22,6 @@ find_package(SDL2_image REQUIRED SDL2_image>=2.0.0)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
-# win32 builds will use pdcurses locally while
-# other builds will require ncurses
-if (WIN32)
-   set (CURSES_LIBRARIES ${PROJECT_SOURCE_DIR}/pdcurses/pdcurses.lib ${PROJECT_SOURCE_DIR}/pdcurses/panel.lib)
-else()
-   set(CURSES_NEED_NCURSES TRUE)
-   find_package(curses REQUIRED)
-   set (CURSES_LIBS ncurses)
-endif()
-
 set (CMAKE_CXX_STANDARD 11)
 
 # deal with compiler flags

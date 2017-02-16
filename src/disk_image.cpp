@@ -41,56 +41,6 @@ SOFTWARE.
 #include "apple2emu_defs.h"
 #include "disk_image.h"
 
-#define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
-
-// translate table used during nibbilize process to go
-// from 6-bit bytes to 8 bit disk bytes
-const uint8_t disk_image::m_write_translate_table[64] =
-{
-	0x96,0x97,0x9A,0x9B,0x9D,0x9E,0x9F,0xA6,
-	0xA7,0xAB,0xAC,0xAD,0xAE,0xAF,0xB2,0xB3,
-	0xB4,0xB5,0xB6,0xB7,0xB9,0xBA,0xBB,0xBC,
-	0xBD,0xBE,0xBF,0xCB,0xCD,0xCE,0xCF,0xD3,
-	0xD6,0xD7,0xD9,0xDA,0xDB,0xDC,0xDD,0xDE,
-	0xDF,0xE5,0xE6,0xE7,0xE9,0xEA,0xEB,0xEC,
-	0xED,0xEE,0xEF,0xF2,0xF3,0xF4,0xF5,0xF6,
-	0xF7,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF
-};
-
-// this table is used during de-nibbilize to go
-// from 8 bit disk byte to 6 bit bytes.  The table
-// is _really_ 64 entries large because we only
-// have a one to one mapping from disk bytes
-// to 6 bit bytes.  But doing that mapping would
-// require std::map, and while that's fine, it's
-// easier to just create this table once and leave it
-// as a static variable.  While we are truly only
-// using 64 of these entires (one to one mapping of
-// disk bytes to 6 bit bytes), then table needs to
-// be large because we have holse in the read translate
-// table.  All disk bytes have high bit set so there
-// are 128 _potential_ entries, although only 64 are
-// used
-const uint8_t disk_image::m_read_translate_table[128] =
-{
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,
-	0x00,0x00,0x08,0x0c,0x00,0x10,0x14,0x18,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x1c,0x20,
-	0x00,0x00,0x00,0x24,0x28,0x2c,0x30,0x34,
-	0x00,0x00,0x38,0x3c,0x40,0x44,0x48,0x4c,
-	0x00,0x50,0x54,0x58,0x5c,0x60,0x64,0x68,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x6c,0x00,0x70,0x74,0x78,
-	0x00,0x00,0x00,0x7c,0x00,0x00,0x80,0x84,
-	0x00,0x88,0x8c,0x90,0x94,0x98,0x9c,0xa0,
-	0x00,0x00,0x00,0x00,0x00,0xa4,0xa8,0xac,
-	0x00,0xb0,0xb4,0xb8,0xbc,0xc0,0xc4,0xc8,
-	0x00,0x00,0xcc,0xd0,0xd4,0xd8,0xdc,0xe0,
-	0x00,0xe4,0xe8,0xec,0xf0,0xf4,0xf8,0xfc,
-};
-
 const uint8_t disk_image::m_sector_map[static_cast<uint8_t>(format_type::NUM_FORMATS)][16] =
 {
    { 0x00,0x07,0x0E,0x06,0x0D,0x05,0x0C,0x04,0x0B,0x03,0x0A,0x02,0x09,0x01,0x08,0x0F },  // DOS format
@@ -100,14 +50,14 @@ const uint8_t disk_image::m_sector_map[static_cast<uint8_t>(format_type::NUM_FOR
 // prodos block to physical sector
 const uint8_t disk_image::m_prodos_block_map[][2] =
 {
-   { 0x0, 0x2 },
-   { 0x4, 0x6 },
-   { 0x8, 0xa },
-   { 0xc, 0xe },
-   { 0x1, 0x3 },
+	{ 0x0, 0x2 },
+	{ 0x4, 0x6 },
+	{ 0x8, 0xa },
+	{ 0xc, 0xe },
+	{ 0x1, 0x3 },
 	{ 0x5, 0x7 },
-   { 0x9, 0xb },
-   { 0xd, 0xf },
+	{ 0x9, 0xb },
+	{ 0xd, 0xf },
 };
 
 // destructor for a diskimage.  Make sure the
@@ -128,28 +78,29 @@ const char *disk_image::get_filename()
 
 void disk_image::initialize_image()
 {
-	// check the size of the image to see if we have dsk image
-	if (m_buffer_size == 143360) {
-		m_image_type = image_type::DSK_IMAGE;
-		m_num_tracks = (uint8_t)(m_buffer_size / (m_total_sectors * m_sector_bytes));
-
-		// see if we can determine DOS or prodos format.  Let's assume dos and check
-		// for prodos.  See Beneath Apple ProDOS page 4-6.  Scan volume directory
-		// and see if we can find the volume blocks.  Starts at block 2 of the
-		// disk and contains backwards/forward pointers from there
-		disk_image::format_type format = format_type::DOS_FORMAT;
-		//for (auto i = 2; i < 6; i++) {
-		//	// get the starting physical sector for the block, then get the DOS sector
-		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
-		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos.
-		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
-		//		format = format_type::DOS_FORMAT;
-		//		break;
-		//	}
-		//}
-
-		m_format = format;
-	}
+//	// check the size of the image to see if we have dsk image
+//	if (m_buffer_size == 143360) {
+//		m_image_type = image_type::DSK_IMAGE;
+//		m_num_tracks = (uint8_t)(m_buffer_size / (m_total_sectors * m_sector_bytes));
+//
+//		// see if we can determine DOS or prodos format.  Let's assume dos and check
+//		// for prodos.  See Beneath Apple ProDOS page 4-6.  Scan volume directory
+//		// and see if we can find the volume blocks.  Starts at block 2 of the
+//		// disk and contains backwards/forward pointers from there
+//		disk_image::format_type format = format_type::DOS_FORMAT;
+//		//for (auto i = 2; i < 6; i++) {
+//		//	// get the starting physical sector for the block, then get the DOS sector
+//		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
+//		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos.
+//		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
+//		//		format = format_type::DOS_FORMAT;
+//		//		break;
+//		//	}
+//		//}
+//
+		m_format = format_type::DOS_FORMAT;
+		m_num_tracks = m_total_tracks;
+//	}
 }
 
 
@@ -163,38 +114,56 @@ void disk_image::init()
 // of the image into local memory.  Makes
 // reading and writing super fast since we do it
 // straight to memory
-bool disk_image::load_image(const char *filename)
+disk_image *disk_image::load_image(const char *filename)
 {
 	// load disk into buffer
 	FILE *fp = fopen(filename, "rb");
 	if (fp == nullptr) {
-		return false;
+		return nullptr;
 	}
 
 	fseek(fp, 0, SEEK_END);
-	m_buffer_size = ftell(fp);
+	uint32_t buffer_size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 
 	// allocate the whole buffer - in modern systems we
 	// can just load these things up and not really worry
 	// about memory usage here
-	m_raw_buffer = (uint8_t *)new uint8_t[m_buffer_size];
-	fread(m_raw_buffer, 1, m_buffer_size, fp);
+	uint8_t *raw_buffer = (uint8_t *)new uint8_t[buffer_size];
+	fread(raw_buffer, 1, buffer_size, fp);
 	fclose(fp);
 
 	// determien read-only access for the file
-	m_read_only = false;
+	bool read_only = false;
 	if (access(filename, 2)) {
-		m_read_only = true;
+		read_only = true;
 	}
 
-	m_filename = filename;
-	m_volume_num = 254;
-	m_image_dirty = false;
+	// some logic to determine which kind of disk we have
+	const char *ext = strrchr(filename, '.');
+	disk_image *new_image = nullptr;
+	if (ext != nullptr) {
+		if (!stricmp(ext, ".dsk") && buffer_size == m_dsk_image_size) {
+			// disk image format
+			new_image = new dsk_image();
+		}
 
-	// get all the information needed about this disk image
-	initialize_image();
-	return true;
+		else if  (!stricmp(ext, ".nib") && buffer_size == m_nib_image_size) {
+			new_image = new nib_image();
+		}
+	}
+
+	if (new_image != nullptr) {
+		new_image->m_raw_buffer = raw_buffer;
+		new_image->m_buffer_size = buffer_size;
+		new_image->m_filename = filename;
+		new_image->m_volume_num = 254;
+		new_image->m_image_dirty = false;
+		new_image->initialize_image();
+	}
+
+
+	return new_image;
 }
 
 // save a disk image (if needed).  This will write out the entire disk
@@ -230,6 +199,80 @@ bool disk_image::unload_image()
 	return true;
 }
 
+// read the track data into the supplied buffer
+uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer)
+{
+	UNREFERENCED(track);
+	UNREFERENCED(buffer);
+	ASSERT(0);
+	return 0;
+}
+
+bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
+{
+	UNREFERENCED(track);
+	UNREFERENCED(buffer);
+	ASSERT(0);
+	m_image_dirty = true;
+	return true;
+}
+
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+//  Code for DSK Images
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+
+#define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
+
+// translate table used during nibbilize process to go
+// from 6-bit bytes to 8 bit disk bytes
+const uint8_t dsk_image::m_write_translate_table[64] =
+{
+	0x96,0x97,0x9A,0x9B,0x9D,0x9E,0x9F,0xA6,
+	0xA7,0xAB,0xAC,0xAD,0xAE,0xAF,0xB2,0xB3,
+	0xB4,0xB5,0xB6,0xB7,0xB9,0xBA,0xBB,0xBC,
+	0xBD,0xBE,0xBF,0xCB,0xCD,0xCE,0xCF,0xD3,
+	0xD6,0xD7,0xD9,0xDA,0xDB,0xDC,0xDD,0xDE,
+	0xDF,0xE5,0xE6,0xE7,0xE9,0xEA,0xEB,0xEC,
+	0xED,0xEE,0xEF,0xF2,0xF3,0xF4,0xF5,0xF6,
+	0xF7,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF
+};
+
+// this table is used during de-nibbilize to go
+// from 8 bit disk byte to 6 bit bytes.  The table
+// is _really_ 64 entries large because we only
+// have a one to one mapping from disk bytes
+// to 6 bit bytes.  But doing that mapping would
+// require std::map, and while that's fine, it's
+// easier to just create this table once and leave it
+// as a static variable.  While we are truly only
+// using 64 of these entires (one to one mapping of
+// disk bytes to 6 bit bytes), then table needs to
+// be large because we have holse in the read translate
+// table.  All disk bytes have high bit set so there
+// are 128 _potential_ entries, although only 64 are
+// used
+const uint8_t dsk_image::m_read_translate_table[128] =
+{
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,
+	0x00,0x00,0x08,0x0c,0x00,0x10,0x14,0x18,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x1c,0x20,
+	0x00,0x00,0x00,0x24,0x28,0x2c,0x30,0x34,
+	0x00,0x00,0x38,0x3c,0x40,0x44,0x48,0x4c,
+	0x00,0x50,0x54,0x58,0x5c,0x60,0x64,0x68,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x6c,0x00,0x70,0x74,0x78,
+	0x00,0x00,0x00,0x7c,0x00,0x00,0x80,0x84,
+	0x00,0x88,0x8c,0x90,0x94,0x98,0x9c,0xa0,
+	0x00,0x00,0x00,0x00,0x00,0xa4,0xa8,0xac,
+	0x00,0xb0,0xb4,0xb8,0xbc,0xc0,0xc4,0xc8,
+	0x00,0x00,0xcc,0xd0,0xd4,0xd8,0xdc,0xe0,
+	0x00,0xe4,0xe8,0xec,0xf0,0xf4,0xf8,0xfc,
+};
+
 // the nuibbilize function.  This code (and the following denibbilize code) can be
 // pretty difficult to understsand.  For those playing at home, the following
 // reference is invaluable:
@@ -251,7 +294,7 @@ bool disk_image::unload_image()
 // The following two routines take care of nibbilizing and denibbilizing.
 // The code works on a track at a time (i.e. 16 sectors for dos 3.3 format)
 // to make things speedier.
-uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
+uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 {
 	// get a pointer to the beginning of the track information
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
@@ -356,7 +399,7 @@ uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 
 // denibbilize a track.  See the comments above the previous
 // function for an explanation.
-bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
+bool dsk_image::denibbilize_track(const int track, uint8_t *buffer)
 {
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
 	uint8_t *work_ptr = buffer;  // working pointer into the final data
@@ -412,7 +455,7 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 		// goes from disk bytes to 6 bit bytes
 		uint8_t *nib_data = (uint8_t *)alloca(344);
 		for (auto count = 0; count <= 343; count++) {
-			nib_data[count] = disk_image::m_read_translate_table[(*work_ptr++) & 0x7f];
+			nib_data[count] = m_read_translate_table[(*work_ptr++) & 0x7f];
 		}
 
 		// skip epilogue
@@ -442,17 +485,40 @@ bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 }
 
 // read the track data into the supplied buffer
-uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer) {
+uint32_t dsk_image::read_track(const uint32_t track, uint8_t *buffer) {
 	// with the data in the work buffer, we need to nibbilize the data
-	uint32_t num_bytes = nibbilize_track(track, buffer);
-
-	return num_bytes;
+	return nibbilize_track(track, buffer);
 }
 
-bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
+bool dsk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	// denybbilze track data stored in buffer to the work buffer
 	// and then store that work buffer into the loaded disk image
-	m_image_dirty = true;
+	disk_image::write_track(track, buffer);
 	return denibbilize_track(track, buffer);
+}
+
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+//  Code for NIB Images
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+
+// read the track data into the supplied buffer
+uint32_t nib_image::read_track(const uint32_t track, uint8_t *buffer) {
+	// nib images have their data already in the format that we need
+	uint32_t num_bytes = m_total_sectors * m_sector_bytes;
+	memcpy(buffer, &m_raw_buffer[track * num_bytes], num_bytes);
+	return num_bytes;
+}
+
+bool nib_image::write_track(const uint32_t track, uint8_t *buffer)
+{
+	UNREFERENCED(track);
+	UNREFERENCED(buffer);
+	return true;
+	// denybbilze track data stored in buffer to the work buffer
+	// and then store that work buffer into the loaded disk image
+//	disk_image::write_track(track, buffer);
+//	return denibbilize_track(track, buffer);
 }

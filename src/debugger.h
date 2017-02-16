@@ -51,8 +51,16 @@ struct breakpoint {
 	bool               m_enabled;
 };
 
+// commmands for the debugger - need access to these from the disassembler
+extern const char *step_command_name;
+extern const char *next_command_name;
+extern const char *continue_command_name;
+extern const char *break_command_name;
+
+
 extern debugger_state Debugger_state;
 extern bool Debugger_use_sym_tables;
+extern std::vector<breakpoint> Debugger_breakpoints;
 
 void debugger_enter();
 void debugger_exit();

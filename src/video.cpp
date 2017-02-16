@@ -55,7 +55,6 @@ const int Video_cell_height = Video_native_height / 24;
 static int Video_scale_factor = 2;
 static SDL_Rect Video_native_size;
 
-static SDL_Surface *Splash_screen_surface;
 static GLuint Splash_screen_texture;
 
 // information about internally built textures
@@ -788,7 +787,7 @@ bool video_create()
 // intialize the SDL system
 bool video_init()
 {
-	IMG_Init(IMG_INIT_JPG);
+	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
 
 	if (Video_window == nullptr) {
 		Video_native_size.x = 0;
@@ -821,27 +820,23 @@ bool video_init()
 	}
 
 	// create the splash screen
-	// load up the interface screen if needed
-	if (Splash_screen_surface != nullptr) {
-		SDL_FreeSurface(Splash_screen_surface);
-	}
 
-	Splash_screen_surface = IMG_Load("splash.jpg");
-	if (Splash_screen_surface == nullptr) {
-		printf("Unable to load splash screen: %s\n", SDL_GetError());
-	}
-   int mode = GL_RGB;
-   if (Splash_screen_surface->format->BytesPerPixel == 4) {
-	  mode = GL_RGBA;
-   }
+	SDL_Surface *surface = IMG_Load("interface/splash.jpg");
+	if (surface != nullptr) {
+		int mode = GL_RGB;
+		if (surface->format->BytesPerPixel == 4) {
+		  mode = GL_RGBA;
+		}
 
-	glGenTextures(1, &Splash_screen_texture);
-	glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Splash_screen_surface->w, Splash_screen_surface->h, 0, mode, GL_UNSIGNED_BYTE, Splash_screen_surface->pixels);
+		glGenTextures(1, &Splash_screen_texture);
+		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
+		SDL_FreeSurface(surface);
+	}
 
 	return true;
 }
@@ -851,10 +846,6 @@ void video_shutdown()
 	ui_shutdown();
 
 	// free the splash screen
-	if (Splash_screen_surface != nullptr) {
-		SDL_FreeSurface(Splash_screen_surface);
-	}
-
 	// free the pixels used for the hires texture patterns
 	for (auto i = 0; i < Num_hires_mono_patterns; i++) {
 		delete Hires_mono_pixels[i];

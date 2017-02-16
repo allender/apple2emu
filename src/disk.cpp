@@ -343,3 +343,15 @@ const char *disk_get_mounted_filename(const uint32_t slot)
 {
 	return Disk_drives[slot - 1].get_mounted_filename();
 }
+
+bool disk_is_on(const uint32_t slot)
+{
+	return Disk_drives[slot - 1].m_motor_on;
+}
+
+bool disk_get_track_and_sector(uint32_t slot, uint32_t &track, uint32_t &sector)
+{
+	track = Disk_drives[slot - 1].m_current_track;
+	sector = Disk_drives[slot - 1].m_current_byte / 256;
+	return true;
+}

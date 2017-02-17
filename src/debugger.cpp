@@ -60,6 +60,7 @@ static ImGuiWindowFlags default_window_flags = ImGuiWindowFlags_ShowBorders;
 static debugger_console Debugger_console;
 static debugger_memory_editor Debugger_memory_editor;
 static debugger_disasm Debugger_disasm;
+static bool Reset_windows = false;
 
 const char *step_command_name = "step";
 const char *next_command_name = "next";
@@ -219,9 +220,14 @@ static void debugger_trace_line()
 
 static void debugger_display_soft_switch()
 {
-	ImGui::SetNextWindowSize(ImVec2(224, 269), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(5, 401), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowCollapsed(true,ImGuiSetCond_FirstUseEver);
+
+	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	if (Reset_windows) {
+		condition = ImGuiSetCond_Always;
+	}
+	ImGui::SetNextWindowSize(ImVec2(224, 269), condition);
+	ImGui::SetNextWindowPos(ImVec2(5, 401), condition);
+	ImGui::SetNextWindowCollapsed(true, condition);
 
 	ImGuiStyle &style = ImGui::GetStyle();
 	if (ImGui::Begin("Soft Switches", nullptr, default_window_flags)) {
@@ -372,9 +378,13 @@ static void debugger_display_soft_switch()
 // display breakpoints
 static void debugger_display_breakpoints()
 {
-	ImGui::SetNextWindowSize(ImVec2(265, 881), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(245, 401), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowCollapsed(true,ImGuiSetCond_FirstUseEver);
+	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	if (Reset_windows) {
+		condition = ImGuiSetCond_Always;
+	}
+	ImGui::SetNextWindowSize(ImVec2(265, 881), condition);
+	ImGui::SetNextWindowPos(ImVec2(245, 401), condition);
+	ImGui::SetNextWindowCollapsed(true, condition);
 
 	if (ImGui::Begin("Breakpoints", nullptr, default_window_flags)) {
 		// for now, just disassm from the current pc
@@ -550,9 +560,19 @@ void debugger_render()
 	Debugger_console.draw("Console", nullptr);
 	debugger_display_breakpoints();
 	debugger_display_soft_switch();
+
+	Reset_windows = false;
 }
 
 void debugger_print_char_to_console(uint8_t c)
 {
 	Debugger_console.add_log("%c", c);
+}
+
+void debugger_reset_windows()
+{
+	Debugger_memory_editor.reset();
+	Debugger_disasm.reset();
+	Debugger_console.reset();
+	Reset_windows = true;       // ugh should make the other windows classes probably
 }

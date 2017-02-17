@@ -113,7 +113,8 @@ const char *debugger_disasm::find_symbol(uint16_t addr)
 	return nullptr;
 }
 
-debugger_disasm::debugger_disasm () : m_console(nullptr)
+debugger_disasm::debugger_disasm() : m_console(nullptr),
+									 m_reset_window(false)
 {
 	// load in symbol tables
 	add_symtable("symtables/apple2e_sym.txt");
@@ -295,8 +296,14 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		m_break_addr = m_current_addr = pc;
 	}
 
-	ImGui::SetNextWindowSize(ImVec2(546, 578), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(570, 8), ImGuiSetCond_FirstUseEver);
+	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	if (m_reset_window) {
+		condition = ImGuiSetCond_Always;
+		m_reset_window = false;
+	}
+
+	ImGui::SetNextWindowSize(ImVec2(546, 578), condition);
+	ImGui::SetNextWindowPos(ImVec2(570, 8), condition);
 
 	// get the styling so we can get access to color values
 	ImGuiStyle &style = ImGui::GetStyle();

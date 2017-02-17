@@ -40,6 +40,7 @@
 debugger_memory_editor::debugger_memory_editor()
 {
 	m_open = true;
+	m_reset_window = false;
 	m_columns = 16;
 	m_data_editing_address = -1;
 	m_data_editing_take_focus = false;
@@ -54,8 +55,14 @@ debugger_memory_editor::~debugger_memory_editor()
 
 void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_display_addr)
 {
-	ImGui::SetNextWindowSize(ImVec2(550, 332), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(5, 428), ImGuiSetCond_FirstUseEver);
+	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	if (m_reset_window) {
+		condition = ImGuiSetCond_Always;
+		m_reset_window = false;
+	}
+
+	ImGui::SetNextWindowSize(ImVec2(550, 332), condition);
+	ImGui::SetNextWindowPos(ImVec2(5, 428), condition);
 
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders)) {
 		ImGui::BeginChild("##scrolling", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()));

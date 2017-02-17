@@ -275,6 +275,9 @@ static void ui_show_debugger_menu()
 {
 	ImGui::Text("Debugger Options");
 	ImGui::Checkbox("Use Symbol Tables", &Debugger_use_sym_tables);
+	if (ImGui::Button("Reset Debugger Windows")) {
+		debugger_reset_windows();
+	}
 }
 
 static void ui_show_speed_menu()

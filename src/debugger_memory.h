@@ -35,6 +35,7 @@ class debugger_memory_editor
 {
 	bool    m_open;
 	bool    m_allow_edits;
+	bool    m_reset_window;
 	int     m_columns;
 	int     m_data_editing_address;
 	bool    m_data_editing_take_focus;
@@ -45,6 +46,8 @@ public:
 	debugger_memory_editor();
 	~debugger_memory_editor();
 	void draw(const char* title, int mem_size, size_t base_display_addr = 0);
+	void reset() {
+		m_reset_window = true; }
 };
 
 

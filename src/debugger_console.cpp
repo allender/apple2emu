@@ -48,6 +48,8 @@ debugger_console::debugger_console()
 				add_log("%s - %s", cmd.first.c_str(), cmd.second.m_help.c_str());
 			}
 	} };
+
+	m_reset_window = false;
 }
 
 debugger_console::~debugger_console()
@@ -91,8 +93,14 @@ void debugger_console::add_log(const char* fmt, ...)
 
 void debugger_console::draw(const char* title, bool* p_open)
 {
-	ImGui::SetNextWindowSize(ImVec2(546, 165), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(570, 596), ImGuiSetCond_FirstUseEver);
+	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	if (m_reset_window == true) {
+		condition = ImGuiSetCond_Always;
+		m_reset_window = false;
+	}
+
+	ImGui::SetNextWindowSize(ImVec2(546, 165), condition);
+	ImGui::SetNextWindowPos(ImVec2(570, 596), condition);
 	if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_ShowBorders)) {
 		ImGui::End();
 		return;

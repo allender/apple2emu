@@ -48,9 +48,10 @@ private:
 	typedef std::map<uint16_t, const char *> symtable_map;
 	std::vector<symtable_map> m_symbol_tables;
 
-    uint16_t m_break_addr;
-    uint16_t m_current_addr;
+	uint16_t          m_break_addr;
+	uint16_t          m_current_addr;
 	debugger_console *m_console;
+	bool              m_reset_window;
 
 
 	static const char *m_addressing_format_string[];
@@ -63,8 +64,9 @@ public:
 	~debugger_disasm();
 	uint8_t get_disassembly(uint16_t addr);
 	void draw(const char* title, uint16_t addr);
-    void set_break_addr(uint16_t addr);
+	void set_break_addr(uint16_t addr);
 	char *get_disassembly_line() { return m_disassembly_line; }
 	void attach_console(debugger_console *console);
+	void reset() { m_reset_window = true; }
 };
 

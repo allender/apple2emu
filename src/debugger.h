@@ -70,4 +70,5 @@ bool debugger_process();
 void debugger_render();
 bool debugger_active();
 void debugger_print_char_to_console(uint8_t c);
+void debugger_reset_windows();
 

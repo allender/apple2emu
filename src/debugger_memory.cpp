@@ -40,6 +40,9 @@
 debugger_memory_editor::debugger_memory_editor()
 {
 	m_open = true;
+	m_reset_window = false;
+	m_show_ram = memory_high_read_type::READ_ROM;
+	m_bank_num = memory_high_read_bank::READ_BANK1;
 	m_columns = 16;
 	m_data_editing_address = -1;
 	m_data_editing_take_focus = false;
@@ -58,7 +61,7 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 	ImGui::SetNextWindowPos(ImVec2(5, 428), ImGuiSetCond_FirstUseEver);
 
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders)) {
-		ImGui::BeginChild("##scrolling", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()));
+		ImGui::BeginChild("##scrolling", ImVec2(0, -(ImGui::GetItemsLineHeightWithSpacing() * 2)));
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
@@ -161,7 +164,7 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 				{
 					uint8_t val = 0;
 					if (addr < 0xc000 || addr > 0xc0ff) {
-						val = memory_read(addr);
+						val = memory_read(addr, m_show_ram, m_bank_num);
 					}
 
 					ImGui::Text("%02X ", val);
@@ -192,7 +195,7 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 				if (n > 0) ImGui::SameLine();
 				int c = '?';
 				if (addr < 0xc000 || addr > 0xc0ff) {
-					c = memory_read(addr);
+					c = memory_read(addr, m_show_ram, m_bank_num);
 				}
 				ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
 			}
@@ -231,12 +234,32 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 		}
 		ImGui::PopItemWidth();
 
-		// keeps focus in input box
-		if (ImGui::IsItemHovered() ||
-			(ImGui::IsRootWindowOrAnyChildFocused() &&
-				!ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
-			ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+		// add in radio buttons for displaying specifics kinds of RAM in the
+		// memoory window
+		int rom_type = static_cast<int>(m_show_ram);
+		ImGui::SameLine();
+		ImGui::RadioButton("ROM", &rom_type, static_cast<int>(memory_high_read_type::READ_ROM));
+		ImGui::SameLine();
+		ImGui::RadioButton("Bank RAM", &rom_type, static_cast<int>(memory_high_read_type::READ_RAM));
+		m_show_ram = static_cast<memory_high_read_type>(rom_type);
+
+		if (m_show_ram == memory_high_read_type::READ_RAM) {
+			int ram_bank = static_cast<int>(m_bank_num);
+			ImGui::SameLine();
+			ImGui::RadioButton("Bank 1", &ram_bank, static_cast<int>(memory_high_read_bank::READ_BANK1));
+			ImGui::SameLine();
+			ImGui::RadioButton("Bank 2", &ram_bank, static_cast<int>(memory_high_read_bank::READ_BANK2));
+			m_bank_num = static_cast<memory_high_read_bank>(ram_bank);
 		}
+
+		//
+
+		// keeps focus in input box
+		//if (ImGui::IsItemHovered() ||
+		//	(ImGui::IsRootWindowOrAnyChildFocused() &&
+		//		!ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
+		//	ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+		//}
 	}
 	ImGui::End();
 }

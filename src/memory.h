@@ -44,6 +44,16 @@ SOFTWARE.
 
 #define RAM_EXPANSION_RESET     (1 << 10)
 
+enum class memory_high_read_type : int {
+	READ_ROM = 0,
+	READ_RAM,
+};
+
+enum class memory_high_read_bank : int {
+	READ_BANK1 = 0,
+	READ_BANK2,
+};
+
 extern uint32_t Memory_state;
 
 typedef std::function<uint8_t(uint16_t, uint8_t, bool)> soft_switch_function;
@@ -54,6 +64,7 @@ bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location);
 uint8_t memory_read_main(const uint16_t addr);
 uint8_t memory_read_aux(const uint16_t addr);
 uint8_t memory_read(const uint16_t addr, bool instruction = false);
+uint8_t memory_read(const uint16_t addr, memory_high_read_type high_type, memory_high_read_bank bank);
 uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num);
 void memory_write(const uint16_t addr, uint8_t val);
 void memory_set_paging_tables();

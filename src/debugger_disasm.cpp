@@ -176,46 +176,79 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			}
 			sprintf(internal_buffer, m_addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
 			strcat(m_disassembly_line, internal_buffer);
+			if (0) {
+				switch (mode) {
+				case cpu_6502::addr_mode::ACCUMULATOR_MODE:
+				case cpu_6502::addr_mode::IMMEDIATE_MODE:
+				case cpu_6502::addr_mode::IMPLIED_MODE:
+				case cpu_6502::addr_mode::NO_MODE:
+				case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
+				case cpu_6502::addr_mode::ABSOLUTE_INDEXED_INDIRECT_MODE:
+				case cpu_6502::addr_mode::INDIRECT_ZP_MODE:
+					break;
 
-			switch (mode) {
-			case cpu_6502::addr_mode::ACCUMULATOR_MODE:
-			case cpu_6502::addr_mode::IMMEDIATE_MODE:
-			case cpu_6502::addr_mode::IMPLIED_MODE:
-			case cpu_6502::addr_mode::NO_MODE:
-			case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
-			case cpu_6502::addr_mode::ABSOLUTE_INDEXED_INDIRECT_MODE:
-			case cpu_6502::addr_mode::INDIRECT_ZP_MODE:
-				break;
+					// relative mode is relative to current PC.  figure out if we need to
+					// move forwards or backwards
+				case cpu_6502::addr_mode::RELATIVE_MODE:
+					//if (addressing_val & 0x80) {
+					//	mem_value = cpu.get_pc() - (addressing_val & 0x80);
+					//} else {
+					//	mem_value = cpu.get_pc() + addressing_val;
+					//}
+					break;
 
-				// relative mode is relative to current PC.  figure out if we need to
-				// move forwards or backwards
-			case cpu_6502::addr_mode::RELATIVE_MODE:
-				//if (addressing_val & 0x80) {
-				//	mem_value = cpu.get_pc() - (addressing_val & 0x80);
-				//} else {
-				//	mem_value = cpu.get_pc() + addressing_val;
-				//}
-				break;
+				case cpu_6502::addr_mode::INDIRECT_MODE:
+					addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
+					sprintf(internal_buffer, "\t$%04X", addressing_val);
+					strcat(m_disassembly_line, internal_buffer);
+					break;
 
-			case cpu_6502::addr_mode::INDIRECT_MODE:
-				addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
-				sprintf(internal_buffer, "\t$%04X", addressing_val);
-				strcat(m_disassembly_line, internal_buffer);
-				break;
-
-			case cpu_6502::addr_mode::ABSOLUTE_MODE:
-			case cpu_6502::addr_mode::ZERO_PAGE_MODE:
-			{
-				const char *mem_str = find_symbol(addressing_val);
-				if (opcode->m_mnemonic != 'JSR ' && opcode->m_mnemonic != 'JMP ') {
-					if (mem_str != nullptr) {
-						sprintf(internal_buffer, "\t%s", mem_str);
-						strcat(m_disassembly_line, internal_buffer);
+				case cpu_6502::addr_mode::ABSOLUTE_MODE:
+				case cpu_6502::addr_mode::ZERO_PAGE_MODE:
+				{
+					const char *mem_str = find_symbol(addressing_val);
+					if (opcode->m_mnemonic != 'JSR ' && opcode->m_mnemonic != 'JMP ') {
+						if (mem_str != nullptr) {
+							sprintf(internal_buffer, "\t%s", mem_str);
+							strcat(m_disassembly_line, internal_buffer);
+						} else {
+							sprintf(internal_buffer, "\t$%04X", addressing_val);
+							strcat(m_disassembly_line, internal_buffer);
+						}
+						if (((addressing_val >> 8) & 0xff) != 0xc0 && mem_str == nullptr) {
+							mem_value = memory_read(addressing_val);
+							sprintf(internal_buffer, ": $%02X", mem_value);
+							strcat(m_disassembly_line, internal_buffer);
+							if (isprint(mem_value)) {
+								sprintf(internal_buffer, " (%c)", mem_value);
+								strcat(m_disassembly_line, internal_buffer);
+							}
+						}
 					} else {
-						sprintf(internal_buffer, "\t$%04X", addressing_val);
-						strcat(m_disassembly_line, internal_buffer);
+						if (mem_str != nullptr) {
+							sprintf(internal_buffer, "\t%s", mem_str);
+							strcat(m_disassembly_line, internal_buffer);
+						}
 					}
-					if (((addressing_val >> 8) & 0xff) != 0xc0 && mem_str == nullptr) {
+					break;
+				}
+
+					// indexed and zero page indexed are the same
+				case cpu_6502::addr_mode::X_INDEXED_MODE:
+				case cpu_6502::addr_mode::ZP_INDEXED_MODE:
+				case cpu_6502::addr_mode::Y_INDEXED_MODE:
+				case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
+					if (mode == cpu_6502::addr_mode::X_INDEXED_MODE ||
+							mode == cpu_6502::addr_mode::ZP_INDEXED_MODE) {
+						addressing_val += cpu.get_x();
+					} else {
+						addressing_val += cpu.get_y();
+					}
+
+					// don't print out memory value if this is softswitch area
+					sprintf(internal_buffer, "\t$%04X", addressing_val);
+					strcat(m_disassembly_line, internal_buffer);
+					if (((addressing_val >> 8) & 0xff) != 0xc0) {
 						mem_value = memory_read(addressing_val);
 						sprintf(internal_buffer, ": $%02X", mem_value);
 						strcat(m_disassembly_line, internal_buffer);
@@ -224,64 +257,32 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 							strcat(m_disassembly_line, internal_buffer);
 						}
 					}
-				} else {
-					if (mem_str != nullptr) {
-						sprintf(internal_buffer, "\t%s", mem_str);
-						strcat(m_disassembly_line, internal_buffer);
-					}
-				}
-				break;
-			}
+					break;
 
-				// indexed and zero page indexed are the same
-			case cpu_6502::addr_mode::X_INDEXED_MODE:
-			case cpu_6502::addr_mode::ZP_INDEXED_MODE:
-			case cpu_6502::addr_mode::Y_INDEXED_MODE:
-			case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
-				if (mode == cpu_6502::addr_mode::X_INDEXED_MODE ||
-						mode == cpu_6502::addr_mode::ZP_INDEXED_MODE) {
-					addressing_val += cpu.get_x();
-				} else {
+				case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
+					//addressing_val += cpu.get_x();
+					//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
+					//mem_value = mem[addressing_val];
+					//sprintf(internal_buffer, "\t\t%04X: 0x%02X", addressing_val, mem_value);
+					//strcat(Debugger_disassembly_line, internal_buffer);
+					//if (isprint(mem_value)) {
+					//	sprintf(internal_buffer, " (%c)", mem_value);
+					//	strcat(Debugger_disassembly_line, internal_buffer);
+					//}
+					break;
+
+				case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
+					addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
 					addressing_val += cpu.get_y();
-				}
-
-				// don't print out memory value if this is softswitch area
-				sprintf(internal_buffer, "\t$%04X", addressing_val);
-				strcat(m_disassembly_line, internal_buffer);
-				if (((addressing_val >> 8) & 0xff) != 0xc0) {
 					mem_value = memory_read(addressing_val);
-					sprintf(internal_buffer, ": $%02X", mem_value);
+					sprintf(internal_buffer, "\t$%04X: $%02X", addressing_val, mem_value);
 					strcat(m_disassembly_line, internal_buffer);
 					if (isprint(mem_value)) {
 						sprintf(internal_buffer, " (%c)", mem_value);
 						strcat(m_disassembly_line, internal_buffer);
 					}
+					break;
 				}
-				break;
-
-			case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
-				//addressing_val += cpu.get_x();
-				//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
-				//mem_value = mem[addressing_val];
-				//sprintf(internal_buffer, "\t\t%04X: 0x%02X", addressing_val, mem_value);
-				//strcat(Debugger_disassembly_line, internal_buffer);
-				//if (isprint(mem_value)) {
-				//	sprintf(internal_buffer, " (%c)", mem_value);
-				//	strcat(Debugger_disassembly_line, internal_buffer);
-				//}
-				break;
-
-			case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
-				addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
-				addressing_val += cpu.get_y();
-				mem_value = memory_read(addressing_val);
-				sprintf(internal_buffer, "\t$%04X: $%02X", addressing_val, mem_value);
-				strcat(m_disassembly_line, internal_buffer);
-				if (isprint(mem_value)) {
-					sprintf(internal_buffer, " (%c)", mem_value);
-					strcat(m_disassembly_line, internal_buffer);
-				}
-				break;
 			}
 		}
 	}

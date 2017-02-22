@@ -25,6 +25,6 @@ SOFTWARE.
 
 */
 
-#include "cpu.h"
+#include "6502.h"
 
 bool assemble_6502(const std::string &input_file);

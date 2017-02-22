@@ -33,7 +33,7 @@ SOFTWARE.
 #include <errno.h>
 
 #include "apple2emu_defs.h"
-#include "cpu.h"
+#include "6502.h"
 #include "assemble.h"
 #include "video.h"
 #include "memory.h"
@@ -47,6 +47,7 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
+#include "z80.h"
 
 #include "SDL.h"
 
@@ -112,7 +113,6 @@ static char *get_cmdline_option(char **start, char **end, const std::string &sho
 	return nullptr;
 }
 
-#if 0
 static bool cmdline_option_exists(char **start, char **end, const std::string &short_option, const std::string &long_option = "")
 {
 	char **iter = std::find(start, end, short_option);
@@ -124,7 +124,6 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	}
 	return true;
 }
-#endif
 
 static uint32_t render_event_timer(uint32_t interval, void *param)
 {
@@ -197,6 +196,9 @@ int main(int argc, char* argv[])
 	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");
 	Binary_image_filename = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 
+	// testing z80
+	bool test_z80 = cmdline_option_exists(argv, argv + argc, "-z", "--z80");
+
 	// initialize SDL before everything else
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());
@@ -211,6 +213,11 @@ int main(int argc, char* argv[])
 	addr_string = get_cmdline_option(argv, argv + argc, "-b", "--base");
 	if (addr_string != nullptr) {
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
+	}
+
+	if (test_z80 == true) {
+		z80_do_tests();
+		exit(0);
 	}
 
 	reset_machine();

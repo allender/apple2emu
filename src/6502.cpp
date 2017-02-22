@@ -34,7 +34,7 @@ SOFTWARE.
 #include "string.h"
 #include "debugger.h"
 
-#include "cpu.h"
+#include "6502.h"
 #include "memory.h"
 
 cpu_6502::opcode_info cpu_6502::m_6502_opcodes[] = {

@@ -44,7 +44,7 @@
 static const int Max_symtable_line = 256;
 
 // these string formats need to match the addressing modes
-// defined in cpu.h
+// defined in 6502.h
 const char *debugger_disasm::m_addressing_format_string[] = {
 	"",           // NO_MODE
 	"",           // ACCUMULATOR_MODE

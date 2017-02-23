@@ -399,17 +399,17 @@ void z80::sub(uint8_t val, int carry)
 	m_registers.bytes[A_INDEX] = tmp & 0xff;
 }
 
-void z80::and(uint8_t val)
+void z80::op_and(uint8_t val)
 {
 	m_registers.bytes[A_INDEX] &= val;
 }
 
-void z80::xor(uint8_t val)
+void z80::op_xor(uint8_t val)
 {
 	m_registers.bytes[A_INDEX] ^= val;
 }
 
-void z80::or(uint8_t val)
+void z80::op_or(uint8_t val)
 {
 	m_registers.bytes[A_INDEX] |= val;
 }
@@ -452,8 +452,8 @@ uint32_t z80::process_opcode()
 	switch(opcode) {
 
 	case 0x01:
-		m_registers.bytes[C_INDEX] = z80_memory_read(m_pc++);
-		m_registers.bytes[B_INDEX] = z80_memory_read(m_pc++);
+		m_registers.bytes[C_INDEX] = z80_memory_read(m_pc + 1);
+		m_registers.bytes[B_INDEX] = z80_memory_read(m_pc + 2);
 		break;
 	case 0x02:
 		store_register(m_registers.shorts[BC_INDEX], A_INDEX);
@@ -462,7 +462,7 @@ uint32_t z80::process_opcode()
 		inc_register(B_INDEX);
 		break;
 	case 0x06:
-		load_register(B_INDEX, z80_memory_read(m_pc++));
+		load_register(B_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x08:
 	{
@@ -477,11 +477,11 @@ uint32_t z80::process_opcode()
 		inc_register(C_INDEX);
 		break;
 	case 0x0e:
-		load_register(C_INDEX, z80_memory_read(m_pc++));
+		load_register(C_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x11:
-		m_registers.bytes[E_INDEX] = z80_memory_read(m_pc++);
-		m_registers.bytes[D_INDEX] = z80_memory_read(m_pc++);
+		m_registers.bytes[E_INDEX] = z80_memory_read(m_pc + 1);
+		m_registers.bytes[D_INDEX] = z80_memory_read(m_pc + 2);
 		break;
 	case 0x12:
 		store_register(m_registers.shorts[DE_INDEX], A_INDEX);
@@ -490,7 +490,7 @@ uint32_t z80::process_opcode()
 		inc_register(D_INDEX);
 		break;
 	case 0x16:
-		load_register(D_INDEX, z80_memory_read(m_pc++));
+		load_register(D_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x1a:
 		load_register(A_INDEX, z80_memory_read(m_registers.shorts[DE_INDEX]));
@@ -499,15 +499,15 @@ uint32_t z80::process_opcode()
 		inc_register(E_INDEX);
 		break;
 	case 0x1e:
-		load_register(E_INDEX, z80_memory_read(m_pc++));
+		load_register(E_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x21:
-		m_registers.bytes[L_INDEX] = z80_memory_read(m_pc++);
-		m_registers.bytes[H_INDEX] = z80_memory_read(m_pc++);
+		m_registers.bytes[L_INDEX] = z80_memory_read(m_pc + 1);
+		m_registers.bytes[H_INDEX] = z80_memory_read(m_pc + 2);
 		break;
 	case 0x22:
 	{
-		uint16_t addr = z80_memory_read(m_pc++) << 8 | z80_memory_read(m_pc++);
+		uint16_t addr = z80_memory_read(m_pc + 1) << 8 | z80_memory_read(m_pc + 2);
 		z80_memory_write(addr, m_registers.bytes[L_INDEX]);
 		z80_memory_write(addr + 1, m_registers.bytes[H_INDEX]);
 		break;
@@ -516,21 +516,21 @@ uint32_t z80::process_opcode()
 		inc_register(F_INDEX);
 		break;
 	case 0x26:
-		load_register(H_INDEX, z80_memory_read(m_pc++));
+		load_register(H_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x2c:
 		inc_register(L_INDEX);
 		break;
 	case 0x2e:
-		load_register(L_INDEX, z80_memory_read(m_pc++));
+		load_register(L_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x31:
-		m_registers.bytes[SPL_INDEX] = z80_memory_read(m_pc++);
-		m_registers.bytes[SPH_INDEX] = z80_memory_read(m_pc++);
+		m_registers.bytes[SPL_INDEX] = z80_memory_read(m_pc + 1);
+		m_registers.bytes[SPH_INDEX] = z80_memory_read(m_pc + 2);
 		break;
 	case 0x32:
 	{
-		uint16_t addr = z80_memory_read(m_pc++) << 8 | z80_memory_read(m_pc++);
+		uint16_t addr = z80_memory_read(m_pc + 1) << 8 | z80_memory_read(m_pc + 2);
 		store_register(addr, A_INDEX);
 		break;
 	}
@@ -541,11 +541,11 @@ uint32_t z80::process_opcode()
 		dec_indirect(z80_memory_read(m_registers.shorts[HL_INDEX]));
 		break;
 	case 0x36:
-		store_immediate(m_registers.shorts[HL_INDEX], z80_memory_read(m_pc++));
+		store_immediate(m_registers.shorts[HL_INDEX], z80_memory_read(m_pc + 1));
 		break;
 	case 0x3a:
 	{
-		uint16_t mem_loc = z80_memory_read(m_pc++) << 8 | z80_memory_read(m_pc++);
+		uint16_t mem_loc = z80_memory_read(m_pc + 1) << 8 | z80_memory_read(m_pc + 2);
 		load_register(A_INDEX, z80_memory_read(mem_loc));
 		break;
 	}
@@ -553,7 +553,7 @@ uint32_t z80::process_opcode()
 		inc_register(A_INDEX);
 		break;
 	case 0x3e:
-		load_register(A_INDEX, z80_memory_read(m_pc++));
+		load_register(A_INDEX, z80_memory_read(m_pc + 1));
 		break;
 	case 0x40:
 		load_register(B_INDEX, m_registers.bytes[B_INDEX]);
@@ -823,76 +823,76 @@ uint32_t z80::process_opcode()
 		sub(m_registers.bytes[A_INDEX], get_flag(register_bit::CARRY_BIT));
 		break;
 	case 0xa0:
-		and(m_registers.bytes[B_INDEX]);
+		op_and(m_registers.bytes[B_INDEX]);
 		break;
 	case 0xa1:
-		and(m_registers.bytes[C_INDEX]);
+		op_and(m_registers.bytes[C_INDEX]);
 		break;
 	case 0xa2:
-		and(m_registers.bytes[D_INDEX]);
+		op_and(m_registers.bytes[D_INDEX]);
 		break;
 	case 0xa3:
-		and(m_registers.bytes[E_INDEX]);
+		op_and(m_registers.bytes[E_INDEX]);
 		break;
 	case 0xa4:
-		and(m_registers.bytes[F_INDEX]);
+		op_and(m_registers.bytes[F_INDEX]);
 		break;
 	case 0xa5:
-		and(m_registers.bytes[L_INDEX]);
+		op_and(m_registers.bytes[L_INDEX]);
 		break;
 	case 0xa6:
-		and(z80_memory_read(m_registers.shorts[HL_INDEX]));
+		op_and(z80_memory_read(m_registers.shorts[HL_INDEX]));
 		break;
 	case 0xa7:
-		and(m_registers.bytes[A_INDEX]);
+		op_and(m_registers.bytes[A_INDEX]);
 		break;
 	case 0xa8:
-		xor(m_registers.bytes[B_INDEX]);
+		op_xor(m_registers.bytes[B_INDEX]);
 		break;
 	case 0xa9:
-		xor(m_registers.bytes[C_INDEX]);
+		op_xor(m_registers.bytes[C_INDEX]);
 		break;
 	case 0xaa:
-		xor(m_registers.bytes[D_INDEX]);
+		op_xor(m_registers.bytes[D_INDEX]);
 		break;
 	case 0xab:
-		xor(m_registers.bytes[E_INDEX]);
+		op_xor(m_registers.bytes[E_INDEX]);
 		break;
 	case 0xac:
-		xor(m_registers.bytes[F_INDEX]);
+		op_xor(m_registers.bytes[F_INDEX]);
 		break;
 	case 0xad:
-		xor(m_registers.bytes[L_INDEX]);
+		op_xor(m_registers.bytes[L_INDEX]);
 		break;
 	case 0xae:
-		xor(z80_memory_read(m_registers.shorts[HL_INDEX]));
+		op_xor(z80_memory_read(m_registers.shorts[HL_INDEX]));
 		break;
 	case 0xaf:
-		xor(m_registers.bytes[A_INDEX]);
+		op_xor(m_registers.bytes[A_INDEX]);
 		break;
 	case 0xb0:
-		or(m_registers.bytes[B_INDEX]);
+		op_or(m_registers.bytes[B_INDEX]);
 		break;
 	case 0xb1:
-		or(m_registers.bytes[C_INDEX]);
+		op_or(m_registers.bytes[C_INDEX]);
 		break;
 	case 0xb2:
-		or(m_registers.bytes[D_INDEX]);
+		op_or(m_registers.bytes[D_INDEX]);
 		break;
 	case 0xb3:
-		or(m_registers.bytes[E_INDEX]);
+		op_or(m_registers.bytes[E_INDEX]);
 		break;
 	case 0xb4:
-		or(m_registers.bytes[F_INDEX]);
+		op_or(m_registers.bytes[F_INDEX]);
 		break;
 	case 0xb5:
-		or(m_registers.bytes[H_INDEX]);
+		op_or(m_registers.bytes[H_INDEX]);
 		break;
 	case 0xb6:
-		or(z80_memory_read(m_registers.shorts[HL_INDEX]));
+		op_or(z80_memory_read(m_registers.shorts[HL_INDEX]));
 		break;
 	case 0xb7:
-		or(m_registers.bytes[A_INDEX]);
+		op_or(m_registers.bytes[A_INDEX]);
 		break;
 	case 0xc1:
 		pop(BC_INDEX);
@@ -915,7 +915,7 @@ uint32_t z80::process_opcode()
 		push(BC_INDEX);
 		break;
 	case 0xc6:
-		add(z80_memory_read(m_pc++), 0);
+		add(z80_memory_read(m_pc + 1), 0);
 		break;
 	case 0xca:
 	{
@@ -926,7 +926,7 @@ uint32_t z80::process_opcode()
 		break;
 	}
 	case 0xce:
-		add(z80_memory_read(m_pc++), get_flag(register_bit::CARRY_BIT));
+		add(z80_memory_read(m_pc + 1), get_flag(register_bit::CARRY_BIT));
 		break;
 	case 0xd1:
 		pop(DE_INDEX);
@@ -954,7 +954,7 @@ uint32_t z80::process_opcode()
 		break;
 	}
 	case 0xde:
-		sub(z80_memory_read(m_pc++), get_flag(register_bit::CARRY_BIT));
+		sub(z80_memory_read(m_pc + 1), get_flag(register_bit::CARRY_BIT));
 		break;
 	case 0xd9:
 	{
@@ -993,7 +993,7 @@ uint32_t z80::process_opcode()
 		push(HL_INDEX);
 		break;
 	case 0xe6:
-		and(z80_memory_read(m_pc++));
+		op_and(z80_memory_read(m_pc + 1));
 		break;
 	case 0xea:
 	{
@@ -1011,7 +1011,7 @@ uint32_t z80::process_opcode()
 		break;
 	}
 	case 0xee:
-		and(z80_memory_read(m_pc++));
+		op_and(z80_memory_read(m_pc + 1));
 		break;
 	case 0xf1:
 		pop(AF_INDEX);
@@ -1028,7 +1028,7 @@ uint32_t z80::process_opcode()
 		push(AF_INDEX);
 		break;
 	case 0xf6:
-		or(z80_memory_read(m_pc++));
+		op_or(z80_memory_read(m_pc + 1));
 		break;
 	case 0xfa:
 	{

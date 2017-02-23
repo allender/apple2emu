@@ -134,11 +134,11 @@ private:
 	// alternate register set.  We don't need direct access to these
 	// registers. so we can just store them as shorts.  We just store
 	// up to the HL index
-	uint16_t         m_alternate_regs[reg_16bit::HL_INDEX];
+	uint16_t         m_alternate_regs[reg_16bit::HL_INDEX + 1];
 
 	// interrupt and memory refresh registers
-	uint8_t          m_i;
-	uint8_t          m_r;
+	//uint8_t          m_i;
+	//uint8_t          m_r;
 
 	uint8_t          m_flags;
 
@@ -159,9 +159,9 @@ private:
 	void push(int reg);
 	void add(uint8_t val, int carry);
 	void sub(uint8_t val, int carry);
-	void and(uint8_t val);
-	void xor(uint8_t val);
-	void or(uint8_t val);
+	void op_and(uint8_t val);
+	void op_xor(uint8_t val);
+	void op_or(uint8_t val);
 	void cp(uint8_t reg);
 	void dec_register(int reg);
 	void dec_indirect(uint16_t addr);

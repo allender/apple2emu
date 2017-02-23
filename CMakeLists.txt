@@ -48,7 +48,7 @@ include_directories(SYSTEM
 
 set (EMU_SOURCES
    src/apple2emu.cpp
-   src/cpu.cpp
+   src/6502.cpp
    src/debugger.cpp
    src/debugger_console.cpp
    src/debugger_disasm.cpp
@@ -62,7 +62,8 @@ set (EMU_SOURCES
    src/memory.cpp
    src/path_utils.cpp
    src/speaker.cpp
-   src/video.cpp)
+   src/video.cpp
+   src/z80.cpp)
 
 add_executable(apple2emu ${EMU_SOURCES})
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")

@@ -48,7 +48,7 @@ static const int Memory_rom_size = (16 * 1024);
 static const int Memory_switched_bank_size = (4 * 1024);
 static const int Memory_c000_rom_size = (4 * 1024);
 static const int Memory_extended_size = (8 * 1024);
-static const int Memory_aux_size = (48 * 256);
+static const int Memory_aux_size = (48 * 1024);
 static const int Memory_expansion_rom_size = (2 * 1024);
 
 static const uint16_t Memory_page_size = 256;
@@ -332,7 +332,7 @@ uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 // handler for reading memory status.  This handles 0xc010 to 0xc018
 uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 {
-	uint8_t return_val = 0;
+	uint8_t return_val = 0xff;
 
 	// writes to 0xc01x reset the keyboard strobe
 	if (write == true) {
@@ -680,7 +680,7 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 			return m_soft_switch_handlers[mapped_addr](addr, 0, false);
 		}
 		if (Memory_read_pages[page] == nullptr) {
-			return 0;
+			return 0xff;
 		}
 	}
 
@@ -735,7 +735,7 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 		// handler for the page, then just return
 		if (page >= 0xc0 && page <= 0xcf) {
 			if (Memory_read_pages[page] == nullptr) {
-				return 0;
+				return 0xff;
 			}
 		}
 	}

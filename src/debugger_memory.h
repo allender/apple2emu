@@ -30,12 +30,15 @@
 
 #include "apple2emu.h"
 #include "apple2emu_defs.h"
+#include "memory.h"
 
 class debugger_memory_editor
 {
 	bool    m_open;
 	bool    m_allow_edits;
 	bool    m_reset_window;
+	memory_high_read_type     m_show_ram;
+	memory_high_read_bank     m_bank_num;
 	int     m_columns;
 	int     m_data_editing_address;
 	bool    m_data_editing_take_focus;

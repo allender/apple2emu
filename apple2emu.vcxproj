@@ -115,6 +115,7 @@
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\6502.cpp" />
     <ClCompile Include="src\apple2emu.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -122,9 +123,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="src\cpu.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\debugger.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -168,6 +166,13 @@
     <ClCompile Include="src\video.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="z80emu\maketables.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="z80emu\z80emu.cpp" />
+    <ClCompile Include="z80emu\zextest.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h" />
@@ -180,12 +185,12 @@
     <ClInclude Include="nativefiledialog\src\common.h" />
     <ClInclude Include="nativefiledialog\src\include\nfd.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />
+    <ClInclude Include="src\6502.h" />
     <ClInclude Include="src\apple2emu.h" />
     <ClInclude Include="src\assemble.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="src\cpu.h" />
     <ClInclude Include="src\debugger.h" />
     <ClInclude Include="src\debugger_console.h" />
     <ClInclude Include="src\debugger_disasm.h" />
@@ -200,6 +205,15 @@
     <ClInclude Include="src\path_utils.h" />
     <ClInclude Include="src\speaker.h" />
     <ClInclude Include="src\video.h" />
+    <ClInclude Include="z80emu\instructions.h" />
+    <ClInclude Include="z80emu\macros.h" />
+    <ClInclude Include="z80emu\tables.h" />
+    <ClInclude Include="z80emu\z80config.h" />
+    <ClInclude Include="z80emu\z80emu.h" />
+    <ClInclude Include="z80emu\z80user.h" />
+    <ClInclude Include="z80emu\zextest.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClInclude>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

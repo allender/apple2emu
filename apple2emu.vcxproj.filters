@@ -19,9 +19,6 @@
     <ClCompile Include="nativefiledialog\src\nfd_common.cpp">
       <Filter>nativefiledialog</Filter>
     </ClCompile>
-    <ClCompile Include="src\cpu.cpp">
-      <Filter>machine</Filter>
-    </ClCompile>
     <ClCompile Include="src\disk.cpp">
       <Filter>machine</Filter>
     </ClCompile>
@@ -68,6 +65,18 @@
     <ClCompile Include="src\debugger_disasm.cpp">
       <Filter>debugger</Filter>
     </ClCompile>
+    <ClCompile Include="src\6502.cpp">
+      <Filter>machine</Filter>
+    </ClCompile>
+    <ClCompile Include="z80emu\z80emu.cpp">
+      <Filter>z80</Filter>
+    </ClCompile>
+    <ClCompile Include="z80emu\maketables.cpp">
+      <Filter>z80</Filter>
+    </ClCompile>
+    <ClCompile Include="z80emu\zextest.cpp">
+      <Filter>z80</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -99,9 +108,6 @@
     </ClInclude>
     <ClInclude Include="nativefiledialog\src\common.h">
       <Filter>nativefiledialog</Filter>
-    </ClInclude>
-    <ClInclude Include="src\cpu.h">
-      <Filter>machine</Filter>
     </ClInclude>
     <ClInclude Include="src\disk.h">
       <Filter>machine</Filter>
@@ -149,6 +155,30 @@
     <ClInclude Include="src\debugger_disasm.h">
       <Filter>debugger</Filter>
     </ClInclude>
+    <ClInclude Include="src\6502.h">
+      <Filter>machine</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\instructions.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\macros.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\tables.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\z80emu.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\z80config.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\z80user.h">
+      <Filter>z80</Filter>
+    </ClInclude>
+    <ClInclude Include="z80emu\zextest.h">
+      <Filter>z80</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -165,6 +195,9 @@
     </Filter>
     <Filter Include="debugger">
       <UniqueIdentifier>{7cd16d80-a700-4350-b6e6-3c7159a545b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="z80">
+      <UniqueIdentifier>{2202eb85-2941-40b8-a540-96d8e4cde5c9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

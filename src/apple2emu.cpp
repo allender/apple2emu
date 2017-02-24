@@ -47,7 +47,7 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
-#include "z80.h"
+#include "../z80emu/z80emu.h"
 
 #include "SDL.h"
 
@@ -81,6 +81,7 @@ static int32_t Program_load_addr = -1;
 uint32_t Total_cycles, Total_cycles_this_frame;
 
 cpu_6502 cpu;
+Z80_STATE z80_cpu;
 
 static void configure_logging()
 {
@@ -160,6 +161,8 @@ void reset_machine()
 	disk_init();
 	video_init();
 
+	Z80Reset(&z80_cpu);
+
 	if (Binary_image_filename != nullptr && Program_start_addr != -1) {
 		FILE *fp = fopen(Binary_image_filename, "rb");
 		if (fp == nullptr) {
@@ -199,12 +202,6 @@ int main(int argc, char* argv[])
 	// testing z80
 	bool test_z80 = cmdline_option_exists(argv, argv + argc, "-z", "--z80");
 
-	// initialize SDL before everything else
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
-		printf("Error initializing SDL: %s\n", SDL_GetError());
-		return -1;
-	}
-
 	const char *addr_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (addr_string != nullptr) {
 		Program_start_addr = (uint16_t)strtol(addr_string, nullptr, 16);
@@ -215,12 +212,25 @@ int main(int argc, char* argv[])
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
 	}
 
-	if (test_z80 == true) {
-		z80_do_tests();
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
+	reset_machine();
+
+	if (test_z80) {
+		SDL_Quit();
+		memory_init_for_z80_test();
+		z80_cpu.status = 0;
+		z80_cpu.pc = Program_start_addr;
+		while (true) {
+			Z80Emulate(&z80_cpu, 0, nullptr);
+		}
 		exit(0);
 	}
 
-	reset_machine();
+
 	if (Auto_start == true) {
 		Emulator_state = emulator_state::EMULATOR_STARTED;
 	}

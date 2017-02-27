@@ -221,6 +221,7 @@ int main(int argc, char* argv[])
 
 	if (test_z80) {
 		SDL_Quit();
+		Emulator_type = emulator_type::APPLE2;
 		memory_init_for_z80_test();
 		z80_cpu.status = 0;
 		z80_cpu.pc = Program_start_addr;

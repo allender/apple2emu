@@ -1029,11 +1029,15 @@ void memory_init()
 // for z80 testing from command line.  Just striaght 64k block of ram
 void memory_init_for_z80_test()
 {
+	for (auto i = 0; i < 256; i++) {
+		m_soft_switch_handlers[i] = nullptr;
+	}
 	for (auto i = 0; i < Memory_num_main_pages; i++) {
 		Memory_read_pages[i] = &Memory_main_pages[i];
 		Memory_write_pages[i] = &Memory_main_pages[i];
 	}
 	for (auto i = 0xc0; i < 0xd0; i++) {
+		Memory_rom_pages[i - 0xc0].set_write_protected(false);
 		Memory_read_pages[i] = &Memory_rom_pages[i - 0xc0];
 		Memory_write_pages[i] = &Memory_rom_pages[i - 0xc0];
 	}

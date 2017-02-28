@@ -33,7 +33,8 @@ SOFTWARE.
 #include <errno.h>
 
 #include "apple2emu_defs.h"
-#include "cpu.h"
+#include "6502.h"
+#include "z80softcard.h"
 #include "assemble.h"
 #include "video.h"
 #include "memory.h"
@@ -80,6 +81,7 @@ static int32_t Program_load_addr = -1;
 uint32_t Total_cycles, Total_cycles_this_frame;
 
 cpu_6502 cpu;
+Z80_STATE z80_cpu;
 
 static void configure_logging()
 {
@@ -112,7 +114,6 @@ static char *get_cmdline_option(char **start, char **end, const std::string &sho
 	return nullptr;
 }
 
-#if 0
 static bool cmdline_option_exists(char **start, char **end, const std::string &short_option, const std::string &long_option = "")
 {
 	char **iter = std::find(start, end, short_option);
@@ -124,7 +125,6 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	}
 	return true;
 }
-#endif
 
 static uint32_t render_event_timer(uint32_t interval, void *param)
 {
@@ -154,12 +154,15 @@ void reset_machine()
 	}
 	memory_init();
 	cpu.init(mode);
+	z80softcard_init();
 	debugger_init();
 	speaker_init();
 	keyboard_init();
 	joystick_init();
 	disk_init();
 	video_init();
+
+	z80softcard_reset(&z80_cpu);
 
 	if (Binary_image_filename != nullptr && Program_start_addr != -1) {
 		FILE *fp = fopen(Binary_image_filename, "rb");
@@ -197,11 +200,8 @@ int main(int argc, char* argv[])
 	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");
 	Binary_image_filename = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 
-	// initialize SDL before everything else
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
-		printf("Error initializing SDL: %s\n", SDL_GetError());
-		return -1;
-	}
+	// testing z80
+	bool test_z80 = cmdline_option_exists(argv, argv + argc, "-z", "--z80");
 
 	const char *addr_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (addr_string != nullptr) {
@@ -213,7 +213,26 @@ int main(int argc, char* argv[])
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
 	}
 
+	// initialize SDL before everything else
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
+		printf("Error initializing SDL: %s\n", SDL_GetError());
+		return -1;
+	}
 	reset_machine();
+
+	if (test_z80) {
+		SDL_Quit();
+		Emulator_type = emulator_type::APPLE2;
+		memory_init_for_z80_test();
+		z80_cpu.status = 0;
+		z80_cpu.pc = Program_start_addr;
+		while (true) {
+			z80softcard_emulate(&z80_cpu, 0);
+		}
+		exit(0);
+	}
+
+
 	if (Auto_start == true) {
 		Emulator_state = emulator_state::EMULATOR_STARTED;
 	}
@@ -246,7 +265,11 @@ int main(int argc, char* argv[])
 				bool next_statement = debugger_process();
 
 				if (next_statement) {
-					uint32_t cycles = cpu.process_opcode();
+					// note that we might emulate z80 or 6502 here
+					uint32_t cycles = z80softcard_emulate(&z80_cpu, 0);
+					if (cycles == 0) {
+						cycles = cpu.process_opcode();
+					}
 					Total_cycles_this_frame += cycles;
 					Total_cycles += cycles;
 

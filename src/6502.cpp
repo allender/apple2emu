@@ -34,7 +34,7 @@ SOFTWARE.
 #include "string.h"
 #include "debugger.h"
 
-#include "cpu.h"
+#include "6502.h"
 #include "memory.h"
 
 cpu_6502::opcode_info cpu_6502::m_6502_opcodes[] = {
@@ -167,7 +167,7 @@ cpu_6502::opcode_info cpu_6502::m_6502_opcodes[] = {
 
  // 0x70 -
  { 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
- { 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { 'ADC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
  { '    ', 1, 0, addr_mode::NO_MODE, nullptr },
@@ -461,7 +461,7 @@ cpu_6502::opcode_info cpu_6502::m_65c02_opcodes[] = {
 
  // 0x70 -
  { 'BVS ', 2, 2, addr_mode::RELATIVE_MODE, &cpu_6502::relative_mode },
- { 'ADC ', 3, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
+ { 'ADC ', 2, 5, addr_mode::INDIRECT_INDEXED_MODE, &cpu_6502::indirect_indexed_check_boundary_mode },
  { 'ADC ', 2, 5, addr_mode::INDIRECT_ZP_MODE, &cpu_6502::zero_page_indirect},
  { 'NOP ', 1, 1, addr_mode::IMPLIED_MODE, &cpu_6502::implied_mode },
  { 'STZ ', 2, 4, addr_mode::ZP_INDEXED_MODE, &cpu_6502::zero_page_indexed_mode },

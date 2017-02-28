@@ -64,5 +64,6 @@ SOFTWARE.
 
 // master crystal is 14.31818 Mhz.  CPU clock is
 const float Clock_master = 14.31818f;
-const float CLock_6502 = ((Clock_master * 65.0f) / 912.0f);
-
+const float Clock_6502 = ((Clock_master * 65.0f) / 912.0f);
+const float Clock_z80 = (Clock_6502 * 2);
+const float Z80_clock_multiplier = Clock_z80 / Clock_6502;

@@ -25,9 +25,12 @@ SOFTWARE.
 
 */
 
+#include "SDL.h"
 #include "apple2emu_defs.h"
 #include "speaker.h"
 #include "memory.h"
+
+SDL_AudioDeviceID Device_id = 0;
 
 uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
@@ -41,4 +44,27 @@ uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 // for the memory location that will do nothing
 void speaker_init()
 {
+	// allow for re-entrancy
+	if (Device_id != 0) {
+		SDL_CloseAudioDevice(Device_id);
+	}
+
+	// open up sdl audio device to write wave data
+	SDL_AudioSpec want, have;
+
+	want.channels = 1;
+	want.format = AUDIO_S8;
+	want.freq = 11025;
+	want.samples = 4096;
+	want.callback = nullptr;
+
+	Device_id = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	SDL_PauseAudioDevice(Device_id, 0);
+}
+
+void speaker_shutdown()
+{
+	if (Device_id != 0) {
+		SDL_CloseAudioDevice(Device_id);
+	}
 }

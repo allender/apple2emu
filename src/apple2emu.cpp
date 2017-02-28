@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include "apple2emu_defs.h"
 #include "6502.h"
+#include "z80softcard.h"
 #include "assemble.h"
 #include "video.h"
 #include "memory.h"
@@ -47,7 +48,6 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
-#include "../z80emu/z80emu.h"
 
 #include "SDL.h"
 
@@ -154,7 +154,7 @@ void reset_machine()
 	}
 	memory_init();
 	cpu.init(mode);
-	z80_init();
+	z80softcard_init();
 	debugger_init();
 	speaker_init();
 	keyboard_init();
@@ -162,7 +162,7 @@ void reset_machine()
 	disk_init();
 	video_init();
 
-	Z80Reset(&z80_cpu);
+	z80softcard_reset(&z80_cpu);
 
 	if (Binary_image_filename != nullptr && Program_start_addr != -1) {
 		FILE *fp = fopen(Binary_image_filename, "rb");
@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
 		z80_cpu.status = 0;
 		z80_cpu.pc = Program_start_addr;
 		while (true) {
-			Z80Emulate(&z80_cpu, 0, nullptr);
+			z80softcard_emulate(&z80_cpu, 0);
 		}
 		exit(0);
 	}
@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
 
 				if (next_statement) {
 					// note that we might emulate z80 or 6502 here
-					uint32_t cycles = Z80Emulate(&z80_cpu, 0, nullptr);
+					uint32_t cycles = z80softcard_emulate(&z80_cpu, 0);
 					if (cycles == 0) {
 						cycles = cpu.process_opcode();
 					}

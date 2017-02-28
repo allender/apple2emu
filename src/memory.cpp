@@ -32,7 +32,6 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "memory.h"
 #include "video.h"
-//#include "curses.h"
 #include "debugger.h"
 #include "keyboard.h"
 #include "joystick.h"

@@ -18,15 +18,6 @@
 #pragma warning(disable:4244)   // disable the deprecated warnings for fopen
 #endif
 
-static bool Map_memory = true;
-
-enum class z80_state {
-	WAIT,
-	ACTIVE,
-};
-
-static z80_state Z80_state;
-
 
  /* Indirect (HL) or prefixed indexed (IX + d) and (IY + d) memory operands are
   * encoded using the 3 bits "110" (0x06).
@@ -255,10 +246,6 @@ static uint32_t z80_to_6502_cycles(uint32_t z80_cycles)
 int Z80Emulate(Z80_STATE *state, int number_cycles, void *context)
 {
 	int     elapsed_cycles, pc, opcode;
-
-	if (Z80_state == z80_state::WAIT) {
-		return 0;
-	}
 
 	state->status = 0;
 	elapsed_cycles = 0;
@@ -2671,57 +2658,3 @@ stop_emulation:
 	return z80_to_6502_cycles(elapsed_cycles);
 }
 
-static uint16_t z80_map_z80_to_6502(uint16_t addr)
-{
-	if (Map_memory == false) {
-		return addr;
-	}
-
-	uint8_t h = addr >> 12;
-	uint16_t return_addr = addr;
-
-	if (h < 0xb) {
-		return_addr += 0x1000;
-	} else if (h >= 0xb && h <= 0xd) {
-		return_addr += 0x2000;
-	} else if (h == 0xe) {
-		return_addr -= 0x2000;
-	} else {
-		return_addr -= 0xf000;
-	}
-
-	return return_addr;
-}
-
-uint8_t z80_memory_read(uint16_t addr)
-{
-	uint16_t mapped_addr = z80_map_z80_to_6502(addr);
-	return memory_read(mapped_addr);
-}
-
-/****************************************************************************/
-/* Write a byte to given memory location                                    */
-/****************************************************************************/
-void z80_memory_write(uint16_t addr, uint8_t val)
-{
-	uint16_t mapped_addr = z80_map_z80_to_6502(addr);
-	memory_write(mapped_addr, val);
-	//CpuWrite( addr, Value, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
-}
-
-// handler for read/writes to z80 softcard space
-static uint8_t z80_handler(uint16_t addr, uint8_t val, bool write)
-{
-	UNREFERENCED(addr);
-	UNREFERENCED(val);
-	if (write) {
-		Z80_state = (Z80_state == z80_state::WAIT ? z80_state::ACTIVE : z80_state::WAIT);
-	}
-	return 255;
-}
-
-// initialize the z80 softward aystem
-void z80_init()
-{
-	memory_register_slot_memory_handler(4, z80_handler);
-}

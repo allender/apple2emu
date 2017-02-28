@@ -93,8 +93,6 @@ extern void z80_memory_write(uint16_t address, uint8_t val);
 {                                                                       \
 	(x) = z80_memory_read((address) & 0xffff);                          \
 }
-//		(x) = ((ZEXTEST *) context)->memory[(address) & 0xffff];        \
-//}
 
 #define Z80_FETCH_BYTE(address, x)		Z80_READ_BYTE((address), (x))
 
@@ -103,10 +101,6 @@ extern void z80_memory_write(uint16_t address, uint8_t val);
 	(x) = z80_memory_read((address) & 0xffff) |                         \
 		   (z80_memory_read(((address)+1) & 0xffff) << 8);              \
 }
-//	memory = ((ZEXTEST *) context)->memory;				\
-//		(x) = memory[(address) & 0xffff]                                \
-//				| (memory[((address) + 1) & 0xffff] << 8);              \
-//}
 
 #define Z80_FETCH_WORD(address, x)		Z80_READ_WORD((address), (x))
 
@@ -114,18 +108,12 @@ extern void z80_memory_write(uint16_t address, uint8_t val);
 {                                                                       \
 	z80_memory_write((address) & 0xffff, (uint8_t)x);                   \
 }
-//		((ZEXTEST *) context)->memory[(address) & 0xffff] = (unsigned char)(x);	\
-//}
 
 #define Z80_WRITE_WORD(address, x)                                      \
 {                                                                       \
 	z80_memory_write((address) & 0xffff, (uint8_t)(x));                 \
 	z80_memory_write(((address) + 1) & 0xffff, (uint8_t)((x) >> 8));    \
 }
-//	memory = ((ZEXTEST *) context)->memory;				\
-//		memory[(address) & 0xffff] = (unsigned char)(x); 				\
-//		memory[((address) + 1) & 0xffff] = (unsigned char)((x) >> 8);   \
-//}
 
 #define Z80_WRITE_WORD_INTERRUPT(address, x)	Z80_WRITE_WORD((address), (x))
 
@@ -146,7 +134,6 @@ extern void z80_memory_write(uint16_t address, uint8_t val);
 						}                                               \
 				}                                                       \
 		}                                                               \
-		/*SystemCall((ZEXTEST *) context);*/				\
 }
 
 #define Z80_OUTPUT_BYTE(port, x)                                        \

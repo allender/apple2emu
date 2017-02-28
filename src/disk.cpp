@@ -111,7 +111,7 @@ void disk_drive::readwrite()
 	}
 
 	// read the data out of the disk image into the track image
-	if (m_track_size == 0) {
+	if (m_track_size == 0 && m_disk_image != nullptr) {
 #if defined(LOG_DISK)
 		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)Current_drive->m_current_track << "  read";
 #endif

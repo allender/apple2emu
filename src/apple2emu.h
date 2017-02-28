@@ -26,7 +26,7 @@ SOFTWARE.
 */
 
 #pragma once
-#include "cpu.h"
+#include "6502.h"
 
 enum class emulator_state : uint8_t {
 	SPLASH_SCREEN,

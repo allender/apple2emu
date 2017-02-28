@@ -654,7 +654,7 @@ uint8_t video_set_state(uint16_t addr, uint8_t val, bool write)
 
 	memory_set_paging_tables();
 
-	return 0;
+	return 0xff;
 }
 
 uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
@@ -662,7 +662,7 @@ uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
 	UNREFERENCED(write);
 	UNREFERENCED(val);
 
-	uint8_t return_val = 0;
+	uint8_t return_val = 0xff;
 
 	addr = addr & 0xff;
 

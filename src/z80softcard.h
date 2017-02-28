@@ -25,6 +25,11 @@ SOFTWARE.
 
 */
 
-#include "6502.h"
+#pragma once
 
-bool assemble_6502(const std::string &input_file);
+#include <stdint.h>
+#include "../z80emu/z80emu.h"
+
+void z80softcard_init();
+void z80softcard_reset(Z80_STATE *z80_cpu);
+int z80softcard_emulate(Z80_STATE *z80_cpu, int number_cycles);

@@ -35,7 +35,7 @@ SOFTWARE.
 #include <unordered_map>
 #include <ctype.h>
 
-#include "cpu.h"
+#include "6502.h"
 #include "assemble.h"
 #include "utils/path_utils.h"
 
@@ -275,7 +275,7 @@ static record_type parse_line(char *line)
 	return record_type::RECORD_TYPE_INSTRUCTION;
 }
 
-// gets a byte from the current string.  
+// gets a byte from the current string.
 static uint8_t encode_byte(const char *p)
 {
 	if (*p == '$') {

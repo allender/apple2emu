@@ -32,7 +32,6 @@ SOFTWARE.
 #include "apple2emu.h"
 #include "memory.h"
 #include "video.h"
-//#include "curses.h"
 #include "debugger.h"
 #include "keyboard.h"
 #include "joystick.h"
@@ -48,7 +47,7 @@ static const int Memory_rom_size = (16 * 1024);
 static const int Memory_switched_bank_size = (4 * 1024);
 static const int Memory_c000_rom_size = (4 * 1024);
 static const int Memory_extended_size = (8 * 1024);
-static const int Memory_aux_size = (48 * 256);
+static const int Memory_aux_size = (48 * 1024);
 static const int Memory_expansion_rom_size = (2 * 1024);
 
 static const uint16_t Memory_page_size = 256;
@@ -72,6 +71,9 @@ static const int APPLE2E_ROM_SIZE = 0x4000;
 static const int Num_slots = 8;
 
 static soft_switch_function m_soft_switch_handlers[256];
+
+// Need handlers for reading/writing slot memory for some handlers
+static soft_switch_function m_slot_memory_handlers[Num_slots];
 
 // class to handle memory paging.  Simple wrapper class  to hold the
 // pointer and whether or not the page is write protected.  Memory
@@ -332,7 +334,7 @@ uint8_t memory_set_state(uint16_t addr, uint8_t val, bool write)
 // handler for reading memory status.  This handles 0xc010 to 0xc018
 uint8_t memory_get_state(uint16_t addr, uint8_t val, bool write)
 {
-	uint8_t return_val = 0;
+	uint8_t return_val = 0xff;
 
 	// writes to 0xc01x reset the keyboard strobe
 	if (write == true) {
@@ -508,7 +510,7 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 	// set up paging pointers
 	memory_set_paging_tables();
 
-	return 0;
+	return 0xff;
 }
 
 // set up the paging table pointers based on the current memory
@@ -575,7 +577,11 @@ void memory_set_paging_tables()
 		} else {
 			// offset is 0xc0 here because rom pages start at page 0xc0
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
-			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+			if (Memory_state & RAM_CARD_WRITE_PROTECT) {
+				Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+			} else {
+				Memory_write_pages[page] = &Memory_bank_pages[bank][page - 0xd0];
+			}
 		}
 	}
 
@@ -591,7 +597,11 @@ void memory_set_paging_tables()
 		} else {
 			// offset is 0xc0 here because rom pages start at page 0xc0
 			Memory_read_pages[page] = &Memory_rom_pages[page - 0xc0];
-			Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+			if (Memory_state & RAM_CARD_WRITE_PROTECT) {
+				Memory_write_pages[page] = &Memory_rom_pages[page - 0xc0];
+			} else {
+				Memory_write_pages[page] = &Memory_extended_pages[page - 0xe0];
+			}
 		}
 	}
 
@@ -633,6 +643,34 @@ uint8_t memory_read_main(const uint16_t addr)
 	return Memory_main_pages[page].read(addr & 0xff);
 }
 
+// read memory, but use the read types to get the value to
+// return.  this function is used in the memory display
+// window in the debugger and will allow us to show
+// high rem/ROM and which bank
+uint8_t memory_read(const uint16_t addr, memory_high_read_type high_type, memory_high_read_bank bank)
+{
+	auto page = (addr / Memory_page_size);
+	memory_page *page_ptr = nullptr;
+
+	// for rom reading, just get what's in rom
+	if (addr >= 0xc000) {
+		if (high_type == memory_high_read_type::READ_ROM) {
+			page_ptr = &Memory_rom_pages[page - 0xc0];
+		} else {
+			// this is ram, so we need to figure out which bank
+			if (page < 0xe0) {
+				int bank_num = static_cast<int>(bank);
+				page_ptr = &Memory_bank_pages[bank_num][page - 0xd0];
+			} else {
+				page_ptr = &Memory_extended_pages[page - 0xe0];
+			}
+		}
+	} else {
+		page_ptr = Memory_read_pages[page];
+	}
+	return page_ptr->read(addr & 0xff);
+}
+
 uint8_t memory_read(const uint16_t addr, bool instruction)
 {
 	auto page = (addr / Memory_page_size);
@@ -644,7 +682,7 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 			return m_soft_switch_handlers[mapped_addr](addr, 0, false);
 		}
 		if (Memory_read_pages[page] == nullptr) {
-			return 0;
+			return 0xff;
 		}
 	}
 
@@ -699,7 +737,7 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 		// handler for the page, then just return
 		if (page >= 0xc0 && page <= 0xcf) {
 			if (Memory_read_pages[page] == nullptr) {
-				return 0;
+				return 0xff;
 			}
 		}
 	}
@@ -767,6 +805,16 @@ void memory_write(const uint16_t addr, uint8_t val)
 		}
 	}
 
+	// check for handlers for slot memory
+	if (page >= 0xc1 && page <= 0xc8) {
+		uint8_t slot = page & 0x0f;
+		if (m_slot_memory_handlers[slot] != nullptr) {
+			m_slot_memory_handlers[slot](addr, val, true);
+			return;
+		}
+	}
+
+
 	ASSERT(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
@@ -795,6 +843,14 @@ void memory_register_slot_handler(const uint8_t slot, soft_switch_function func,
 	if (expansion_rom != nullptr) {
 		Memory_expansion_rom_buffer[slot] = expansion_rom;
 	}
+}
+
+// register memory read/write handlers for slot memory (needed for things like
+// z80 card)
+void memory_register_slot_memory_handler(const uint8_t slot, soft_switch_function func)
+{
+	ASSERT((slot >= 0) && (slot < Num_slots));
+	m_slot_memory_handlers[slot] = func;
 }
 
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
@@ -956,6 +1012,10 @@ void memory_init()
 		m_soft_switch_handlers[i] = nullptr;
 	}
 
+	for (auto i = 0; i < Num_slots; i++) {
+		m_slot_memory_handlers[i] = nullptr;
+	}
+
 	// register handlers for 0xc000 to 0xc00c.  These are memory
 	// management switches (except for the read of 0xc000 which is
 	// reading the keyboard).
@@ -988,6 +1048,30 @@ void memory_init()
 	// register a handler for memory expansion card in slot 0.  This handler will
 	// also handle the first 64K in the apple iie
 	memory_register_slot_handler(0, memory_expansion_soft_switch_handler);
+}
+
+// for z80 testing from command line.  Just striaght 64k block of ram
+void memory_init_for_z80_test()
+{
+	for (auto i = 0; i < 256; i++) {
+		m_soft_switch_handlers[i] = nullptr;
+	}
+	for (auto i = 0; i < Memory_num_main_pages; i++) {
+		Memory_read_pages[i] = &Memory_main_pages[i];
+		Memory_write_pages[i] = &Memory_main_pages[i];
+	}
+	for (auto i = 0xc0; i < 0xd0; i++) {
+		Memory_rom_pages[i - 0xc0].set_write_protected(false);
+		Memory_read_pages[i] = &Memory_rom_pages[i - 0xc0];
+		Memory_write_pages[i] = &Memory_rom_pages[i - 0xc0];
+	}
+
+	Memory_buffer[0] = 0xd3;       /* OUT N, A */
+	Memory_buffer[1] = 0x00;
+
+	Memory_buffer[5] = 0xdb;       /* IN A, N */
+	Memory_buffer[6] = 0x00;
+	Memory_buffer[7] = 0xc9;       /* RET */
 }
 
 void memory_shutdown()

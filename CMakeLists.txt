@@ -48,7 +48,7 @@ include_directories(SYSTEM
 
 set (EMU_SOURCES
    src/apple2emu.cpp
-   src/cpu.cpp
+   src/6502.cpp
    src/debugger.cpp
    src/debugger_console.cpp
    src/debugger_disasm.cpp
@@ -62,7 +62,8 @@ set (EMU_SOURCES
    src/memory.cpp
    src/path_utils.cpp
    src/speaker.cpp
-   src/video.cpp)
+   src/video.cpp
+   src/z80.cpp)
 
 add_executable(apple2emu ${EMU_SOURCES})
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")
@@ -83,7 +84,7 @@ if (WIN32)
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/libjpeg-9.dll" "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" "${CMAKE_CURRENT_BINARY_DIR}")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/splash.jpg" "${CMAKE_CURRENT_BINARY_DIR}")
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/interface" "${CMAKE_CURRENT_BINARY_DIR}/interface")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/disks" "${CMAKE_CURRENT_BINARY_DIR}/disks")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/roms" "${CMAKE_CURRENT_BINARY_DIR}/roms")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/fonts" "${CMAKE_CURRENT_BINARY_DIR}/fonts")

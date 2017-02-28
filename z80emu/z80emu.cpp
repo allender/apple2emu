@@ -11,13 +11,21 @@
 #include "instructions.h"
 #include "macros.h"
 #include "tables.h"
+#include "../src/apple2emu_defs.h"
 #include "../src/memory.h"
 
 #if defined(_MSC_VER)
 #pragma warning(disable:4244)   // disable the deprecated warnings for fopen
 #endif
 
-static bool Map_memory = false;
+static bool Map_memory = true;
+
+enum class z80_state {
+	WAIT,
+	ACTIVE,
+};
+
+static z80_state Z80_state;
 
 
  /* Indirect (HL) or prefixed indexed (IX + d) and (IY + d) memory operands are
@@ -235,9 +243,22 @@ int Z80NonMaskableInterrupt(Z80_STATE *state, void *context)
 	return elapsed_cycles + 11;
 }
 
+static uint32_t z80_to_6502_cycles(uint32_t z80_cycles)
+{
+	if (z80_cycles <= 0) {
+		return 0;
+	}
+
+	return (uint32_t) ((double)z80_cycles / Z80_clock_multiplier);
+}
+
 int Z80Emulate(Z80_STATE *state, int number_cycles, void *context)
 {
 	int     elapsed_cycles, pc, opcode;
+
+	if (Z80_state == z80_state::WAIT) {
+		return 0;
+	}
 
 	state->status = 0;
 	elapsed_cycles = 0;
@@ -2647,61 +2668,35 @@ stop_emulation:
 	state->r = (state->r & 0x80) | (r & 0x7f);
 	state->pc = pc & 0xffff;
 
-	return elapsed_cycles;
+	return z80_to_6502_cycles(elapsed_cycles);
+}
+
+static uint16_t z80_map_z80_to_6502(uint16_t addr)
+{
+	if (Map_memory == false) {
+		return addr;
+	}
+
+	uint8_t h = addr >> 12;
+	uint16_t return_addr = addr;
+
+	if (h < 0xb) {
+		return_addr += 0x1000;
+	} else if (h >= 0xb && h <= 0xd) {
+		return_addr += 0x2000;
+	} else if (h == 0xe) {
+		return_addr -= 0x2000;
+	} else {
+		return_addr -= 0xf000;
+	}
+
+	return return_addr;
 }
 
 uint8_t z80_memory_read(uint16_t addr)
 {
-	if (Map_memory == false) {
-		return memory_read(addr);
-	}
-
-	switch (addr / 0x1000)
-	{
-	case 0x0:
-	case 0x1:
-	case 0x2:
-	case 0x3:
-	case 0x4:
-	case 0x5:
-	case 0x6:
-	case 0x7:
-	case 0x8:
-	case 0x9:
-	case 0xA:
-		addr = addr + 0x1000;
-		return memory_read(addr);
-		//return CpuRead( addr, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
-		break;
-
-	case 0xB:
-	case 0xC:
-	case 0xD:
-		addr = addr + 0x2000;
-		return memory_read(addr);
-		//return CpuRead( addr, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
-		break;
-
-	case 0xE:
-		addr = addr - 0x2000;
-		return memory_read(addr);
-		//if ((addr & 0xF000) == 0xC000)
-		//{
-		//	return IORead[(addr>>4) & 0xFF]( regs.pc, addr, 0, 0, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
-		//}
-		//else
-		//{
-		//	return *(mem+addr);
-		//}
-		break;
-
-	case 0xF:
-		addr = addr - 0xF000;
-		return memory_read(addr);
-		//return CpuRead( addr, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
-		break;
-	}
-	return 255;
+	uint16_t mapped_addr = z80_map_z80_to_6502(addr);
+	return memory_read(mapped_addr);
 }
 
 /****************************************************************************/
@@ -2709,34 +2704,24 @@ uint8_t z80_memory_read(uint16_t addr)
 /****************************************************************************/
 void z80_memory_write(uint16_t addr, uint8_t val)
 {
-	if (Map_memory == false) {
-		memory_write(addr, val);
-		return;
-	}
-
-	unsigned int laddr;
-
-	laddr = addr & 0x0FFF;
-	switch (addr & 0xF000)
-	{
-	case 0x0000: addr = laddr+0x1000; break;
-	case 0x1000: addr = laddr+0x2000; break;
-	case 0x2000: addr = laddr+0x3000; break;
-	case 0x3000: addr = laddr+0x4000; break;
-	case 0x4000: addr = laddr+0x5000; break;
-	case 0x5000: addr = laddr+0x6000; break;
-	case 0x6000: addr = laddr+0x7000; break;
-	case 0x7000: addr = laddr+0x8000; break;
-	case 0x8000: addr = laddr+0x9000; break;
-	case 0x9000: addr = laddr+0xA000; break;
-	case 0xA000: addr = laddr+0xB000; break;
-	case 0xB000: addr = laddr+0xD000; break;
-	case 0xC000: addr = laddr+0xE000; break;
-	case 0xD000: addr = laddr+0xF000; break;
-	case 0xE000: addr = laddr+0xC000; break;
-	case 0xF000: addr = laddr+0x0000; break;
-	}
-	memory_write(addr, val);
+	uint16_t mapped_addr = z80_map_z80_to_6502(addr);
+	memory_write(mapped_addr, val);
 	//CpuWrite( addr, Value, ConvertZ80TStatesTo6502Cycles(maincpu_clk) );
 }
 
+// handler for read/writes to z80 softcard space
+static uint8_t z80_handler(uint16_t addr, uint8_t val, bool write)
+{
+	UNREFERENCED(addr);
+	UNREFERENCED(val);
+	if (write) {
+		Z80_state = (Z80_state == z80_state::WAIT ? z80_state::ACTIVE : z80_state::WAIT);
+	}
+	return 255;
+}
+
+// initialize the z80 softward aystem
+void z80_init()
+{
+	memory_register_slot_memory_handler(4, z80_handler);
+}

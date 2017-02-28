@@ -69,6 +69,7 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num);
 void memory_write(const uint16_t addr, uint8_t val);
 void memory_set_paging_tables();
 void memory_register_slot_handler(const uint8_t slot, soft_switch_function func, uint8_t *expansion_rom = nullptr);
+void memory_register_slot_memory_handler(const uint8_t slot, soft_switch_function func);
 void memory_init_for_z80_test();
 
 #endif  // MEMORY_H

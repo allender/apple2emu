@@ -154,6 +154,7 @@ void reset_machine()
 	}
 	memory_init();
 	cpu.init(mode);
+	z80_init();
 	debugger_init();
 	speaker_init();
 	keyboard_init();
@@ -264,7 +265,11 @@ int main(int argc, char* argv[])
 				bool next_statement = debugger_process();
 
 				if (next_statement) {
-					uint32_t cycles = cpu.process_opcode();
+					// note that we might emulate z80 or 6502 here
+					uint32_t cycles = Z80Emulate(&z80_cpu, 0, nullptr);
+					if (cycles == 0) {
+						cycles = cpu.process_opcode();
+					}
 					Total_cycles_this_frame += cycles;
 					Total_cycles += cycles;
 

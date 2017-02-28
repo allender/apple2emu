@@ -73,6 +73,9 @@ static const int Num_slots = 8;
 
 static soft_switch_function m_soft_switch_handlers[256];
 
+// Need handlers for reading/writing slot memory for some handlers
+static soft_switch_function m_slot_memory_handlers[Num_slots];
+
 // class to handle memory paging.  Simple wrapper class  to hold the
 // pointer and whether or not the page is write protected.  Memory
 // pages will be set up when emulator starts.  Pointers to a full set
@@ -803,6 +806,16 @@ void memory_write(const uint16_t addr, uint8_t val)
 		}
 	}
 
+	// check for handlers for slot memory
+	if (page >= 0xc1 && page <= 0xc8) {
+		uint8_t slot = page & 0x0f;
+		if (m_slot_memory_handlers[slot] != nullptr) {
+			m_slot_memory_handlers[slot](addr, val, true);
+			return;
+		}
+	}
+
+
 	ASSERT(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
@@ -831,6 +844,14 @@ void memory_register_slot_handler(const uint8_t slot, soft_switch_function func,
 	if (expansion_rom != nullptr) {
 		Memory_expansion_rom_buffer[slot] = expansion_rom;
 	}
+}
+
+// register memory read/write handlers for slot memory (needed for things like
+// z80 card)
+void memory_register_slot_memory_handler(const uint8_t slot, soft_switch_function func)
+{
+	ASSERT((slot >= 0) && (slot < Num_slots));
+	m_slot_memory_handlers[slot] = func;
 }
 
 bool memory_load_buffer(uint8_t *buffer, uint16_t size, uint16_t location)
@@ -990,6 +1011,10 @@ void memory_init()
 
 	for (auto i = 0; i < 256; i++) {
 		m_soft_switch_handlers[i] = nullptr;
+	}
+
+	for (auto i = 0; i < Num_slots; i++) {
+		m_slot_memory_handlers[i] = nullptr;
 	}
 
 	// register handlers for 0xc000 to 0xc00c.  These are memory

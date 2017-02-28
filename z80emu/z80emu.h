@@ -171,4 +171,6 @@ extern int      Z80Emulate(Z80_STATE *state,
 	int number_cycles,
 	void *context);
 
+void z80_init();
+
 #endif

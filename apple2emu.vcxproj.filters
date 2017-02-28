@@ -179,6 +179,7 @@
     <ClInclude Include="z80emu\zextest.h">
       <Filter>z80</Filter>
     </ClInclude>
+    <ClInclude Include="src\apple2emu_defs.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">

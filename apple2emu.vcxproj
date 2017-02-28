@@ -187,6 +187,7 @@
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />
     <ClInclude Include="src\6502.h" />
     <ClInclude Include="src\apple2emu.h" />
+    <ClInclude Include="src\apple2emu_defs.h" />
     <ClInclude Include="src\assemble.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

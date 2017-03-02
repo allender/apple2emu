@@ -259,6 +259,8 @@ int main(int argc, char* argv[])
 		// process the next opcode
 		if (Emulator_state == emulator_state::EMULATOR_STARTED ||
 			Emulator_state == emulator_state::EMULATOR_TEST) {
+			speaker_unpause();
+			uint64_t start = SDL_GetPerformanceCounter();
 			while (true) {
 				// process debugger (before opcode processing so that we can break on
 				// specific addresses properly
@@ -273,10 +275,16 @@ int main(int argc, char* argv[])
 					Total_cycles_this_frame += cycles;
 					Total_cycles += cycles;
 
+					// update speaker if needed
+					speaker_update(cycles);
+
 					if (Total_cycles_this_frame > cycles_per_frame) {
 						// this is essentially number of cycles for one redraw cycle
 						// for TV/monitor.  Around 17030 cycles I believe
 						Total_cycles_this_frame -= cycles_per_frame;
+						uint64_t end = SDL_GetPerformanceCounter();
+						double x = ((double)(end - start)) * 1000.0f / (double)SDL_GetPerformanceFrequency();
+						x = x;
 						SDL_SemWait(cpu_sem);
 						break;
 					}
@@ -325,6 +333,7 @@ int main(int argc, char* argv[])
 	joystick_shutdown();
 	debugger_shutdown();
 	memory_shutdown();
+	speaker_shutdown();
 
 	SDL_Quit();
 

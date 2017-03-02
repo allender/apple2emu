@@ -204,7 +204,7 @@ uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer)
 {
 	UNREFERENCED(track);
 	UNREFERENCED(buffer);
-	ASSERT(0);
+	SDL_assert(0);
 	return 0;
 }
 
@@ -212,7 +212,7 @@ bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	UNREFERENCED(track);
 	UNREFERENCED(buffer);
-	ASSERT(0);
+	SDL_assert(0);
 	m_image_dirty = true;
 	return true;
 }
@@ -426,7 +426,7 @@ bool dsk_image::denibbilize_track(const int track, uint8_t *buffer)
 		work_ptr += 2;  // skip past the volume number
 #if defined(_DEBUG)
 		uint8_t encoded_track = (*work_ptr & 0x55) << 1 | (*(work_ptr + 1) & 0x55);
-		ASSERT(encoded_track == track);
+		SDL_assert(encoded_track == track);
 #endif
 		work_ptr += 2;
 

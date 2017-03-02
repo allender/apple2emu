@@ -115,7 +115,7 @@ static uint8_t keyboard_get_key()
 		// Advance past invalidated entries
 	} while (key_buffer[key_buffer_front] == 0 && key_buffer_front != key_buffer_end);
 
-	ASSERT(key <= UINT8_MAX);
+	SDL_assert(key <= UINT8_MAX);
 	return static_cast<uint8_t>(key);
 }
 

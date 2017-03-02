@@ -831,9 +831,9 @@ uint32_t cpu_6502::process_opcode()
 
 	// get addressing mode and then do appropriate work based on the mode
 	addr_mode mode = m_opcodes[opcode].m_addr_mode;
-	ASSERT(mode != addr_mode::NO_MODE);
-	ASSERT(m_opcodes[opcode].m_cycle_count != 0);
-	ASSERT(m_opcodes[opcode].m_addr_func != nullptr);
+	SDL_assert(mode != addr_mode::NO_MODE);
+	SDL_assert(m_opcodes[opcode].m_cycle_count != 0);
+	SDL_assert(m_opcodes[opcode].m_addr_func != nullptr);
 	uint16_t src = (this->*m_opcodes[opcode].m_addr_func)();
 
 	uint8_t cycles = m_opcodes[opcode].m_cycle_count;
@@ -1471,7 +1471,7 @@ uint32_t cpu_6502::process_opcode()
 
 	default:
 	{
-		ASSERT(0);
+		SDL_assert(0);
 	}
 	}
 

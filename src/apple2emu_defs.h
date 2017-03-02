@@ -25,7 +25,8 @@ SOFTWARE.
 
 */
 
-#include "debugbreak.h"
+// pull this assert definition in everywhere
+#include <SDL_assert.h>
 
 #pragma once
 
@@ -49,16 +50,6 @@ SOFTWARE.
 // define for helping to clear out unreferenced
 // parameter warmings
 #define UNREFERENCED(X) (void)X
-
-// defines for asserts
-#define ASSERT(x)    \
-   do {              \
-      if (!(x)) {    \
-         fprintf(stderr, "Assertion Failed: %s - %s:%d\n", #x, __FILE__, __LINE__); \
-         debug_break();    \
-      }              \
-   } while (0)
-
 
 // timings - these need to get moved elsewhere eventually.
 

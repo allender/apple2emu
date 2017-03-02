@@ -49,7 +49,8 @@ SOFTWARE.
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 
-#include "SDL.h"
+#include <SDL.h>
+#include <SDL_assert.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable:4996)   // disable the deprecated warnings for fopen
@@ -173,7 +174,7 @@ void reset_machine()
 		fseek(fp, 0, SEEK_END);
 		auto buffer_size = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
-		ASSERT(buffer_size <= UINT16_MAX);
+		SDL_assert(buffer_size <= UINT16_MAX);
 
 		// allocate the memory buffer
 		uint8_t *buffer = new uint8_t[buffer_size];
@@ -212,6 +213,8 @@ int main(int argc, char* argv[])
 	if (addr_string != nullptr) {
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
 	}
+
+	SDL_assert(addr_string != nullptr);
 
 	// initialize SDL before everything else
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {

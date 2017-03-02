@@ -444,7 +444,7 @@ void debugger_disasm::set_break_addr(uint16_t addr)
 			break;
 		}
 	}
-	ASSERT(a != 0xffff);
+	SDL_assert(a != 0xffff);
 
 	// starting at the address, disassembly to the current breakpoint
 	// address, reading the opcode from memory to fill in
@@ -459,7 +459,7 @@ void debugger_disasm::set_break_addr(uint16_t addr)
 	}
 
 	// check to see if we've accurately done the work!
-	ASSERT(a == m_current_addr);
+	SDL_assert(a == m_current_addr);
 }
 
 void debugger_disasm::attach_console(debugger_console *console)

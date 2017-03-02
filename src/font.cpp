@@ -67,7 +67,7 @@ bool font::load(const char *filename)
 	fread(pixels, num_pixels, 1, fp);
 	fclose(fp);
 
-	ASSERT((m_header.m_id[0] == 0xbf) && (m_header.m_id[1] == 0xf2));
+	SDL_assert((m_header.m_id[0] == 0xbf) && (m_header.m_id[1] == 0xf2));
 
 	// load the pixels into a GL texture
 	glGenTextures(1, &m_texture_id);

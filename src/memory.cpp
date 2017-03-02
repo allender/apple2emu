@@ -495,7 +495,7 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 		}
 		break;
 	default:
-		ASSERT(0);
+		SDL_assert(0);
 	}
 
 	// set write protect on ramcard pages if necessary.  Total of 48 pages
@@ -742,7 +742,7 @@ uint8_t memory_read(const uint16_t addr, bool instruction)
 		}
 	}
 
-	ASSERT(Memory_read_pages[page] != nullptr);
+	SDL_assert(Memory_read_pages[page] != nullptr);
 	return Memory_read_pages[page]->read(addr & 0xff, instruction);
 }
 
@@ -815,7 +815,7 @@ void memory_write(const uint16_t addr, uint8_t val)
 	}
 
 
-	ASSERT(Memory_write_pages[page] != nullptr);
+	SDL_assert(Memory_write_pages[page] != nullptr);
 	if (Memory_write_pages[page]->write_protected()) {
 		return;
 	}
@@ -831,7 +831,7 @@ void memory_register_soft_switch_handler(const uint8_t addr, soft_switch_functio
 // register handlers for the I/O slots
 void memory_register_slot_handler(const uint8_t slot, soft_switch_function func, uint8_t *expansion_rom)
 {
-	ASSERT((slot >= 0) && (slot < Num_slots));
+	SDL_assert((slot >= 0) && (slot < Num_slots));
 	uint8_t addr = 0x80 + (slot << 4);
 
 	// add handlers for the slot.  There are 16 addresses per slot so set them all to the same
@@ -849,7 +849,7 @@ void memory_register_slot_handler(const uint8_t slot, soft_switch_function func,
 // z80 card)
 void memory_register_slot_memory_handler(const uint8_t slot, soft_switch_function func)
 {
-	ASSERT((slot >= 0) && (slot < Num_slots));
+	SDL_assert((slot >= 0) && (slot < Num_slots));
 	m_slot_memory_handlers[slot] = func;
 }
 

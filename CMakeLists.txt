@@ -40,7 +40,7 @@ include_directories(
    ${SDL2_IMAGE_INCLUDE_DIR}
    imgui
    nativefiledialog/src/include
-   pdcurses)
+   z80emu)
 
 include_directories(SYSTEM
    ${GLEW_INCLUDE_DIR}
@@ -63,7 +63,8 @@ set (EMU_SOURCES
    src/path_utils.cpp
    src/speaker.cpp
    src/video.cpp
-   src/z80.cpp)
+   src/z80softcard.cpp
+   z80emu/z80emu.cpp)
 
 add_executable(apple2emu ${EMU_SOURCES})
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")

@@ -217,7 +217,7 @@ int Z80Interrupt(Z80_STATE *state, int data_on_bus, void *context)
 
 int Z80NonMaskableInterrupt(Z80_STATE *state, void *context)
 {
-	(void *)context;
+	(void)context;
 	int	elapsed_cycles;
 
 	state->status = 0;
@@ -265,7 +265,7 @@ static int emulate(Z80_STATE * state,
 	int elapsed_cycles, int number_cycles,
 	void *context)
 {
-	(void *)context;
+	(void)context;
 
 	int	pc, r;
 

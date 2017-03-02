@@ -11,6 +11,7 @@
 #define __Z80USER_INCLUDED__
 
 #include <stdint.h>
+#include <cstdlib>
 
 extern uint8_t z80_memory_read(uint16_t address);
 extern void z80_memory_write(uint16_t address, uint8_t val);

@@ -378,9 +378,9 @@ void ui_do_frame(SDL_Window *window)
 		// because we are all opengl all the time.
 		SDL_Surface *icon = IMG_Load("interface/black_disk.png");
 		if (icon != nullptr) {
-			int mode = GL_RGB;
+			int mode = GL_LOAD_FORMAT_RGB;
 			if (icon->format->BytesPerPixel == 4) {
-			  mode = GL_RGBA;
+			  mode = GL_LOAD_FORMAT_RGBA;
 			}
 
 			glGenTextures(1, &Disk_black_texture);
@@ -389,16 +389,16 @@ void ui_do_frame(SDL_Window *window)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
 
 			// free the surface since we now have a texture
 			SDL_FreeSurface(icon);
 		}
 		icon = IMG_Load("interface/red_disk.png");
 		if (icon != nullptr) {
-			int mode = GL_RGB;
+			int mode = GL_LOAD_FORMAT_RGB;
 			if (icon->format->BytesPerPixel == 4) {
-			  mode = GL_RGBA;
+			  mode = GL_LOAD_FORMAT_RGBA;
 			}
 
 			glGenTextures(1, &Disk_red_texture);
@@ -407,7 +407,7 @@ void ui_do_frame(SDL_Window *window)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
 
 			// free the surface since we now have a texture
 			SDL_FreeSurface(icon);

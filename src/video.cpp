@@ -257,7 +257,7 @@ static bool video_create_hires_textures()
 		// create the texture
 		glBindTexture(GL_TEXTURE_2D, Hires_mono_textures[y]);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_mono_pixels[y]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Hires_texture_width, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_mono_pixels[y]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -362,7 +362,7 @@ static bool video_create_hires_textures()
 
 	glBindTexture(GL_TEXTURE_2D, Hires_color_texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_size / Num_hires_color_patterns / 3, Num_hires_color_patterns, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_color_pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_size / Num_hires_color_patterns / 3, Num_hires_color_patterns, 0, GL_RGB, GL_UNSIGNED_BYTE, Hires_color_pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -717,7 +717,7 @@ bool video_create()
 	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
@@ -751,7 +751,7 @@ bool video_create()
 
 	glGenTextures(1, &Video_framebuffer_texture);
 	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Video_native_width, Video_native_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Video_native_width, Video_native_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -820,12 +820,11 @@ bool video_init()
 	}
 
 	// create the splash screen
-
 	SDL_Surface *surface = IMG_Load("interface/splash.jpg");
 	if (surface != nullptr) {
-		int mode = GL_RGB;
+		int mode = GL_LOAD_FORMAT_RGB;
 		if (surface->format->BytesPerPixel == 4) {
-		  mode = GL_RGBA;
+		  mode = GL_LOAD_FORMAT_RGBA;
 		}
 
 		glGenTextures(1, &Splash_screen_texture);
@@ -834,7 +833,7 @@ bool video_init()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
 		SDL_FreeSurface(surface);
 	}
 

@@ -214,8 +214,6 @@ int main(int argc, char* argv[])
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
 	}
 
-	SDL_assert(addr_string != nullptr);
-
 	// initialize SDL before everything else
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());

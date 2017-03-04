@@ -38,6 +38,20 @@ SOFTWARE.
 #define VIDEO_MODE_80COL   (1 << 4)
 #define VIDEO_MODE_ALTCHAR (1 << 5)
 
+// there is something weird with SDL/SDL_image
+// on mac (maybe linux) where textures are coming
+// back as BGR format instead of RGB.  Maybe it's
+// how SDL_image was compiled.  Too lazy to look
+// more info it.  Define modes for RGB and RGBA
+// that can be used when loading with SDL_image
+#if defined(__APPLE__)
+#define GL_LOAD_FORMAT_RGB GL_BGR
+#define GL_LOAD_FORMAT_RGBA GL_BGRA
+#else
+#define GL_LOAD_FORMAT_RGB GL_RGB
+#define GL_LOAD_FORMAT_RGBA GL_RGBA
+#endif
+
 // display types (mono)
 enum class video_tint_types : uint8_t {
 	MONO_WHITE = 0,

@@ -76,7 +76,7 @@ bool font::load(const char *filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_header.m_bitmap_width, m_header.m_bitmap_height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_header.m_bitmap_width, m_header.m_bitmap_height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
 	// set up font information on cells and locations for characters
 	//

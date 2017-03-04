@@ -510,7 +510,7 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 	// set up paging pointers
 	memory_set_paging_tables();
 
-	return 0xff;
+	return memory_read_floating_bus();
 }
 
 // set up the paging table pointers based on the current memory
@@ -786,6 +786,71 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 	// bad.  So let's return the largest value and disassembler
 	// can just deal with it there
 	return 0xffff;
+}
+
+// read the floating bus.  Based on the scanner address.  See inside the
+// Apple ][ (or ][e) in the memory section on generating the scanner
+// address
+uint8_t memory_read_floating_bus()
+{
+	int current_cycles, horz_clock, horz_count, horz_sum, vert_count;
+
+	current_cycles = Total_cycles_this_frame % Cycles_per_frame;
+	horz_clock = current_cycles % Horz_state_counter;
+	horz_count = (horz_clock != 0) ? Horz_scan_preset + horz_clock - 1 : 0;
+	horz_sum = horz_count & 0x38;  // grab  horz bits 4-6
+	vert_count = Vert_scan_preset + (current_cycles / Horz_state_counter);
+
+	// drive the scanner address.  Table 5.1 in understanding the apple ][ e
+	// gives the "formula' for computing the address
+
+	// a0 - a2 bits are H0 - H2
+	uint16_t addr = (horz_count & 0x7);
+
+	// a3 - a6 are computed based on which horizontal section we are in added
+	// to offset given by V3 and V4.
+	int h543 = (horz_count >> 3) & 0x07;
+	int v4343 = (vert_count >> 3) & 0x03 + ((vert_count >> 1) & 0x6);
+	addr |= (0x0d + h543 + v4343);
+
+	// a7 - a9 bits are V0 - V2
+	addr |= (vert_count << 4);
+
+	 // text/lores and hires scanning
+	if (!(Video_mode & VIDEO_MODE_HIRES)) {
+		// page 1 and page2/80 store both set a10-a11 to 0x01
+		if (!(Video_mode & VIDEO_MODE_PAGE2) || (Memory_state & RAM_80STORE)) {
+			addr |= 0x400;
+		} else {
+			// otherwise a10-a11 get set to 0x80;
+			addr |= 0x800;
+		}
+	} else {
+		// a10-12 are VA, VB, VC
+		addr |= ((vert_count << 10) & 0x1c00);
+
+		// a13 is !(PAGE2 & !80STORE).  a14 is inverse
+		int a13 = (Video_mode & VIDEO_MODE_PAGE2) & !(Memory_state & RAM_80STORE);
+		int a14 = !a13;
+		addr |= (a14 << 14) | (a13 << 13);
+	}
+
+	//if (_memory.IsHires && !(_memory.IsMixed && ((vert_count & 0xA0) == 0xA0))) // hires but not actively mixed [5-13, 5-19]
+	//{
+	//	address |= (_memory.IsVideoPage2 ? 0x4000 : 0x2000) | ((vert_count << 10) & 0x1C00);
+	//}
+	//else
+	//{
+	//	address |= _memory.IsVideoPage2 ? 0x0800 : 0x0400;
+	//	if (((_scannerOptions & ScannerOptions.AppleII) != 0) && (horz_count < HCountLeaveHBlank))
+	//	{
+	//		address |= 0x1000;
+	//	}
+	//}
+
+	SDL_assert((addr >> 8) != 0xc0);
+
+	return memory_read(addr) & 0x7f;
 }
 
 // function to write value to memory.  Trapped here in order to

@@ -34,7 +34,8 @@ uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 	UNREFERENCED(addr);
 	UNREFERENCED(val);
 	UNREFERENCED(write);
-	return 0xff;
+
+	return memory_read_floating_bus();
 }
 
 // initialize the speaker system.  For now, this is just setting up a handler

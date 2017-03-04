@@ -31,6 +31,7 @@ SOFTWARE.
 
 #include "apple2emu_defs.h"
 #include "apple2emu.h"
+#include "memory.h"
 #include "joystick.h"
 
 static int Num_controllers;
@@ -79,7 +80,6 @@ uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {
 	UNREFERENCED(write);
 	UNREFERENCED(val);
-
 	uint8_t return_val = 0;
 
 	addr = addr & 0xff;
@@ -87,13 +87,13 @@ uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 	case 0x61:
 	case 0x62:
 	case 0x63:
-		joystick_read_button(addr - 0x61);
+		return_val = joystick_read_button(addr - 0x61);
 		break;
 	case 0x64:
 	case 0x65:
 	case 0x66:
 	case 0x67:
-		joystick_read_axis(addr - 0x64);
+		return_val = joystick_read_axis(addr - 0x64);
 		break;
 
 	// this function initiates the analog to digital conversion from the
@@ -121,7 +121,7 @@ uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 		}
 	}
 
-	return return_val;
+	return return_val | memory_read_floating_bus();
 }
 
 void joystick_init()

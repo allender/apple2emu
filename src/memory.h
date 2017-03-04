@@ -65,6 +65,7 @@ uint8_t memory_read_main(const uint16_t addr);
 uint8_t memory_read_aux(const uint16_t addr);
 uint8_t memory_read(const uint16_t addr, bool instruction = false);
 uint8_t memory_read(const uint16_t addr, memory_high_read_type high_type, memory_high_read_bank bank);
+uint8_t memory_read_floating_bus();
 uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num);
 void memory_write(const uint16_t addr, uint8_t val);
 void memory_set_paging_tables();

@@ -316,6 +316,7 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
+			speaker_queue_audio();
 			video_render_frame();
 		}
 	}

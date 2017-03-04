@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #include "SDL.h"
+#include "apple2emu.h"
 #include "apple2emu_defs.h"
 #include "speaker.h"
 #include "memory.h"
@@ -36,7 +37,7 @@ static SDL_AudioSpec Audio_spec;
 const static int Sound_freq = 11025;
 const static int Sound_num_channels = 1;
 const static int Sound_buffer_size = (Sound_freq * Sound_num_channels) / 60;
-const static int Speaker_sample_cycles = 93;
+const static int Speaker_sample_cycles = CYCLES_PER_FRAME / Sound_buffer_size;
 
 static bool Speaker_on = false;
 static int Speaker_cycles = 0;
@@ -118,6 +119,10 @@ void speaker_update(int cycles)
 		SDL_QueueAudio(Device_id, Sound_buffer, Sound_buffer_size);
 		Sound_buffer_index = 0;
 	}
+}
+
+void speaker_queue_audio()
+{
 }
 
 void speaker_pause()

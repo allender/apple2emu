@@ -52,7 +52,7 @@ struct ring_buffer {
 
 ring_buffer Audio_ring_buffer;
 
-
+/*
 // callback from SDL for audio
 static void audio_callback(void *userdata, uint8_t *stream, int len)
 {
@@ -63,6 +63,7 @@ static void audio_callback(void *userdata, uint8_t *stream, int len)
 		stream[i] = rb->data[(rb->head++) % rb->size];
 	}
 }
+*/
 
 uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 {

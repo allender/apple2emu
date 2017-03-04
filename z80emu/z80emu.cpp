@@ -6,6 +6,7 @@
  * This code is free, do whatever you want with it.
  */
 
+#include <cstdlib>
 #include "z80emu.h"
 #include "z80user.h"
 #include "instructions.h"
@@ -217,7 +218,7 @@ int Z80Interrupt(Z80_STATE *state, int data_on_bus, void *context)
 
 int Z80NonMaskableInterrupt(Z80_STATE *state, void *context)
 {
-	(void *)context;
+	UNREFERENCED(context);
 	int	elapsed_cycles;
 
 	state->status = 0;
@@ -265,8 +266,7 @@ static int emulate(Z80_STATE * state,
 	int elapsed_cycles, int number_cycles,
 	void *context)
 {
-	(void *)context;
-
+	UNREFERENCED(context);
 	int	pc, r;
 
 	pc = state->pc;

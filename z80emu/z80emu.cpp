@@ -2259,6 +2259,7 @@ static int emulate(Z80_STATE * state,
 		case IN_A_N: {
 
 			int     n;
+            UNREFERENCED(n);
 
 			READ_N(n);
 			Z80_INPUT_BYTE(n, A);
@@ -2409,6 +2410,7 @@ static int emulate(Z80_STATE * state,
 		case OUT_N_A: {
 
 			int     n;
+            UNREFERENCED(n);
 
 			READ_N(n);
 			Z80_OUTPUT_BYTE(n, A);
@@ -2422,6 +2424,7 @@ static int emulate(Z80_STATE * state,
 		case OUT_C_R: {
 
 			int     x;
+            UNREFERENCED(x);
 
 			x = Y(opcode) != INDIRECT_HL
 				? R(Y(opcode))

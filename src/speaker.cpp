@@ -161,6 +161,7 @@ void speaker_update(int cycles)
 	// assume speaker on
 	int8_t val = Sound_silence;
 	if (Speaker_on) {
+        last_value = last_value;
 		val = ~val;
 	}
 

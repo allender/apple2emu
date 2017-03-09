@@ -154,6 +154,7 @@ disk_image *disk_image::load_image(const char *filename)
 	}
 
 	if (new_image != nullptr) {
+        new_image->m_read_only = read_only;
 		new_image->m_raw_buffer = raw_buffer;
 		new_image->m_buffer_size = buffer_size;
 		new_image->m_filename = filename;
@@ -302,11 +303,11 @@ uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 
 	// write out the self-sync bytes.  I'm pretty sure that we can put
 	// in range between X and Y self sync bytes
-	for (auto i = 0; i < m_gap1_num_bytes; i++) {
+	for (uint32_t i = 0; i < m_gap1_num_bytes; i++) {
 		*work_ptr++ = 0xff;
 	}
 
-	for (auto sector = 0; sector < m_total_sectors; sector++) {
+	for (uint32_t sector = 0; sector < m_total_sectors; sector++) {
 		// read in the sector, which consists of
 		// Address Field
 		//    Prologue    D5 AA 96
@@ -336,7 +337,7 @@ uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 		*work_ptr++ = 0xeb;
 
 		// gap 2
-		for (auto i = 0; i < m_gap2_num_bytes; i++) {
+		for (uint32_t i = 0; i < m_gap2_num_bytes; i++) {
 			*work_ptr++ = 0xff;
 		}
 
@@ -389,7 +390,7 @@ uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 		*work_ptr++ = 0xeb;
 
 		// gap 3
-		for (auto i = 0; i < m_gap3_num_bytes; i++) {
+		for (uint32_t i = 0; i < m_gap3_num_bytes; i++) {
 			*work_ptr++ = 0xff;
 		}
 	}

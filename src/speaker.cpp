@@ -25,6 +25,8 @@ SOFTWARE.
 
 */
 
+#include <limits.h>
+
 #include "SDL.h"
 #include "apple2emu.h"
 #include "apple2emu_defs.h"

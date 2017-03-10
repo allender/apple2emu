@@ -873,9 +873,7 @@ uint8_t memory_read_floating_bus()
 
 	// make sure hit bit not set as it may need to get set
 	// somehwere else
-	uint8_t return_val = memory_read(addr) & 0x7f;
-	printf("Addr: %04x - %02x\n", addr, return_val);
-	return return_val;
+	return memory_read(addr) & 0x7f;
 }
 
 // function to write value to memory.  Trapped here in order to

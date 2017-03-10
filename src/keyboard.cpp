@@ -185,13 +185,13 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 		key = '\b';
 	}
 	else if (key == SDLK_ESCAPE) {
-		key = 0x9b;
+		key = 0x1b;
 	}
 	else if (key == SDLK_RIGHT) {
-		key = 0x95;
+		key = 0x15;
 	}
 	else if (key == SDLK_LEFT) {
-		key = 0x88;
+		key = 0x08;
 	}
 	else if (ctrl == true) {
 		// send ctrl-A through ctrl-Z

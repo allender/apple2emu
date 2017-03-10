@@ -545,8 +545,10 @@ void ui_do_frame(SDL_Window *window)
 		// etc.  The underlying code will figure out what it needs to keep
 		for (auto i = 0; i < 512; i++) {
 			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
-			if (ImGui::IsKeyPressed(i) && !isprint(key)) {
-				keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+			if (ImGui::IsKeyPressed(i)) {
+				if ((key & SDLK_SCANCODE_MASK) || (key < 256 && !isprint(key))) {
+					keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+				}
 			}
 		}
 	}

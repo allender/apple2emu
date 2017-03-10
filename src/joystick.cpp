@@ -62,7 +62,7 @@ static uint8_t joystick_read_button(int button_num)
 {
 	uint8_t val = SDL_GameControllerGetButton(Controllers[0].m_gc, Controllers[0].m_buttons[button_num]);
 	// signals is active low.  So return 0 when on, and high bit set when not
-	return val ? 0 : 0x80;
+	return val ? 0x80 : 0;
 }
 
 static uint8_t joystick_read_axis(int axis_num)
@@ -121,6 +121,9 @@ uint8_t joystick_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 		}
 	}
 
+	if (write) {
+		return 0;
+	}
 	return return_val | memory_read_floating_bus();
 }
 

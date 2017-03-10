@@ -431,20 +431,6 @@ void ui_do_frame(SDL_Window *window)
 			debugger_enter();
 		}
 	}
-	if (ImGui::IsKeyPressed(SDL_SCANCODE_F10, false)) {
-		if (io.KeyShift == true) {
-			Frames_per_second *= 2;
-			io.WantCaptureKeyboard = false;
-
-		}
-	}
-	if (ImGui::IsKeyPressed(SDL_SCANCODE_F9, false)) {
-		if (io.KeyShift == true) {
-			Frames_per_second /= 2;
-			io.WantCaptureKeyboard = false;
-		}
-	}
-
 	// maybe bring up the main menu
 	if (ImGui::IsKeyPressed(SDL_SCANCODE_F1, false)) {
 		io.WantCaptureKeyboard = true;

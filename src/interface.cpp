@@ -28,6 +28,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <string>
 #include <fstream>
+#include <cctype>
 
 #include "SDL_image.h"
 #include "apple2emu_defs.h"
@@ -531,7 +532,7 @@ void ui_do_frame(SDL_Window *window)
 		// etc.  The underlying code will figure out what it needs to keep
 		for (auto i = 0; i < 512; i++) {
 			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
-			if (ImGui::IsKeyPressed(i)) {
+			if (ImGui::IsKeyPressed(i) && !isprint(key)) {
 				keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
 			}
 		}

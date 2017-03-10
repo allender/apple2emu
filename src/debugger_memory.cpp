@@ -158,12 +158,12 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 					ImGui::PopItemWidth();
 					if (cursor_pos >= 2)
 						data_write = data_next = true;
-					//if (data_write)
-					//{
+					if (data_write)
+					{
 					//	int data;
 					//	if (sscanf(DataInput, "%X", &data) == 1)
 					//		memory_write(addr, data);
-					//}
+					}
 					ImGui::PopID();
 				}
 				else

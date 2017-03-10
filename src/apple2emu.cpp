@@ -260,6 +260,7 @@ int main(int argc, char* argv[])
 		// process the next opcode
 		if (Emulator_state == emulator_state::EMULATOR_STARTED ||
 			Emulator_state == emulator_state::EMULATOR_TEST) {
+			speaker_unpause();
 			while (true) {
 				// process debugger (before opcode processing so that we can break on
 				// specific addresses properly
@@ -273,6 +274,9 @@ int main(int argc, char* argv[])
 					}
 					Total_cycles_this_frame += cycles;
 					Total_cycles += cycles;
+
+					// update speaker if needed
+					speaker_update(cycles);
 
 					if (Total_cycles_this_frame > cycles_per_frame) {
 						// this is essentially number of cycles for one redraw cycle
@@ -313,6 +317,7 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
+			speaker_queue_audio();
 			video_render_frame();
 		}
 	}
@@ -326,6 +331,7 @@ int main(int argc, char* argv[])
 	joystick_shutdown();
 	debugger_shutdown();
 	memory_shutdown();
+	speaker_shutdown();
 
 	SDL_Quit();
 

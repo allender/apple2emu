@@ -510,7 +510,10 @@ static uint8_t memory_expansion_soft_switch_handler(uint16_t addr, uint8_t val, 
 	// set up paging pointers
 	memory_set_paging_tables();
 
-	return 0xff;
+	if (write) {
+		return 0;
+	}
+	return memory_read_floating_bus();
 }
 
 // set up the paging table pointers based on the current memory
@@ -786,6 +789,93 @@ uint16_t memory_find_previous_opcode_addr(const uint16_t addr, int num)
 	// bad.  So let's return the largest value and disassembler
 	// can just deal with it there
 	return 0xffff;
+}
+
+// read the floating bus.  Based on the scanner address.  See inside the
+// Apple ][ (or ][e) in the memory section on generating the scanner
+// address.  Understanding the Apple ][e chapters 3 and 5 give
+// the information here to calculate the bus value.
+//
+// TODO:  could this be table driven?
+//
+uint8_t memory_read_floating_bus()
+{
+	int current_cycles = Total_cycles_this_frame % Cycles_per_frame;
+
+	// calculate the horizontal scanning clock.
+	int horz_clock = current_cycles % Horz_state_counter;
+	int horz_state = Horz_clock_start + horz_clock;
+
+	// account for the horizontal state being at 0 twice. (for clocks
+	// 40 and 41)
+	if (horz_clock == Horz_clock_preset) {
+		horz_state -= 1;
+	}
+
+	uint8_t h[8];
+	for (auto i = 0; i < 8; i++) {
+		h[i] = (horz_state >> i) & 1;
+	}
+
+	// calculate the verticle state
+	int vert_line = (current_cycles / Horz_state_counter);
+	int vert_state = Vert_line_start + vert_line;
+	if (vert_line >= Vert_line_preset) {
+		// when we just preset, we must compensate the verticle
+		// state by the reset value of the
+		vert_state = vert_state - (Vert_line_preset_value - Vert_preset_value);
+	}
+
+	uint8_t v_a = vert_state & 1;
+	uint8_t v_b = (vert_state >> 1) & 1;
+	uint8_t v_c = (vert_state >> 2) & 1;
+	uint8_t v_0 = (vert_state >> 3) & 1;
+	uint8_t v_1 = (vert_state >> 4) & 1;
+	uint8_t v_2 = (vert_state >> 5) & 1;
+	uint8_t v_3 = (vert_state >> 6) & 1;
+	uint8_t v_4 = (vert_state >> 7) & 1;
+	//uint8_t v_5 = (vert_state >> 8) & 1;
+
+
+	// drive the scanner address.  Table 5.1 in understanding the apple ][e
+	// gives the "formula' for computing the address
+	int val = 0xd;  // b1101
+	int val1 = (h[5] << 2) | (h[4] << 1) | h[3];
+	int val2 = (v_4 << 3)  | (v_3 << 2)  | (v_4 << 1) | v_3;
+	int sum = (val + val1 + val2) & 0xf;   // make sure to strip to lower 4 bits
+
+	// a0 - a2 bits are H0 - H2 (which we are storing in horz_state)
+	uint16_t addr = h[0] | (h[1] << 1) | (h[2] << 2);
+	addr |= (sum << 3);
+	addr |= v_0 << 7;
+	addr |= v_1 << 8;
+	addr |= v_2 << 9;
+
+	// need to get page 2 and 80store states to help determine address
+	int p2_80_not = (Video_mode & VIDEO_MODE_PAGE2) && !(Memory_state & RAM_80STORE);
+	int not_p2_80_not = !p2_80_not;
+
+	// text/lores and hires scanning
+	if (Video_mode & VIDEO_MODE_HIRES) {
+		addr |= v_a << 10;
+		addr |= v_b << 11;
+		addr |= v_c << 12;
+		addr |= not_p2_80_not << 13;
+		addr |= p2_80_not << 14;
+	} else {
+		addr |= not_p2_80_not << 10;
+		addr |= p2_80_not << 11;
+	}
+
+	// this is temporary to make sure that I'm getting these
+	// addresses calculated properly
+	SDL_assert((addr >> 8) != 0xc0);
+
+	// make sure hit bit not set as it may need to get set
+	// somehwere else
+	uint8_t return_val = memory_read(addr) & 0x7f;
+	printf("Addr: %04x - %02x\n", addr, return_val);
+	return return_val;
 }
 
 // function to write value to memory.  Trapped here in order to

@@ -39,7 +39,7 @@ static SDL_AudioSpec Audio_spec;
 const static int Sound_samples = 44100;
 const static int Sound_num_channels = 1;
 const static int Sound_buffer_size = (Sound_samples * Sound_num_channels) / 60;
-const static int Speaker_sample_cycles = CYCLES_PER_FRAME / Sound_buffer_size;
+const static int Speaker_sample_cycles = Cycles_per_frame / Sound_buffer_size;
 
 static int8_t Sound_silence;
 
@@ -93,7 +93,8 @@ uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
 	UNREFERENCED(addr);
 	UNREFERENCED(val);
 	UNREFERENCED(write);
-	return 0xff;
+
+	return memory_read_floating_bus();
 }
 
 // initialize the speaker system.  For now, this is just setting up a handler

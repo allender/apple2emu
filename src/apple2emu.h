@@ -26,6 +26,7 @@ SOFTWARE.
 */
 
 #pragma once
+#include <SDL_log.h>
 #include "6502.h"
 
 enum class emulator_state : uint8_t {
@@ -44,6 +45,11 @@ enum class emulator_type: uint8_t {
 	NUM_EMULATOR_TYPES,
 };
 
+// enums for logginf
+enum {
+	LOG_CATEGORY_DISK = SDL_LOG_CATEGORY_CUSTOM
+};
+
 extern const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)];
 
 // constants for machine speeds
@@ -58,9 +64,18 @@ const uint32_t FREQ_6502_MS = (uint32_t)((CLOCK_14M * 65.0) / ((65.0 * 14) + 2) 
 
 // timing related to video refresh.  See Understanding the
 // Apple ][ page 3-11.
-const uint32_t HORZ_STATE_COUNTER = 65;
-const uint32_t VERT_STATE_COUNTER = 262;
-const uint32_t CYCLES_PER_FRAME = VERT_STATE_COUNTER * HORZ_STATE_COUNTER;
+const uint32_t Horz_state_counter = 65;
+const uint32_t Horz_clock_start = 24;        // clock where HBL starts
+const uint32_t Horz_clock_preset = 41;       // clock when reset happens
+const uint32_t Horz_segment_count = 40;
+const uint32_t Horz_scan_preset = 64;
+const uint32_t Vert_state_counter = 262;
+const uint32_t Vert_line_start = 256;        // vert line after preset
+const uint32_t Vert_line_preset = 256;       // vert line when preset happens
+const uint32_t Vert_line_preset_value = 511; // value of vert state on preset (b111111111)
+const uint32_t Vert_preset_value = 250;      // preset value (b11111010)
+
+const uint32_t Cycles_per_frame = Vert_state_counter * Horz_state_counter;
 
 // several externs for cycle counting
 extern uint32_t Total_cycles;

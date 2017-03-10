@@ -40,9 +40,12 @@ SOFTWARE.
 #include "interface.h"
 #include "debugger.h"
 
-const int Num_vertical_cells = 24;
-const int Num_vertical_cells_mixed = 20;
-const int Num_horizontal_cells = 40;
+uint32_t Frames_per_second = 60;
+static float Framecap_ms;
+
+static const int Num_vertical_cells = 24;
+static const int Num_vertical_cells_mixed = 20;
+static const int Num_horizontal_cells = 40;
 
 // always render to default size - SDL can scale it up
 // we use 560 here because of double hires (and 80 column
@@ -58,12 +61,12 @@ static SDL_Rect Video_native_size;
 static GLuint Splash_screen_texture;
 
 // information about internally built textures
-const int Num_lores_colors = 16;
-const int Num_hires_mono_patterns = 128;
-const int Num_hires_color_patterns = 256;
-const int Hires_texture_width = 8;
-const int Num_hires_pattern_variations = 4;
-const int Hires_color_texture_width = Hires_texture_width * Num_hires_pattern_variations * 2;  // mult by 2 for odd/even
+static const int Num_lores_colors = 16;
+static const int Num_hires_mono_patterns = 128;
+static const int Num_hires_color_patterns = 256;
+static const int Hires_texture_width = 8;
+static const int Num_hires_pattern_variations = 4;
+static const int Hires_color_texture_width = Hires_texture_width * Num_hires_pattern_variations * 2;  // mult by 2 for odd/even
 
 // textures and pixel storage for mono mode.  There
 // are only 128 patterns since we don't need to worry
@@ -655,6 +658,7 @@ uint8_t video_set_state(uint16_t addr, uint8_t val, bool write)
 	memory_set_paging_tables();
 
 	return 0xff;
+	//return memory_read_floating_bus();;
 }
 
 uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
@@ -692,10 +696,10 @@ uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
 		break;
 	}
 	if (return_val) {
-		return 0x80;
+		return_val = 0x80;
 	}
 
-	return return_val;
+	return return_val;// | memory_read_floating_bus();
 }
 
 bool video_create()
@@ -740,9 +744,9 @@ bool video_create()
 	}
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
-   if (err != GLEW_OK) {
-	  printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
-   }
+	if (err != GLEW_OK) {
+		printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
+	}
 
 	// framebuffer and render to texture
 	glGenFramebuffers(1, &Video_framebuffer);
@@ -857,6 +861,22 @@ bool Debug_show_bitmap = false;
 
 void video_render_frame()
 {
+	static uint64_t last_time = 0;
+	uint64_t start;
+
+	// framerate cap in millisconds
+	Framecap_ms = (1.0f / Frames_per_second) * 1000;
+
+	//  used for framerate limiting
+	start = SDL_GetPerformanceCounter();
+	if (last_time != 0) {
+		int32_t sleep_ms = (uint32_t)(Framecap_ms - (1000 * (start - last_time) / SDL_GetPerformanceFrequency()));
+		if (sleep_ms > 0) {
+			SDL_Delay(sleep_ms);
+		}
+	}
+	last_time = SDL_GetPerformanceCounter();
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, Video_native_width, Video_native_height);
 	glClearColor(0, 0, 0, 0);
@@ -901,40 +921,6 @@ void video_render_frame()
 	glOrtho(0.0f, (float)Video_window_size.w, (float)Video_window_size.h, 0.0f, 0.0f, 1.0f);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-
-#if 0
-	if (Video_tint_type != video_tint_types::COLOR) {
-		glColor3fv(Video_tint_color);
-	}
-
-	// render texture to window.  Just render the texture to the
-	// full screen (using normalized device coordinates)
-	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	glBegin(GL_QUADS);
-	if (debugger_active() == false) {
-		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h);
-		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w, Video_window_size.h);
-		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w, 0);
-		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
-	} else {
-		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h/2);
-		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w/2, Video_window_size.h/2);
-		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w/2, 0);
-		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
-	}
-	glEnd();
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	if (Debug_show_bitmap) {
-		glBindTexture(GL_TEXTURE_2D, Hires_color_texture);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, Video_window_size.h);
-		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_window_size.w, Video_window_size.h);
-		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_window_size.w, 0);
-		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, 0);
-		glEnd();
-	}
-#endif
 
 	ui_do_frame(Video_window);
 

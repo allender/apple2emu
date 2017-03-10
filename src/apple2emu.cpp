@@ -65,8 +65,6 @@ const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPE
 	"Apple ][e Enhanced",
 };
 
-static SDL_sem *cpu_sem;
-
 // globals used to control emulator
 uint32_t Speed_multiplier = 1;
 bool Auto_start = false;
@@ -78,29 +76,13 @@ static const char *Binary_image_filename = nullptr;
 static int32_t Program_start_addr = -1;
 static int32_t Program_load_addr = -1;
 
+static const char *Log_filename = nullptr;
+static FILE *Log_file = nullptr;
 
 uint32_t Total_cycles, Total_cycles_this_frame;
 
 cpu_6502 cpu;
 Z80_STATE z80_cpu;
-
-static void configure_logging()
-{
-	//el::Configurations conf;
-
-	//conf.setToDefault();
-	//conf.set(el::Level::Global, el::ConfigurationType::Enabled, "true");
-	//conf.set(el::Level::Global, el::ConfigurationType::LogFileTruncate, "true");
-	//conf.set(el::Level::Global, el::ConfigurationType::ToStandardOutput, "false");
-	//conf.set(el::Level::Global, el::ConfigurationType::Format, "%msg");
-	//el::Loggers::reconfigureLogger("default", conf);
-
-	//// set some options on the logger
-	//el::Loggers::addFlag(el::LoggingFlag::ImmediateFlush);
-	//el::Loggers::addFlag(el::LoggingFlag::NewLineForContainer);
-	//el::Loggers::addFlag(el::LoggingFlag::ColoredTerminalOutput);
-}
-
 
 static char *get_cmdline_option(char **start, char **end, const std::string &short_option, const std::string &long_option = "")
 {
@@ -127,11 +109,24 @@ static bool cmdline_option_exists(char **start, char **end, const std::string &s
 	return true;
 }
 
-static uint32_t render_event_timer(uint32_t interval, void *param)
+// log output function.  Redirected from SDL so that we can do whatever
+// we need to with the log message (i.e. stdout, or logfile, etc
+static void log_output(void *userdata, int category, SDL_LogPriority priority, const char *message)
 {
-	UNREFERENCED(param);
-	SDL_SemPost(cpu_sem);
-	return interval;
+	UNREFERENCED(userdata);
+	UNREFERENCED(category);
+	UNREFERENCED(priority);
+
+	if (Log_file != nullptr) {
+		fprintf(Log_file, "%s\n", message);
+	} else {
+		fprintf(stderr, "%s\n", message);
+	}
+}
+
+static void configure_logging()
+{
+	SDL_LogSetOutputFunction(log_output, nullptr);
 }
 
 bool dissemble_6502(const char *filename)
@@ -192,17 +187,28 @@ void reset_machine()
 	}
 }
 
+static void apple2emu_shutdown()
+{
+	if (Log_file != nullptr) {
+		fclose(Log_file);
+	}
+
+	video_shutdown();
+	disk_shutdown();
+	keyboard_shutdown();
+	joystick_shutdown();
+	debugger_shutdown();
+	memory_shutdown();
+
+	SDL_Quit();
+}
+
 int main(int argc, char* argv[])
 {
-	// configure logging before anything else
-	configure_logging();
-
 	// grab some needed command line options
 	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");
 	Binary_image_filename = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 
-	// testing z80
-	bool test_z80 = cmdline_option_exists(argv, argv + argc, "-z", "--z80");
 
 	const char *addr_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (addr_string != nullptr) {
@@ -214,11 +220,21 @@ int main(int argc, char* argv[])
 		Program_load_addr = (uint16_t)strtol(addr_string, nullptr, 16);
 	}
 
+	bool test_z80 = cmdline_option_exists(argv, argv + argc, "-z", "--z80");
+	Log_filename = get_cmdline_option(argv, argv + argc, "-l", "--log");
+	if (Log_filename != nullptr) {
+		Log_file = fopen(Log_filename, "wt");
+	}
+
+	// set up atexit handler to clean everything up
+	atexit(apple2emu_shutdown);
+
 	// initialize SDL before everything else
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
 		printf("Error initializing SDL: %s\n", SDL_GetError());
 		return -1;
 	}
+	configure_logging();
 	reset_machine();
 
 	if (test_z80) {
@@ -240,21 +256,9 @@ int main(int argc, char* argv[])
 
 	bool quit = false;
 	Total_cycles_this_frame = Total_cycles = 0;
-	cpu_sem = SDL_CreateSemaphore(0);
-	if (cpu_sem == nullptr) {
-		printf("Unable to create semaphore for CPU speed throttling: %s\n", SDL_GetError());
-		exit(-1);
-	}
-
-	// set up a timer for rendering
-	SDL_TimerID render_timer = SDL_AddTimer(16, render_event_timer, nullptr);
-	if (render_timer == 0) {
-		printf("Unable to create timer for rendering: %s\n", SDL_GetError());
-		exit(-1);
-	}
 
 	while (!quit) {
-		uint32_t cycles_per_frame = CYCLES_PER_FRAME * Speed_multiplier;  // we can speed up machine by multiplier here
+		uint32_t cycles_per_frame = Cycles_per_frame * Speed_multiplier;  // we can speed up machine by multiplier here
 
 
 		// process the next opcode
@@ -282,11 +286,9 @@ int main(int argc, char* argv[])
 						// this is essentially number of cycles for one redraw cycle
 						// for TV/monitor.  Around 17030 cycles I believe
 						Total_cycles_this_frame -= cycles_per_frame;
-						SDL_SemWait(cpu_sem);
 						break;
 					}
 				} else {
-					SDL_SemWait(cpu_sem);
 					break;
 				}
 			}
@@ -294,46 +296,28 @@ int main(int argc, char* argv[])
 			debugger_process();
 		}
 
-		{
-			SDL_Event evt;
+		SDL_Event evt;
+		while (SDL_PollEvent(&evt)) {
+			ImGui_ImplSdl_ProcessEvent(&evt);
 
-			while (SDL_PollEvent(&evt)) {
-				ImGui_ImplSdl_ProcessEvent(&evt);
-				switch (evt.type) {
-				// event types for keys will be handled by imgui
-				//case SDL_KEYDOWN:
-				//case SDL_KEYUP:
-				//	keyboard_handle_event(evt);
-				//	break;
-
-				case SDL_WINDOWEVENT:
-					if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
-						quit = true;
-					}
-					break;
-
-				case SDL_QUIT:
+			// process events.  Keypressed will be processed through
+			// imgui in the interface code
+			switch (evt.type) {
+			case SDL_WINDOWEVENT:
+				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
 					quit = true;
-					break;
 				}
+				break;
+
+			case SDL_QUIT:
+				quit = true;
+				break;
 			}
-			speaker_queue_audio();
-			video_render_frame();
 		}
+
+		speaker_queue_audio();
+		video_render_frame();
 	}
-
-	SDL_RemoveTimer(render_timer);
-	SDL_DestroySemaphore(cpu_sem);
-
-	video_shutdown();
-	disk_shutdown();
-	keyboard_shutdown();
-	joystick_shutdown();
-	debugger_shutdown();
-	memory_shutdown();
-	speaker_shutdown();
-
-	SDL_Quit();
 
 	return 0;
 }

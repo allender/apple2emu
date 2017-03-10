@@ -30,6 +30,8 @@ SOFTWARE.
 
 #include <algorithm>
 #include <iomanip>
+#include <SDL_log.h>
+#include "apple2emu.h"
 #include "disk.h"
 #include "memory.h"
 
@@ -40,8 +42,6 @@ SOFTWARE.
 #if defined(min)
 #undef min
 #endif
-
-//#define LOG_DISK
 
 class disk_drive {
 private:
@@ -112,9 +112,7 @@ void disk_drive::readwrite()
 
 	// read the data out of the disk image into the track image
 	if (m_track_size == 0 && m_disk_image != nullptr) {
-#if defined(LOG_DISK)
-		LOG(INFO) << "track $" << std::setw(2) << std::setfill('0') << std::setbase(16) << (uint32_t)Current_drive->m_current_track << "  read";
-#endif
+		SDL_LogVerbose(LOG_CATEGORY_DISK, "track $%02x  read\n", Current_drive->m_current_track);
 		m_track_size = m_disk_image->read_track(Current_drive->m_current_track, m_track_data);
 		m_track_dirty = false;
 		m_current_byte = 0;
@@ -123,10 +121,7 @@ void disk_drive::readwrite()
 	if (m_write_mode == false) {
 		// this is read mode
 		m_data_register = m_track_data[m_current_byte];
-#if defined(LOG_DISK)
-		LOG(INFO) << "Read: " << std::setw(4) << std::setfill(' ') << std::setbase(16) << m_current_byte << " " <<
-			std::setw(2) << std::setbase(16) << (uint32_t)m_data_register;
-#endif
+		SDL_LogVerbose(LOG_CATEGORY_DISK, "Read: %04x %02x\n", m_current_byte, m_data_register);
 	}
 	else {
 		// when writing, here we will just apply the byte to the track
@@ -250,15 +245,14 @@ uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 					Current_drive->set_new_track(new_track);
 				}
 			}
-#if defined(LOG_DISK)
-			LOG(INFO) << "phases: " << std::setw(1) << ((Current_drive->m_phase_status >> 3) & 0x1)
-				<< std::setw(1) << ((Current_drive->m_phase_status >> 2) & 0x1)
-				<< std::setw(1) << ((Current_drive->m_phase_status >> 1) & 0x1)
-				<< std::setw(1) << (Current_drive->m_phase_status & 0x1)
-				<< " track: " << std::setw(2) << (int)Current_drive->m_half_track_count
-				<< " dir: " << std::setw(1) << dir
-				<< " addr: " << std::setbase(16) << (addr & 0xff);
-#endif
+			SDL_LogVerbose(LOG_CATEGORY_DISK, "phases: %1x%1x%1x%1x track: %02x dir: %1x addr: %02x\n",
+				((Current_drive->m_phase_status >> 3) & 0x1),
+				((Current_drive->m_phase_status >> 2) & 0x1),
+				((Current_drive->m_phase_status >> 1) & 0x1),
+				(Current_drive->m_phase_status & 0x1),
+				(int)Current_drive->m_half_track_count,
+				dir,
+				(addr & 0xff));
 		}
 	}
 	break;
@@ -278,7 +272,7 @@ uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 		else {
 			Current_drive = &Disk_drives[1];
 		}
-		//LOG(INFO) << "Select drive: " << ((addr & 0xf) - 0x9);
+		SDL_LogVerbose(LOG_CATEGORY_DISK, "Select drive: %1d\n", (addr & 0xf) - 0x9);
 		break;
 
 	case 0xc:

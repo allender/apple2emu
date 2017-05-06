@@ -818,7 +818,7 @@ uint8_t memory_read_floating_bus()
 	}
 
 	// calculate the verticle state
-	int vert_line = (current_cycles / Horz_state_counter);
+	uint32_t vert_line = (current_cycles / Horz_state_counter);
 	int vert_state = Vert_line_start + vert_line;
 	if (vert_line >= Vert_line_preset) {
 		// when we just preset, we must compensate the verticle

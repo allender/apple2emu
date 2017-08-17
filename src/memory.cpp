@@ -222,16 +222,16 @@ static bool memory_load_from_filename(const char *filename, uint8_t *dest)
 static void memory_load_rom_images()
 {
 	if (Emulator_type == emulator_type::APPLE2) {
-		memory_load_from_filename("roms/apple2.rom", &Memory_rom_buffer[0x1000]);
+		memory_load_from_filename("roms/Apple2.rom", &Memory_rom_buffer[0x1000]);
 	}
 	else if (Emulator_type == emulator_type::APPLE2_PLUS) {
-		memory_load_from_filename("roms/apple2_plus.rom", &Memory_rom_buffer[0x1000]);
+		memory_load_from_filename("roms/Apple2_Plus.rom", &Memory_rom_buffer[0x1000]);
 	} else if (Emulator_type == emulator_type::APPLE2E) {
-		memory_load_from_filename("roms/apple2e.rom", &Memory_rom_buffer[0x1000]);
+		memory_load_from_filename("roms/Apple2e.rom", &Memory_rom_buffer[0x1000]);
 	} else if (Emulator_type == emulator_type::APPLE2E_ENHANCED) {
-		memory_load_from_filename("roms/apple2e_enhanced.rom", &Memory_rom_buffer[0x1000]);
+		memory_load_from_filename("roms/Apple2e_Enhanced.rom", &Memory_rom_buffer[0x1000]);
 	}
-	memory_load_from_filename("roms/disk2.rom", &Memory_rom_buffer[0x600]);
+	memory_load_from_filename("roms/DISK2.rom", &Memory_rom_buffer[0x600]);
 }
 
 // initialize the memory buffer with "random" pattern.  I am
@@ -818,7 +818,7 @@ uint8_t memory_read_floating_bus()
 	}
 
 	// calculate the verticle state
-	int vert_line = (current_cycles / Horz_state_counter);
+	uint32_t vert_line = (current_cycles / Horz_state_counter);
 	int vert_state = Vert_line_start + vert_line;
 	if (vert_line >= Vert_line_preset) {
 		// when we just preset, we must compensate the verticle

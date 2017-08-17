@@ -1,7 +1,7 @@
 #
 #  CMake file for Apple2emu
 #
-cmake_minimum_required(VERSION 3.6.0)
+cmake_minimum_required(VERSION 3.5.1)
 project(apple2emu CXX)
 
 # Directory for output files

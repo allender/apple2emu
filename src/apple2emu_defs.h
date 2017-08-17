@@ -25,6 +25,8 @@ SOFTWARE.
 
 */
 
+#include <stdint.h>
+
 // pull this assert definition in everywhere
 #include <SDL_assert.h>
 

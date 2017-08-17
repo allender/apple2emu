@@ -209,7 +209,6 @@ int main(int argc, char* argv[])
 	Disk_image_filename = get_cmdline_option(argv, argv + argc, "-d", "--disk");
 	Binary_image_filename = get_cmdline_option(argv, argv + argc, "-b", "--binary");
 
-
 	const char *addr_string = get_cmdline_option(argv, argv + argc, "-p", "--pc");
 	if (addr_string != nullptr) {
 		Program_start_addr = (uint16_t)strtol(addr_string, nullptr, 16);

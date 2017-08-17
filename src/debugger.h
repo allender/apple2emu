@@ -27,6 +27,7 @@ SOFTWARE.
 
 #pragma once
 
+#include <stdint.h>
 #include <vector>
 
 enum class debugger_state {

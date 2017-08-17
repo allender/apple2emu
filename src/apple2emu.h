@@ -71,7 +71,7 @@ const uint32_t Horz_segment_count = 40;
 const uint32_t Horz_scan_preset = 64;
 const uint32_t Vert_state_counter = 262;
 const uint32_t Vert_line_start = 256;        // vert line after preset
-const uint32_t Vert_line_preset = 256;       // vert line when preset happens
+const int32_t Vert_line_preset = 256;       // vert line when preset happens
 const uint32_t Vert_line_preset_value = 511; // value of vert state on preset (b111111111)
 const uint32_t Vert_preset_value = 250;      // preset value (b11111010)
 

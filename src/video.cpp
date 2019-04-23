@@ -375,26 +375,26 @@ static bool video_create_hires_textures()
 	return true;
 }
 
-static void video_render_screen(std::function<void(int, int)> render_func, std::function<void(int, int)>text_func)
+static void video_render_screen(std::function<void(uint16_t, uint16_t)> render_func, std::function<void(uint16_t, uint16_t)>text_func)
 {
 	// and secondary mode.  The mode might be all text, or
 	// might be lores + text
 	if (!(Video_mode & VIDEO_MODE_MIXED)) {
-		for (auto y = 0; y < Num_vertical_cells; y++) {
-			for (auto x = 0; x < Num_horizontal_cells; x++) {
+		for (uint16_t y = 0; y < Num_vertical_cells; y++) {
+			for (uint16_t x = 0; x < Num_horizontal_cells; x++) {
 				render_func(x, y);
 			}
 		}
 	}
 	else {
-		for (auto y = 0; y < Num_vertical_cells_mixed; y++) {
-			for (auto x = 0; x < Num_horizontal_cells; x++) {
+		for (uint16_t y = 0; y < Num_vertical_cells_mixed; y++) {
+			for (uint16_t x = 0; x < Num_horizontal_cells; x++) {
 				render_func(x, y);
 			}
 		}
 
-		for (auto y = Num_vertical_cells_mixed; y < Num_vertical_cells; y++) {
-			for (auto x = 0; x < Num_horizontal_cells; x++) {
+		for (uint16_t y = Num_vertical_cells_mixed; y < Num_vertical_cells; y++) {
+			for (uint16_t x = 0; x < Num_horizontal_cells; x++) {
 				text_func(x, y);
 			}
 		}

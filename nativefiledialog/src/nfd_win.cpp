@@ -164,7 +164,7 @@ static nfdresult_t AddFiltersToDialog(::IFileDialog *fileOpenDialog, const char 
 	p_filterList = filterList;
 	char typebuf[NFD_MAX_STRLEN] = { 0 };  /* one per comma or semicolon */
 	char *p_typebuf = typebuf;
-	char filterName[NFD_MAX_STRLEN] = { 0 };
+	//char filterName[NFD_MAX_STRLEN] = { 0 };
 
 	char specbuf[NFD_MAX_STRLEN] = { 0 }; /* one per semicolon */
 

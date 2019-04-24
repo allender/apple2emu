@@ -80,10 +80,10 @@ static void speaker_callback(void *userdata, uint8_t *stream, int len)
 			break;
 		}
 	}
-	SDL_SemPost(sem);
 	while (index < len) {
 		stream[index++] = Sound_silence;
 	}
+	SDL_SemPost(sem);
 	SDL_assert(Tail_index >= Head_index);
 }
 
@@ -121,7 +121,7 @@ void speaker_init()
 	want.callback = speaker_callback;
 	want.userdata = Sound_sem;
 
-	Device_id = SDL_OpenAudioDevice(nullptr, 0, &want, &Audio_spec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	Device_id = SDL_OpenAudioDevice(nullptr, 0, &want, &Audio_spec, 0);
 	SDL_PauseAudioDevice(Device_id, 1);
 
 	// set up sound buffer

@@ -298,9 +298,9 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		m_break_addr = m_current_addr = pc;
 	}
 
-	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	ImGuiCond condition = ImGuiCond_FirstUseEver;
 	if (m_reset_window) {
-		condition = ImGuiSetCond_Always;
+		condition = ImGuiCond_Always;
 		m_reset_window = false;
 	}
 
@@ -311,9 +311,8 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 	ImGuiStyle &style = ImGui::GetStyle();
 	ImGuiIO &io = ImGui::GetIO();
 
-	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders |
-				ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoScrollWithMouse)) {
+	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoScrollbar |
+				         ImGuiWindowFlags_NoScrollWithMouse)) {
 		ImGui::Columns(2);
 		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 120.0f);
 
@@ -358,41 +357,46 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		}
 		float line_height = ImGui::GetTextLineHeightWithSpacing();
 		int line_total_count = 0xffff;
-		ImGuiListClipper clipper(line_total_count, line_height);
+		ImGuiListClipper clipper;
 
 		// scan backwards in memory until we find the opcode
 		// that will put current address in the middle of the screen
-		int middle_line = (clipper.DisplayEnd - clipper.DisplayStart) / 2;
-		auto addr = memory_find_previous_opcode_addr(m_current_addr, middle_line);
+		clipper.Begin(line_total_count, line_height);
+		while (clipper.Step()) {
+			int middle_line = (clipper.DisplayEnd - clipper.DisplayStart) / 2;
+			auto addr = memory_find_previous_opcode_addr(m_current_addr, middle_line);
 
-		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) {
-			auto size = get_disassembly(addr);
-			auto f = std::find_if(Debugger_breakpoints.begin(),
-				Debugger_breakpoints.end(),
-				[addr](breakpoint &bp) { return bp.m_addr == addr; });
+			for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) {
+				auto size = get_disassembly(addr);
+				auto f = std::find_if(Debugger_breakpoints.begin(),
+					Debugger_breakpoints.end(),
+					[addr](breakpoint &bp) { return bp.m_addr == addr; });
 
-			// determine color to use.  Breakpoints show in red (lighter red
-			// for disabled ones, current broken on address in bright white
-			// and then eveyrhtnig else.  Always display current line
-			// in bold white
-			if (addr == m_current_addr) {
-				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text]);
-			} else if (f != Debugger_breakpoints.end() && f->m_enabled == true) {
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-			} else if (f != Debugger_breakpoints.end() && f->m_enabled == false) {
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.0f, 0.0f, 1.0f));
-			} else if (addr == m_break_addr) {
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
-			} else {
-				ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
+				// determine color to use.  Breakpoints show in red (lighter red
+				// for disabled ones, current broken on address in bright white
+				// and then eveyrhtnig else.  Always display current line
+				// in bold white
+				if (addr == m_current_addr) {
+					ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text]);
+				} else if (f != Debugger_breakpoints.end() && f->m_enabled == true) {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				} else if (f != Debugger_breakpoints.end() && f->m_enabled == false) {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.0f, 0.0f, 1.0f));
+				} else if (addr == m_break_addr) {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+				} else {
+					ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
+				}
+				ImGui::Text("%s", m_disassembly_line);
+				ImGui::PopStyleColor();
+				addr += size;
 			}
-			ImGui::Text("%s", m_disassembly_line);
-			ImGui::PopStyleColor();
-			addr += size;
 		}
-		clipper.End();
 
+		// need to reset the row back to the top since new column just
+		// moves to the next column
 		ImGui::NextColumn();
+		ImGui::SetCursorPosY(0.0f);
 		ImGui::Text("A  = $%02X", cpu.get_acc());
 		ImGui::Text("X  = $%02X", cpu.get_x());
 		ImGui::Text("Y  = $%02X", cpu.get_y());
@@ -420,7 +424,10 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 			(status >> 1) & 1,
 			(status & 1),
 			status);
+
+		ImGui::NextColumn();
 	}
+
 	ImGui::End();
 }
 

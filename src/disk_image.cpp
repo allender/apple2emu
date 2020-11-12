@@ -395,7 +395,7 @@ uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 		}
 	}
 
-	return work_ptr - buffer;  // number of bytes "read"
+	return static_cast<uint32_t>(work_ptr - buffer);  // number of bytes "read"
 }
 
 // denibbilize a track.  See the comments above the previous

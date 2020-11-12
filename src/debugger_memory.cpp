@@ -57,34 +57,31 @@ debugger_memory_editor::~debugger_memory_editor()
 
 void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_display_addr)
 {
-	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	ImGuiCond condition = ImGuiCond_FirstUseEver;
 	if (m_reset_window) {
-		condition = ImGuiSetCond_Always;
+		condition = ImGuiCond_Always;
 		m_reset_window = false;
 	}
 
 	ImGui::SetNextWindowSize(ImVec2(550, 332), condition);
 	ImGui::SetNextWindowPos(ImVec2(5, 428), condition);
 
-	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_ShowBorders)) {
-		ImGui::BeginChild("##scrolling", ImVec2(0, -(ImGui::GetItemsLineHeightWithSpacing() * 2)));
+	if (ImGui::Begin(title, nullptr, 0)) {
+		ImGui::BeginChild("##scrolling", ImVec2(0, -(ImGui::GetFrameHeightWithSpacing() * 2)));
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
 
 		int addr_digits_count = 0;
-		for (int n = base_display_addr + mem_size - 1; n > 0; n >>= 4) {
+		for (auto n = base_display_addr + mem_size - 1; n > 0; n >>= 4) {
 			addr_digits_count++;
 		}
 
 		float glyph_width = ImGui::CalcTextSize("F").x;
 		// "FF " we include trailing space in the width to easily catch clicks everywhere
 		float cell_width = glyph_width * 3;
-		float line_height = ImGui::GetTextLineHeight();
 		int line_total_count = (int)((mem_size + m_columns - 1) / m_columns);
-		ImGuiListClipper clipper(line_total_count, line_height);
-		int visible_start_addr = clipper.DisplayStart * m_columns;
-		int visible_end_addr = clipper.DisplayEnd * m_columns;
+		ImGuiListClipper clipper;
 
 		bool data_next = false;
 
@@ -107,106 +104,114 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 				m_data_editing_take_focus = true;
 			}
 		}
-		if ((m_data_editing_address / m_columns) != (data_editing_addr_backup / m_columns)) {
-			// Track cursor movements
-			float scroll_offset = ((m_data_editing_address / m_columns) - (data_editing_addr_backup / m_columns)) * line_height;
-			bool scroll_desired = (scroll_offset < 0.0f && m_data_editing_address < visible_start_addr + m_columns * 2) || (scroll_offset > 0.0f && m_data_editing_address > visible_end_addr - m_columns * 2);
-			if (scroll_desired)
-				ImGui::SetScrollY(ImGui::GetScrollY() + scroll_offset);
-		}
 
-		bool draw_separator = true;
-		for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) // display only visible items
-		{
-			uint16_t addr = (uint16_t)(line_i * m_columns);
-			ImGui::Text("%0*lX: ", addr_digits_count, base_display_addr + addr);
-			ImGui::SameLine();
-
-			// Draw Hexadecimal
-			float line_start_x = ImGui::GetCursorPosX();
-			for (int n = 0; n < m_columns && addr < mem_size; n++, addr++) {
-				ImGui::SameLine(line_start_x + cell_width * n);
-
-				if (m_data_editing_address == addr) {
-					// Display text input on current byte
-					ImGui::PushID(addr);
-					struct FuncHolder
-					{
-						// FIXME: We should have a way to retrieve the text edit cursor position more easily in the API, this is rather tedious.
-						static int Callback(ImGuiTextEditCallbackData* data)
-						{
-							int* p_cursor_pos = (int*)data->UserData;
-							if (!data->HasSelection())
-								*p_cursor_pos = data->CursorPos;
-							return 0;
-						}
-					};
-					int cursor_pos = -1;
-					bool data_write = false;
-					if (m_data_editing_take_focus) {
-						ImGui::SetKeyboardFocusHere();
-						sprintf(m_addr_input, "%0*lX", addr_digits_count, base_display_addr + addr);
-						sprintf(m_data_input, "%02X", memory_read(addr));
-					}
-					ImGui::PushItemWidth(ImGui::CalcTextSize("FF").x);
-					ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_AlwaysInsertMode | ImGuiInputTextFlags_CallbackAlways;
-					if (ImGui::InputText("##data", m_data_input, 32, flags, FuncHolder::Callback, &cursor_pos))
-						data_write = data_next = true;
-					else if (!m_data_editing_take_focus && !ImGui::IsItemActive())
-						m_data_editing_address = -1;
-					m_data_editing_take_focus = false;
-					ImGui::PopItemWidth();
-					if (cursor_pos >= 2)
-						data_write = data_next = true;
-					if (data_write)
-					{
-					//	int data;
-					//	if (sscanf(DataInput, "%X", &data) == 1)
-					//		memory_write(addr, data);
-					}
-					ImGui::PopID();
-				}
-				else
-				{
-					uint8_t val = 0;
-					if (addr < 0xc000 || addr > 0xc0ff) {
-						val = memory_read(addr, m_show_ram, m_bank_num);
-					}
-
-					ImGui::Text("%02X ", val);
-					if (m_allow_edits && ImGui::IsItemHovered() &&
-						ImGui::IsMouseClicked(0))
-					{
-						m_data_editing_take_focus = true;
-						m_data_editing_address = addr;
-					}
-				}
+		float line_height = ImGui::GetTextLineHeight();
+		clipper.Begin(line_total_count, line_height);
+		while (clipper.Step()) {
+			int visible_start_addr = clipper.DisplayStart * m_columns;
+			int visible_end_addr = clipper.DisplayEnd * m_columns;
+			if ((m_data_editing_address / m_columns) != (data_editing_addr_backup / m_columns)) {
+				// Track cursor movements
+				float scroll_offset = ((m_data_editing_address / m_columns) - (data_editing_addr_backup / m_columns)) * line_height;
+				bool scroll_desired = (scroll_offset < 0.0f && m_data_editing_address < visible_start_addr + m_columns * 2) || (scroll_offset > 0.0f && m_data_editing_address > visible_end_addr - m_columns * 2);
+				if (scroll_desired)
+					ImGui::SetScrollY(ImGui::GetScrollY() + scroll_offset);
 			}
 
-			ImGui::SameLine(line_start_x + cell_width * m_columns + glyph_width * 2);
-
-			if (draw_separator)
+			// int visible_start_addr = clipper.DisplayStart * m_columns;
+			// int visible_end_addr = clipper.DisplayEnd * m_columns;
+			bool draw_separator = true;
+			for (int line_i = clipper.DisplayStart; line_i < clipper.DisplayEnd; line_i++) // display only visible items
 			{
-				ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-				ImGui::GetWindowDrawList()->AddLine(ImVec2(screen_pos.x - glyph_width,
-					screen_pos.y - 9999),
-					ImVec2(screen_pos.x - glyph_width, screen_pos.y + 9999),
-					ImColor(ImGui::GetStyle().Colors[ImGuiCol_Border]));
-				draw_separator = false;
-			}
+				uint16_t addr = (uint16_t)(line_i * m_columns);
+				ImGui::Text("%0*lX: ", addr_digits_count, base_display_addr + addr);
+				ImGui::SameLine();
 
-			// Draw ASCII values
-			addr = (uint16_t)(line_i * m_columns);
-			for (int n = 0; n < m_columns && addr < mem_size; n++, addr++) {
-				if (n > 0) ImGui::SameLine();
-				int c = '?';
-				if (addr < 0xc000 || addr > 0xc0ff) {
-					c = memory_read(addr, m_show_ram, m_bank_num);
+				// Draw Hexadecimal
+				float line_start_x = ImGui::GetCursorPosX();
+				for (int n = 0; n < m_columns && addr < mem_size; n++, addr++) {
+					ImGui::SameLine(line_start_x + cell_width * n);
+
+					if (m_data_editing_address == addr) {
+						// Display text input on current byte
+						ImGui::PushID(addr);
+						struct FuncHolder
+						{
+							// FIXME: We should have a way to retrieve the text edit cursor position more easily in the API, this is rather tedious.
+							static int Callback(ImGuiTextEditCallbackData* data)
+							{
+								int* p_cursor_pos = (int*)data->UserData;
+								if (!data->HasSelection())
+									*p_cursor_pos = data->CursorPos;
+								return 0;
+							}
+						};
+						int cursor_pos = -1;
+						bool data_write = false;
+						if (m_data_editing_take_focus) {
+							ImGui::SetKeyboardFocusHere();
+							sprintf(m_addr_input, "%0*lX", addr_digits_count, static_cast<int>(base_display_addr + addr));
+							sprintf(m_data_input, "%02X", memory_read(addr));
+						}
+						ImGui::PushItemWidth(ImGui::CalcTextSize("FF").x);
+						ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_AlwaysInsertMode | ImGuiInputTextFlags_CallbackAlways;
+						if (ImGui::InputText("##data", m_data_input, 32, flags, FuncHolder::Callback, &cursor_pos))
+							data_write = data_next = true;
+						else if (!m_data_editing_take_focus && !ImGui::IsItemActive())
+							m_data_editing_address = -1;
+						m_data_editing_take_focus = false;
+						ImGui::PopItemWidth();
+						if (cursor_pos >= 2)
+							data_write = data_next = true;
+						if (data_write)
+						{
+						//	int data;
+						//	if (sscanf(DataInput, "%X", &data) == 1)
+						//		memory_write(addr, data);
+						}
+						ImGui::PopID();
+					}
+					else
+					{
+						uint8_t val = 0;
+						if (addr < 0xc000 || addr > 0xc0ff) {
+							val = memory_read(addr, m_show_ram, m_bank_num);
+						}
+
+						ImGui::Text("%02X ", val);
+						if (m_allow_edits && ImGui::IsItemHovered() &&
+							ImGui::IsMouseClicked(0))
+						{
+							m_data_editing_take_focus = true;
+							m_data_editing_address = addr;
+						}
+					}
 				}
-				ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
+
+				ImGui::SameLine(line_start_x + cell_width * m_columns + glyph_width * 2);
+
+				if (draw_separator)
+				{
+					ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+					ImGui::GetWindowDrawList()->AddLine(ImVec2(screen_pos.x - glyph_width,
+						screen_pos.y - 9999),
+						ImVec2(screen_pos.x - glyph_width, screen_pos.y + 9999),
+						ImColor(ImGui::GetStyle().Colors[ImGuiCol_Border]));
+					draw_separator = false;
+				}
+
+				// Draw ASCII values
+				addr = (uint16_t)(line_i * m_columns);
+				for (int n = 0; n < m_columns && addr < mem_size; n++, addr++) {
+					if (n > 0) ImGui::SameLine();
+					int c = '?';
+					if (addr < 0xc000 || addr > 0xc0ff) {
+						c = memory_read(addr, m_show_ram, m_bank_num);
+					}
+					ImGui::Text("%c", (c >= 32 && c < 128) ? c : '.');
+				}
 			}
 		}
-		clipper.End();
 		ImGui::PopStyleVar(2);
 
 		ImGui::EndChild();
@@ -218,7 +223,7 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 
 		ImGui::Separator();
 
-		ImGui::AlignFirstTextHeightToWidgets();
+		ImGui::AlignTextToFramePadding();
 		ImGui::SameLine();
 		ImGui::Text("Range %0*X..%0*X", addr_digits_count,
 			(int)base_display_addr, addr_digits_count,
@@ -228,7 +233,7 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 		if (ImGui::InputText("##addr", m_addr_input, 32, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
 			int goto_addr;
 			if (sscanf(m_addr_input, "%X", &goto_addr) == 1) {
-				goto_addr -= base_display_addr;
+				goto_addr -= static_cast<int>(base_display_addr);
 				if (goto_addr >= 0 && goto_addr < mem_size) {
 					ImGui::BeginChild("##scrolling");
 					ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + (goto_addr / m_columns) * ImGui::GetTextLineHeight());

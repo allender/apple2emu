@@ -79,6 +79,11 @@ target_link_libraries(apple2emu
 
 # add post build step to copy extra files into
 # the build folder
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/interface")
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/disks")
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/roms")
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/fonts")
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/symtables")
 if (WIN32)
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2.dll" "${CMAKE_CURRENT_BINARY_DIR}")
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2_image.dll" "${CMAKE_CURRENT_BINARY_DIR}")

@@ -66,6 +66,8 @@ extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
 extern GLuint Video_framebuffer_texture;
 extern SDL_Rect Video_window_size;
+extern const int Video_native_width;
+extern const int Video_native_height;
 
 bool video_init();
 void video_shutdown();

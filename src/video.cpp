@@ -25,13 +25,6 @@ SOFTWARE.
 
 */
 
-#define GLEW_STATIC
-
-#include <GL/glew.h>
-#include "SDL.h"
-#include "SDL_opengl.h"
-#include "SDL_image.h"
-
 #include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "memory.h"
@@ -41,7 +34,6 @@ SOFTWARE.
 #include "debugger.h"
 
 uint32_t Frames_per_second = 60;
-static float Framecap_ms;
 
 static const int Num_vertical_cells = 24;
 static const int Num_vertical_cells_mixed = 20;
@@ -50,15 +42,10 @@ static const int Num_horizontal_cells = 40;
 // always render to default size - SDL can scale it up
 // we use 560 here because of double hires (and 80 column
 // support.
-const static int Video_native_width = 560;
-const static int Video_native_height = 384;
+const int Video_native_width = 560;
+const int Video_native_height = 384;
 const int Video_cell_width = Video_native_width / 40;
 const int Video_cell_height = Video_native_height / 24;
-
-static int Video_scale_factor = 2;
-static SDL_Rect Video_native_size;
-
-static GLuint Splash_screen_texture;
 
 // information about internally built textures
 static const int Num_lores_colors = 16;
@@ -82,13 +69,6 @@ static uint8_t *Hires_mono_pixels[Num_hires_mono_patterns];
 // when it is adjacent to another pixel
 static GLuint Hires_color_texture;
 static uint8_t *Hires_color_pixels;
-
-GLuint Video_framebuffer;
-GLuint Video_framebuffer_texture;
-SDL_Rect Video_window_size;
-
-SDL_Window *Video_window = nullptr;
-SDL_GLContext Video_context;
 
 SDL_TimerID Video_flash_timer;
 bool Video_flash = false;
@@ -402,7 +382,7 @@ static void video_render_screen(std::function<void(uint16_t, uint16_t)> render_f
 
 }
 
-static void video_render()
+void video_render()
 {
 	bool primary = (!(Video_mode & VIDEO_MODE_PAGE2) || (Video_mode & VIDEO_MODE_80COL)) ? true : false;
 	uint16_t *gr_addr_map = nullptr;
@@ -702,71 +682,9 @@ uint8_t video_get_state(uint16_t addr, uint8_t val, bool write)
 	return return_val;// | memory_read_floating_bus();
 }
 
-bool video_create()
+// intialize the SDL system
+bool video_init()
 {
-	// set the rect for the window itself
-	Video_window_size.x = 0;
-	Video_window_size.y = 0;
-	Video_window_size.w = (int)(Video_scale_factor * Video_native_size.w);
-	Video_window_size.h = (int)(Video_scale_factor * Video_native_size.h);
-
-	// create SDL window
-	if (Video_window != nullptr) {
-		SDL_DestroyWindow(Video_window);
-	}
-
-	// set attributes for GL:w
-
-	uint32_t sdl_window_flags = SDL_WINDOW_RESIZABLE;
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	sdl_window_flags |= SDL_WINDOW_OPENGL;
-
-	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Video_window_size.w, Video_window_size.h, sdl_window_flags);
-	if (Video_window == nullptr) {
-		printf("Unable to create SDL window: %s\n", SDL_GetError());
-		return false;
-	}
-
-	// create openGL context
-	if (Video_context != nullptr) {
-		SDL_GL_DeleteContext(Video_context);
-	}
-	Video_context = SDL_GL_CreateContext(Video_window);
-
-	if (Video_context == nullptr) {
-		printf("Unable to create GL context: %s\n", SDL_GetError());
-		return false;
-	}
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
-	if (err != GLEW_OK) {
-		printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
-	}
-
-	// framebuffer and render to texture
-	glGenFramebuffers(1, &Video_framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
-
-	glGenTextures(1, &Video_framebuffer_texture);
-	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Video_native_width, Video_native_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	// attach texture to framebuffer
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Video_framebuffer_texture, 0);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		printf("Unable to create framebuffer for render to texture.\n");
-		return false;
-	}
-
 	if (Video_font.load("apple_font.bff") == false) {
 		return false;
 	}
@@ -784,60 +702,21 @@ bool video_create()
 		return false;
 	}
 
-	return true;
-}
+	// set up a timer for flashing cursor
+	Video_flash = false;
+	Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
 
-// intialize the SDL system
-bool video_init()
-{
-	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
+	// set up screen map for video output.  This per/row
+	// table gets starting memory address for that row of text
+	//
+	// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
+	for (int i = 0; i < Num_vertical_cells; i++) {
+		Video_primary_text_map[i] = 1024 + 256 * ((i / 2) % 4) + (128 * (i % 2)) + 40 * ((i / 8) % 4);
+		Video_secondary_text_map[i] = 2048 + 256 * ((i / 2) % 4) + (128 * (i % 2)) + 40 * ((i / 8) % 4);
 
-	if (Video_window == nullptr) {
-		Video_native_size.x = 0;
-		Video_native_size.y = 0;
-		Video_native_size.w = Video_native_width;
-		Video_native_size.h = Video_native_height;
-
-		if (video_create() == false) {
-			return false;
-		}
-
-		// set up a timer for flashing cursor
-		Video_flash = false;
-		Video_flash_timer = SDL_AddTimer(250, timer_flash_callback, nullptr);
-
-		// set up screen map for video output.  This per/row
-		// table gets starting memory address for that row of text
-		//
-		// algorithm here pulled from Apple 2 Monitors Peeled, pg 15
-		for (int i = 0; i < Num_vertical_cells; i++) {
-			Video_primary_text_map[i] = 1024 + 256 * ((i / 2) % 4) + (128 * (i % 2)) + 40 * ((i / 8) % 4);
-			Video_secondary_text_map[i] = 2048 + 256 * ((i / 2) % 4) + (128 * (i % 2)) + 40 * ((i / 8) % 4);
-
-			// set up the hires map at the same time -- same number of lines just offset by fixed amount
-			Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
-			Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
-		}
-
-		//video_set_tint(video_tint_types::MONO_WHITE);
-	}
-
-	// create the splash screen
-	SDL_Surface *surface = IMG_Load("interface/splash.jpg");
-	if (surface != nullptr) {
-		int mode = GL_LOAD_FORMAT_RGB;
-		if (surface->format->BytesPerPixel == 4) {
-		  mode = GL_LOAD_FORMAT_RGBA;
-		}
-
-		glGenTextures(1, &Splash_screen_texture);
-		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
-		SDL_FreeSurface(surface);
+		// set up the hires map at the same time -- same number of lines just offset by fixed amount
+		Video_hires_map[i] = 0x1c00 + Video_primary_text_map[i];
+		Video_hires_secondary_map[i] = Video_hires_map[i] + 0x2000;
 	}
 
 	return true;
@@ -845,87 +724,15 @@ bool video_init()
 
 void video_shutdown()
 {
-	ui_shutdown();
-
 	// free the splash screen
 	// free the pixels used for the hires texture patterns
 	for (auto i = 0; i < Num_hires_mono_patterns; i++) {
 		delete Hires_mono_pixels[i];
 	}
 	delete Hires_color_pixels;
-	SDL_GL_DeleteContext(Video_context);
-	SDL_DestroyWindow(Video_window);
 }
 
 bool Debug_show_bitmap = false;
-
-void video_render_frame()
-{
-	static uint64_t last_time = 0;
-	uint64_t start;
-
-	// framerate cap in millisconds
-	Framecap_ms = (1.0f / Frames_per_second) * 1000;
-
-	//  used for framerate limiting
-	start = SDL_GetPerformanceCounter();
-	if (last_time != 0) {
-		int32_t sleep_ms = (uint32_t)(Framecap_ms - (1000 * (start - last_time) / SDL_GetPerformanceFrequency()));
-		if (sleep_ms > 0) {
-			SDL_Delay(sleep_ms);
-		}
-	}
-	last_time = SDL_GetPerformanceCounter();
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, Video_native_width, Video_native_height);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// render to the framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
-	glViewport(0, 0, Video_native_width, Video_native_height);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(false);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	//glOrtho(0.0f, (float)Video_native_width, (float)Video_native_height, 0.0f, 0.0f, 1.0f);
-	glOrtho(0.0f, (float)Video_native_width, 0.0f, (float)Video_native_height, 0.0f, 1.0f);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glEnable(GL_TEXTURE_2D);
-
-	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
-		// blit splash screen
-		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, Video_native_height);
-		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_native_width, Video_native_height);
-		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_native_width, 0);
-		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
-		glEnd();
-		glBindTexture(GL_TEXTURE_2D, 0);
-	} else {
-		video_render();
-	}
-
-	// back to main framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
-	glOrtho(0.0f, (float)Video_window_size.w, (float)Video_window_size.h, 0.0f, 0.0f, 1.0f);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	ui_do_frame(Video_window);
-
-	SDL_GL_SwapWindow(Video_window);
-}
 
 void video_set_tint(video_tint_types type)
 {
@@ -937,4 +744,3 @@ GLfloat *video_get_tint()
 {
 	return Video_tint_color;
 }
-

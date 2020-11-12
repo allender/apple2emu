@@ -47,7 +47,7 @@ class debugger_console
 	std::vector<char*>                     m_items;
 	bool                                   m_scroll_to_bottom;
 	std::vector<char*>                     m_history;
-	int                                    m_history_pos;    // -1: new line, 0..History.Size-1 browsing history.
+	size_t                                 m_history_pos;    // -1: new line, 0..History.Size-1 browsing history.
 	std::map<std::string, console_command> m_commands;
 	bool                                   m_reset_window;
 
@@ -56,7 +56,7 @@ public:
 	~debugger_console();
 	int text_edit_callback(ImGuiTextEditCallbackData* data);
 	void draw(const char* title, bool* p_open);
-	void add_log(const char* fmt, ...) IM_PRINTFARGS(2);
+	void add_log(const char* fmt, ...) IM_FMTARGS(2);
 	void add_command(const char *command, const char *help, std::function<void(char*)>);
 	void execute_command(const char *command = nullptr);
 	void reset() { m_reset_window = true; }

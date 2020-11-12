@@ -93,20 +93,20 @@ void debugger_console::add_log(const char* fmt, ...)
 
 void debugger_console::draw(const char* title, bool* p_open)
 {
-	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	ImGuiCond condition = ImGuiCond_FirstUseEver;
 	if (m_reset_window == true) {
-		condition = ImGuiSetCond_Always;
+		condition = ImGuiCond_Always;
 		m_reset_window = false;
 	}
 
 	ImGui::SetNextWindowSize(ImVec2(546, 165), condition);
 	ImGui::SetNextWindowPos(ImVec2(570, 596), condition);
-	if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_ShowBorders)) {
+	if (!ImGui::Begin(title, p_open, 0)) {
 		ImGui::End();
 		return;
 	}
 
-	ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar);
 	if (ImGui::BeginPopupContextWindow()) {
 		if (ImGui::Selectable("Clear")) {
 			clear_log();
@@ -122,12 +122,6 @@ void debugger_console::draw(const char* title, bool* p_open)
 		else if (strncmp(item, "# ", 2) == 0) col = ImColor(1.0f, 0.78f, 0.58f, 1.0f);
 		ImGui::PushStyleColor(ImGuiCol_Text, col);
 		ImGui::TextUnformatted(item);
-		if (item[strlen(item)-1] == '\n') {
-			ImGui::NewLine();
-		} else if (item[0] != '\n') {
-			ImGui::SameLine();
-		}
-
 		ImGui::PopStyleColor();
 	}
 	if (m_scroll_to_bottom) {
@@ -161,7 +155,7 @@ void debugger_console::draw(const char* title, bool* p_open)
 	}
 
 	// Demonstrate keeping auto focus on the input box
-	if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
+	if (ImGui::IsItemHovered() || (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))) {
 		ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 	}
 
@@ -265,7 +259,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 	case ImGuiInputTextFlags_CallbackHistory:
 	{
 		// Example of HISTORY
-		const int prev_history_pos = m_history_pos;
+		const size_t prev_history_pos = m_history_pos;
 		if (data->EventKey == ImGuiKey_UpArrow) {
 			if (m_history_pos == -1) {
 				m_history_pos = m_history.size() - 1;

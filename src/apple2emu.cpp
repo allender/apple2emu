@@ -142,7 +142,6 @@ void reset_machine()
 	// ui_init() will load up settings.  Need this before
 	// we set the opcodes we need
 
-	ui_init();
 	if (Emulator_type == emulator_type::APPLE2E_ENHANCED) {
 		mode = cpu_6502::cpu_mode::CPU_65C02;
 	} else {
@@ -234,6 +233,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	configure_logging();
+	ui_init();
 	reset_machine();
 
 	if (test_z80) {
@@ -297,7 +297,7 @@ int main(int argc, char* argv[])
 
 		SDL_Event evt;
 		while (SDL_PollEvent(&evt)) {
-			ImGui_ImplSdl_ProcessEvent(&evt);
+			ImGui_ImplSDL2_ProcessEvent(&evt);
 
 			// process events.  Keypressed will be processed through
 			// imgui in the interface code
@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
 		}
 
 		speaker_queue_audio();
-		video_render_frame();
+		ui_do_frame();
 	}
 
 	return 0;

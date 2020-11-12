@@ -54,7 +54,7 @@ static char Debugger_status_line[Debugger_status_line_length];
 
 static FILE *Debugger_trace_fp = nullptr;
 
-static ImGuiWindowFlags default_window_flags = ImGuiWindowFlags_ShowBorders;
+static ImGuiWindowFlags default_window_flags = 0;
 
 // definitions for windows
 static debugger_console Debugger_console;
@@ -221,9 +221,9 @@ static void debugger_trace_line()
 static void debugger_display_soft_switch()
 {
 
-	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	ImGuiCond condition = ImGuiCond_FirstUseEver;
 	if (Reset_windows) {
-		condition = ImGuiSetCond_Always;
+		condition = ImGuiCond_Always;
 	}
 	ImGui::SetNextWindowSize(ImVec2(224, 269), condition);
 	ImGui::SetNextWindowPos(ImVec2(5, 401), condition);
@@ -378,9 +378,9 @@ static void debugger_display_soft_switch()
 // display breakpoints
 static void debugger_display_breakpoints()
 {
-	ImGuiSetCond condition = ImGuiSetCond_FirstUseEver;
+	ImGuiCond condition = ImGuiCond_FirstUseEver;
 	if (Reset_windows) {
-		condition = ImGuiSetCond_Always;
+		condition = ImGuiCond_Always;
 	}
 	ImGui::SetNextWindowSize(ImVec2(265, 881), condition);
 	ImGui::SetNextWindowPos(ImVec2(245, 401), condition);

@@ -25,14 +25,21 @@ SOFTWARE.
 
 */
 
+#define GLEW_STATIC
+
+#include <GL/glew.h>
 #include <stdio.h>
 #include <string>
 #include <fstream>
 #include <cctype>
 
+#include "SDL.h"
+#include "SDL_opengl.h"
 #include "SDL_image.h"
+
 #include "apple2emu_defs.h"
 #include "imgui.h"
+#include "imgui_impl_opengl2.h"
 #include "imgui_impl_sdl.h"
 #include "interface.h"
 #include "video.h"
@@ -43,16 +50,27 @@ SOFTWARE.
 #include "debugger.h"
 #include "keyboard.h"
 
-static bool Show_main_menu = false;
+static bool Show_main_menu = true;
 static bool Show_demo_window = false;
 static bool Show_drive_indicators = true;
 static bool Menu_open_at_start = false;
-static bool Imgui_initialized = false;
 
 static const char *Settings_filename = "settings.txt";
 
+static SDL_Window *Video_window = nullptr;
+static SDL_GLContext Video_context;
+static GLuint Video_framebuffer;
+static GLuint Video_framebuffer_texture;
+static SDL_Rect Video_native_size;
+
 static GLuint Disk_black_texture;
 static GLuint Disk_red_texture;
+static GLuint Splash_screen_texture;
+
+SDL_Rect Video_window_size;
+static int Video_scale_factor = 2;
+
+static float Framecap_ms;
 
 // settings to be stored
 static int32_t Video_color_type = static_cast<int>(video_tint_types::MONO_WHITE);
@@ -75,7 +93,7 @@ static void ui_load_settings()
 	std::string line;
 
 	while(std::getline(infile, line)) {
-		int pos = line.find('=');
+		size_t pos = line.find('=');
 		if (pos > 0) {
 			std::string setting = line.substr(0, pos - 1);
 			std::string value = line.substr(pos + 1);
@@ -318,7 +336,7 @@ static void ui_show_main_menu()
 // shows drive status indicators
 static void ui_show_drive_indicators()
 {
-	ImGui::SetNextWindowPos(ImVec2(982.0f, 13.0f), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(982.0f, 13.0f), ImGuiCond_FirstUseEver);
 	if (ImGui::Begin("indicators", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -343,6 +361,8 @@ static void ui_show_drive_indicators()
 
 void ui_init()
 {
+	IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
+
 	static bool settings_loaded = false;
 
 	// only load settings when we first start
@@ -351,12 +371,152 @@ void ui_init()
 		ui_load_settings();
 		settings_loaded = true;
 	}
+
+	Video_native_size.x = 0;
+	Video_native_size.y = 0;
+	Video_native_size.w = Video_native_width;
+	Video_native_size.h = Video_native_height;
+
+	Video_window_size.x = 0;
+	Video_window_size.y = 0;
+	Video_window_size.w = (int)(Video_scale_factor * Video_native_size.w);
+	Video_window_size.h = (int)(Video_scale_factor * Video_native_size.h);
+
+
+	// set attributes for GL
+	uint32_t sdl_window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
+	Video_window = SDL_CreateWindow("Apple2Emu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Video_window_size.w, Video_window_size.h, sdl_window_flags);
+	if (Video_window == nullptr) {
+		printf("Unable to create SDL window: %s\n", SDL_GetError());
+		return;
+	}
+
+	// create openGL context
+	if (Video_context != nullptr) {
+		SDL_GL_DeleteContext(Video_context);
+	}
+	Video_context = SDL_GL_CreateContext(Video_window);
+	SDL_GL_MakeCurrent(Video_window, Video_context);
+	SDL_GL_SetSwapInterval(1);
+
+	if (Video_context == nullptr) {
+		printf("Unable to create GL context: %s\n", SDL_GetError());
+		return;
+	}
+	glewExperimental = GL_TRUE;
+	GLenum err = glewInit();
+	if (err != GLEW_OK) {
+		printf("Unable to initialize glew: %s\n", glewGetErrorString(err));
+	}
+
+	// framebuffer and render to texture
+	glGenFramebuffers(1, &Video_framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
+
+	glGenTextures(1, &Video_framebuffer_texture);
+	glBindTexture(GL_TEXTURE_2D, Video_framebuffer_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Video_native_width, Video_native_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// attach texture to framebuffer
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Video_framebuffer_texture, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		printf("Unable to create framebuffer for render to texture.\n");
+		return;
+	}
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavNoCaptureKeyboard;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForOpenGL(Video_window, Video_context);
+    ImGui_ImplOpenGL2_Init();
+
+	// create the splash screen
+	SDL_Surface *surface = IMG_Load("interface/splash.jpg");
+	if (surface != nullptr) {
+		int mode = GL_LOAD_FORMAT_RGB;
+		if (surface->format->BytesPerPixel == 4) {
+		  mode = GL_LOAD_FORMAT_RGBA;
+		}
+
+		glGenTextures(1, &Splash_screen_texture);
+		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
+		SDL_FreeSurface(surface);
+	}
+
+	SDL_Surface *icon = IMG_Load("interface/black_disk.png");
+	if (icon != nullptr) {
+		int mode = GL_LOAD_FORMAT_RGB;
+		if (icon->format->BytesPerPixel == 4) {
+			mode = GL_LOAD_FORMAT_RGBA;
+		}
+
+		glGenTextures(1, &Disk_black_texture);
+		glBindTexture(GL_TEXTURE_2D, Disk_black_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
+
+		// free the surface since we now have a texture
+		SDL_FreeSurface(icon);
+	}
+	icon = IMG_Load("interface/red_disk.png");
+	if (icon != nullptr) {
+		int mode = GL_LOAD_FORMAT_RGB;
+		if (icon->format->BytesPerPixel == 4) {
+			mode = GL_LOAD_FORMAT_RGBA;
+		}
+
+		glGenTextures(1, &Disk_red_texture);
+		glBindTexture(GL_TEXTURE_2D, Disk_red_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
+
+		// free the surface since we now have a texture
+		SDL_FreeSurface(icon);
+	}
 }
 
 void ui_shutdown()
 {
-	ImGui_ImplSdl_Shutdown();
-	Imgui_initialized = false;
+	// shut down IMGUI
+    ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+	// and then SDL
+    SDL_GL_DeleteContext(Video_context);
+    SDL_DestroyWindow(Video_window);
+
 	ui_save_settings();
 }
 
@@ -369,54 +529,73 @@ void ui_toggle_demo_window() {
 	Show_demo_window = !Show_demo_window;
 }
 
-void ui_do_frame(SDL_Window *window)
+void ui_do_frame()
 {
-	// initlialize imgui if it has not been initialized yet
-	if (Imgui_initialized == false) {
-		ImGui_ImplSdl_Init(window);
+	static uint64_t last_time = 0;
+	uint64_t start;
 
-		// load up icons.  Need to turn these into opengl textures
-		// because we are all opengl all the time.
-		SDL_Surface *icon = IMG_Load("interface/black_disk.png");
-		if (icon != nullptr) {
-			int mode = GL_LOAD_FORMAT_RGB;
-			if (icon->format->BytesPerPixel == 4) {
-			  mode = GL_LOAD_FORMAT_RGBA;
-			}
+	// framerate cap in millisconds
+	Framecap_ms = (1.0f / Frames_per_second) * 1000;
 
-			glGenTextures(1, &Disk_black_texture);
-			glBindTexture(GL_TEXTURE_2D, Disk_black_texture);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
-
-			// free the surface since we now have a texture
-			SDL_FreeSurface(icon);
+	//  used for framerate limiting
+	start = SDL_GetPerformanceCounter();
+	if (last_time != 0) {
+		int32_t sleep_ms = (uint32_t)(Framecap_ms - (1000 * (start - last_time) / SDL_GetPerformanceFrequency()));
+		if (sleep_ms > 0) {
+			SDL_Delay(sleep_ms);
 		}
-		icon = IMG_Load("interface/red_disk.png");
-		if (icon != nullptr) {
-			int mode = GL_LOAD_FORMAT_RGB;
-			if (icon->format->BytesPerPixel == 4) {
-			  mode = GL_LOAD_FORMAT_RGBA;
-			}
+	}
+	last_time = SDL_GetPerformanceCounter();
 
-			glGenTextures(1, &Disk_red_texture);
-			glBindTexture(GL_TEXTURE_2D, Disk_red_texture);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, icon->w, icon->h, 0, mode, GL_UNSIGNED_BYTE, icon->pixels);
+	ImGui_ImplOpenGL2_NewFrame();
+	ImGui_ImplSDL2_NewFrame(Video_window);
 
-			// free the surface since we now have a texture
-			SDL_FreeSurface(icon);
-		}
-		Imgui_initialized = true;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, Video_native_width, Video_native_height);
+	glClearColor(0.5f, 0.5f, 0.5f, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	// render to the framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, Video_framebuffer);
+	glViewport(0, 0, Video_native_width, Video_native_height);
+	glClearColor(0.5f, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(false);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0f, (float)Video_native_width, 0.0f, (float)Video_native_height, 0.0f, 1.0f);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glEnable(GL_TEXTURE_2D);
+
+	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
+		// blit splash screen
+		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, Video_native_height);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(Video_native_width, Video_native_height);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(Video_native_width, 0);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
+		glEnd();
+		glBindTexture(GL_TEXTURE_2D, 0);
+	} else {
+		extern void video_render();
+		video_render();
 	}
 
-	ImGui_ImplSdl_NewFrame(window);
+	// back to main framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, Video_window_size.w, Video_window_size.h);
+	glOrtho(0.0f, (float)Video_window_size.w, (float)Video_window_size.h, 0.0f, 0.0f, 1.0f);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	ImGui::NewFrame();
 
 	// handle key presses.  Some keys are global and some
 	// will be specific to the window that is current in focus
@@ -447,10 +626,6 @@ void ui_do_frame(SDL_Window *window)
 		}
 	}
 
-	if (Show_main_menu) {
-		ui_show_main_menu();
-	}
-
 	// show the main window for the emulator.  If the debugger
 	// is active, we'll wind up showing the emulator screen
 	// in imgui window that can be moved/resized.  Otherwise
@@ -470,8 +645,9 @@ void ui_do_frame(SDL_Window *window)
 		title = "Emulator Debugger";
 		initial_size.x = (float)(Video_window_size.w/2);
 		initial_size.y = (float)(Video_window_size.h/2);
-		flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_ShowBorders;
-		ImGui::SetNextWindowPos(ImVec2(5.0f, 6.0f), ImGuiSetCond_FirstUseEver);
+		flags = ImGuiWindowFlags_NoScrollbar;
+		ImGui::SetNextWindowPos(ImVec2(5.0f, 6.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);
 	} else {
 		title = "Emulator";
 		initial_size.x = (float)Video_window_size.w;
@@ -480,8 +656,8 @@ void ui_do_frame(SDL_Window *window)
 			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
 		// also need to set position here
-		ImVec2 pos(0.0f, 0.0f);
-		ImGui::SetNextWindowPos(pos, ImGuiSetCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(initial_size, ImGuiCond_Always);
 	}
 
 	// with no debugger, turn off all padding in the window
@@ -492,7 +668,8 @@ void ui_do_frame(SDL_Window *window)
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 	}
 
-	if (ImGui::Begin(title, nullptr, initial_size, -1.0f, flags)) {
+	//if (ImGui::Begin(title, nullptr, initial_size, -1.0f, flags)) {
+	if (ImGui::Begin(title, nullptr, flags)) {
 		// use the content region for the window which will scale
 		// the texture apporpriately
 		ImVec2 content_region = ImGui::GetContentRegionAvail();
@@ -520,10 +697,9 @@ void ui_do_frame(SDL_Window *window)
 	// also use keydown events for ctrl characters, esc, and a few other
 	// characters that the emulator will need
 	if (io.WantCaptureKeyboard == false) {
-		for (auto i = 0; i < 8; i++) {
-			uint16_t utf8_char = io.InputCharacters[i];
+		for (ImWchar utf8_char : io.InputQueueCharacters) {
 			if (utf8_char != 0 && utf8_char < 128) {
-				keyboard_handle_event(io.InputCharacters[i], false, false, false, false);
+				keyboard_handle_event(utf8_char, false, false, false, false);
 			}
 		}
 
@@ -539,10 +715,17 @@ void ui_do_frame(SDL_Window *window)
 		}
 	}
 
+	if (Show_main_menu) {
+		ui_show_main_menu();
+	}
+
 	if (Show_demo_window) {
-		ImGui::ShowTestWindow();
+		ImGui::ShowDemoWindow();
 		ImGui::ShowMetricsWindow();
 	}
 
 	ImGui::Render();
+
+	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+	SDL_GL_SwapWindow(Video_window);
 }

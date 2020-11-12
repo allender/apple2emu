@@ -51,6 +51,7 @@ SDL_sem *Sound_sem;
 
 static bool Speaker_on = false;
 static int Speaker_cycles = 0;
+static bool Speaker_active = true;
 
 static void speaker_callback(void *userdata, uint8_t *stream, int len)
 {
@@ -181,10 +182,24 @@ void speaker_queue_audio()
 
 void speaker_pause()
 {
-	SDL_PauseAudioDevice(Device_id, 1);
+	if (Speaker_active) {
+		SDL_PauseAudioDevice(Device_id, 1);
+	}
 }
 
 void speaker_unpause()
 {
-	SDL_PauseAudioDevice(Device_id, 0);
+	if (Speaker_active) {
+		SDL_PauseAudioDevice(Device_id, 0);
+	}
+}
+
+void speaker_set_active(bool active)
+{
+	Speaker_active = active;
+	if (Speaker_active == false) {
+		SDL_PauseAudioDevice(Device_id, 1);
+	} else {
+		SDL_PauseAudioDevice(Device_id, 0);
+	}
 }

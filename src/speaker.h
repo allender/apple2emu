@@ -36,3 +36,5 @@ void speaker_update(int cycles);
 void speaker_queue_audio();
 void speaker_pause();
 void speaker_unpause();
+
+void speaker_set_active(bool active);

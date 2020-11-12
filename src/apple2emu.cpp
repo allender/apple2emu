@@ -192,6 +192,7 @@ static void apple2emu_shutdown()
 		fclose(Log_file);
 	}
 
+	ui_shutdown();
 	video_shutdown();
 	disk_shutdown();
 	keyboard_shutdown();

@@ -49,11 +49,13 @@ SOFTWARE.
 #include "nfd.h"
 #include "debugger.h"
 #include "keyboard.h"
+#include "speaker.h"
 
 static bool Show_main_menu = true;
 static bool Show_demo_window = false;
 static bool Show_drive_indicators = true;
 static bool Menu_open_at_start = false;
+static bool Sound_active = true;
 
 static const char *Settings_filename = "settings.txt";
 
@@ -134,6 +136,11 @@ static void ui_load_settings()
 			else if (setting == "sym_tables") {
 				Debugger_use_sym_tables = strtol(value.c_str(), nullptr, 10) ? true : false;
 			}
+			else if (setting == "sound_active") {
+				int i_val = strtol(value.c_str(), nullptr, 10);
+				Sound_active = static_cast<bool>(i_val);
+				speaker_set_active(Sound_active);
+			}
 		}
 	}
 }
@@ -154,6 +161,7 @@ static void ui_save_settings()
 	fprintf(fp, "video = %d\n", Video_color_type);
 	fprintf(fp, "speed = %d\n", Speed_multiplier);
 	fprintf(fp, "sym_tables = %d\n", Debugger_use_sym_tables);
+	fprintf(fp, "sound_active = %d\n", Sound_active ? 1 : 0);
 
 	fclose(fp);
 }
@@ -299,6 +307,13 @@ static void ui_show_debugger_menu()
 	}
 }
 
+static void ui_show_sound_menu()
+{
+	if (ImGui::Checkbox("Sound On", &Sound_active)) {
+		speaker_set_active(Sound_active);
+	}
+}
+
 static void ui_show_speed_menu()
 {
 	if (ImGui::SliderInt("Emulator Speed", (int *)&Speed_multiplier, 1, 100) == true) {
@@ -322,6 +337,7 @@ static void ui_show_main_menu()
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Sound")) {
+			ui_show_sound_menu();
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Debugger")) {

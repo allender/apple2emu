@@ -37,9 +37,10 @@
 #include "apple2emu_defs.h"
 #include "debugger.h"
 #include "debugger_disasm.h"
-#include "memory.h"
 #include "imgui.h"
 #include "keyboard.h"
+#include "memory.h"
+#include "video.h"
 
 
 static const int Max_symtable_line = 256;
@@ -314,7 +315,7 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoScrollbar |
 				         ImGuiWindowFlags_NoScrollWithMouse)) {
 		ImGui::Columns(2);
-		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 120.0f);
+		ImGui::SetColumnOffset(1, ImGui::GetWindowContentRegionWidth() - 200.0f);
 
 		// if window is focued, processes arrow keys to move disassembly
 		if (ImGui::IsWindowFocused()) {
@@ -404,7 +405,6 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		ImGui::Text("SP = $%04X", cpu.get_sp() + 0x100);
 
 		ImGui::NewLine();
-		ImGui::NewLine();
 		uint8_t status = cpu.get_status();
 		ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = $%2x",
 			(status >> 7) & 1 ? 'S' : 's',
@@ -425,7 +425,151 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 			(status & 1),
 			status);
 
-		ImGui::NextColumn();
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		if (ImGui::CollapsingHeader("Soft Switches")) {
+			if (Memory_state & RAM_CARD_BANK2) {
+				ImGui::Text("%-15s", "Bank1");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Bank2");
+			}
+			else {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Bank1");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Bank2");
+			}
+			if (Memory_state & RAM_CARD_READ) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "RCard Write");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "RCard Read");
+			}
+			else {
+				ImGui::Text("%-15s", "RCard Write");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "RCard Read");
+			}
+			if (Memory_state & RAM_AUX_MEMORY_READ) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Main Read");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Aux Read");
+			}
+			else {
+				ImGui::Text("%-15s", "Main Read");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Aux Read");
+			}
+			if (Memory_state & RAM_AUX_MEMORY_WRITE) {
+				ImGui::Text("%-15s", "Main Write");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Aux Write");
+			}
+			else {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Main Write");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Aux Write");
+			}
+			if (Memory_state & RAM_SLOTCX_ROM) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Internal Rom");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Cx Rom");
+			}
+			else {
+				ImGui::Text("%-15s", "Internal Rom");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Cx Rom");
+			}
+			if (Memory_state & RAM_ALT_ZERO_PAGE) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Zero Page");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Alt zp");
+			}
+			else {
+				ImGui::Text("%-15s", "Zero Page");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Alt zp");
+			}
+			if (Memory_state & RAM_SLOTC3_ROM) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Internal Rom");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "C3 Rom");
+			}
+			else {
+				ImGui::Text("%-15s", "Internal Rom");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "C3 Rom");
+			}
+			if (Memory_state & RAM_80STORE) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Normal");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "80Store");
+			}
+			else {
+				ImGui::Text("%-15s", "Normal");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "80Store");
+			}
+			if (Video_mode & VIDEO_MODE_TEXT) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Graphics");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Text");
+			}
+			else {
+				ImGui::Text("%-15s", "Graphics");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Text");
+			}
+			if (Video_mode & VIDEO_MODE_MIXED) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Not Mixed");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Mixed");
+			}
+			else {
+				ImGui::Text("%-15s", "Not Mixed");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Mixed");
+			}
+			if (Video_mode & VIDEO_MODE_PAGE2) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Page 1");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Page 2");
+			}
+			else {
+				ImGui::Text("%-15s", "Page 1");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Page 2");
+			}
+			if (Video_mode & VIDEO_MODE_HIRES) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Lores");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Hires");
+			}
+			else {
+				ImGui::Text("%-15s", "Lores");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Hires");
+			}
+			if (Video_mode & VIDEO_MODE_ALTCHAR) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Reg char");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "Alt char");
+			}
+			else {
+				ImGui::Text("%-15s", "Reg char");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Alt char");
+			}
+			if (Video_mode & VIDEO_MODE_80COL) {
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "40");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::Text("%-15s", "80");
+			}
+			else {
+				ImGui::Text("%-15s", "40");
+				ImGui::SameLine(0.0f, 0.0f);
+				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "80");
+			}
+		}
 	}
 
 	ImGui::End();

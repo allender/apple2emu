@@ -137,7 +137,7 @@ void keyboard_shutdown()
 {
 }
 
-// put get into the emulator buffer.  Code gets the key from the interface
+// put key into the emulator buffer.  Code gets the key from the interface
 // code which will send the key along when it isnt' used by some other
 // UI element.  Code needs to make sure that we only queue keys that
 // that the emulator needs
@@ -146,14 +146,6 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 	UNREFERENCED(alt);
 	UNREFERENCED(super);
 	UNREFERENCED(shift);
-
-	// skip processing if we have plain modifier keys
-	if (key == SDLK_LSHIFT || key == SDLK_RSHIFT ||
-		key == SDLK_LALT   || key == SDLK_RALT   ||
-		key == SDLK_LCTRL  || key == SDLK_RCTRL  ||
-		key == SDLK_LGUI   || key == SDLK_RGUI ) {
-		return;
-	}
 
 	// keys with shift, alt or super pushed can be ignored.  Shift can be
 	// ignored because we will get they actual shifted key for output

@@ -626,7 +626,7 @@ cpu_6502::opcode_info cpu_6502::m_65c02_opcodes[] = {
 void cpu_6502::init(cpu_6502::cpu_mode mode)
 {
 	m_pc = 0;
-	m_sp = 0xff;
+	m_sp = 0xff - 3;     // reset pulls 3 values from the stack
 	m_xindex = 0xff;
 	m_yindex = 0xff;
 	m_acc = 0xff;
@@ -713,7 +713,7 @@ inline int16_t cpu_6502::absolute_x_check_boundary_mode()
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
 	uint16_t addr = ((hi << 8) | lo) + m_xindex;
-	if ((addr ^ save_pc) >> 8) {
+	if (((addr - m_xindex) ^ addr) >> 8) {
 		// we have crossed page boundary, so cycle count increases
 		// by one here
 		m_extra_cycles += 1;
@@ -730,7 +730,7 @@ inline int16_t cpu_6502::absolute_y_check_boundary_mode()
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
 	uint16_t addr = ((hi << 8) | lo) + m_yindex;
-	if ((addr ^ save_pc) >> 8) {
+	if (((addr - m_yindex) ^ addr) >> 8) {
 		// we have crossed page boundary, so cycle count increases
 		// by one here
 		m_extra_cycles += 1;
@@ -795,7 +795,7 @@ inline int16_t cpu_6502::indirect_indexed_check_boundary_mode()
 	addr = ((hi << 8) | lo) + m_yindex;
 
 	// add extra cycle if page boundary crossed
-	if ((addr ^ save_pc) >> 8) {
+	if (((addr - m_yindex) ^ addr) >> 8) {
 		m_extra_cycles++;
 	}
 	return addr;

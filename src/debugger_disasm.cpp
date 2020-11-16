@@ -570,6 +570,45 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "80");
 			}
 		}
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		if (ImGui::CollapsingHeader("Brekpoints")) {
+			// for now, just disassm from the current pc
+			for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
+
+				// don't display temporary breakpoints as these are used
+				// for step over
+				if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
+					continue;
+				}
+				ImGui::Text("%-3lu", i);
+				ImGui::SameLine();
+				switch (Debugger_breakpoints[i].m_type) {
+				case breakpoint_type::BREAKPOINT:
+					ImGui::Text("%-5s", "Bp");
+					break;
+
+				case breakpoint_type::RWATCHPOINT:
+					ImGui::Text("%-5s", "Rwp");
+					break;
+
+				case breakpoint_type::WWATCHPOINT:
+					ImGui::Text("%-5s", "Wwp");
+					break;
+
+				case breakpoint_type::TEMPORARY:
+				case breakpoint_type::INVALID:
+					break;
+				}
+
+				ImGui::SameLine();
+				ImGui::Text("$%-6x", Debugger_breakpoints[i].m_addr);
+				ImGui::SameLine();
+				ImGui::Text("%s", Debugger_breakpoints[i].m_enabled == true ? "enabled" : "disabled");
+			}
+		}
 	}
 
 	ImGui::End();

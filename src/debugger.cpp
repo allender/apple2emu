@@ -181,10 +181,12 @@ auto trace_command = [](char *) {
 		}
 
 		Debugger_trace_fp = fopen(f, "wt");
+		Debugger_console.add_log("Opening trace output to %s", f);
 	} else {
 		if (Debugger_trace_fp != nullptr) {
 			fclose(Debugger_trace_fp);
 			Debugger_trace_fp = nullptr;
+			Debugger_console.add_log("Stopping trace output");
 		}
 	}
 };
@@ -193,7 +195,7 @@ auto trace_command = [](char *) {
 static void debugger_get_short_status()
 {
 	uint8_t status = cpu.get_status();
-	sprintf(Debugger_status_line, "%02x %02X %02X %04X %c%c%c%c%c%c%c%c",
+	sprintf(Debugger_status_line, "%02X %02X %02X %04X %c%c%c%c%c%c%c%c",
 		cpu.get_acc(), cpu.get_x(), cpu.get_y(), cpu.get_sp() + 0x100,
 		(status >> 7) & 1 ? 'N' : '.',
 		(status >> 6) & 1 ? 'V' : '.',
@@ -214,57 +216,7 @@ static void debugger_trace_line()
 	// print out the info the trace file
 	debugger_get_short_status();
 	Debugger_disasm.get_disassembly(cpu.get_pc());
-	fprintf(Debugger_trace_fp, "%s  %s\n", Debugger_status_line, Debugger_disasm.get_disassembly_line());
-}
-
-// display breakpoints
-static void debugger_display_breakpoints()
-{
-	ImGuiCond condition = ImGuiCond_FirstUseEver;
-	if (Reset_windows) {
-		condition = ImGuiCond_Always;
-	}
-	ImGui::SetNextWindowSize(ImVec2(265, 881), condition);
-	ImGui::SetNextWindowPos(ImVec2(245, 401), condition);
-	ImGui::SetNextWindowCollapsed(true, condition);
-
-	if (ImGui::Begin("Breakpoints", nullptr, default_window_flags)) {
-		// for now, just disassm from the current pc
-		for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
-
-			// don't display temporary breakpoints as these are used
-			// for step over
-			if (Debugger_breakpoints[i].m_type == breakpoint_type::TEMPORARY) {
-				continue;
-			}
-			ImGui::Text("%-3lu", i);
-			ImGui::SameLine();
-			switch (Debugger_breakpoints[i].m_type) {
-			case breakpoint_type::BREAKPOINT:
-				ImGui::Text("%-5s", "Bp");
-				break;
-
-			case breakpoint_type::RWATCHPOINT:
-				ImGui::Text("%-5s", "Rwp");
-				break;
-
-			case breakpoint_type::WWATCHPOINT:
-				ImGui::Text("%-5s", "Wwp");
-				break;
-
-			case breakpoint_type::TEMPORARY:
-			case breakpoint_type::INVALID:
-				break;
-			}
-
-			ImGui::SameLine();
-			ImGui::Text("$%-6x", Debugger_breakpoints[i].m_addr);
-			ImGui::SameLine();
-			ImGui::Text("%s", Debugger_breakpoints[i].m_enabled == true ? "enabled" : "disabled");
-			ImGui::NewLine();
-		}
-	}
-	ImGui::End();
+	fprintf(Debugger_trace_fp, "%08X %s  %s\n", Total_cycles, Debugger_status_line, Debugger_disasm.get_disassembly_line());
 }
 
 // display the disassembly in the disassembly window
@@ -400,7 +352,6 @@ void debugger_render()
 	Debugger_memory_editor.draw("Memory", 0x10000, 0);
 	Debugger_disasm.draw("Disassembly", cpu.get_pc());
 	Debugger_console.draw("Console", nullptr);
-	debugger_display_breakpoints();
 
 	Reset_windows = false;
 }

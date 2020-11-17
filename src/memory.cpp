@@ -803,7 +803,7 @@ uint8_t memory_read_floating_bus()
 	int current_cycles = Total_cycles_this_frame % Cycles_per_frame;
 
 	// calculate the horizontal scanning clock.
-	int horz_clock = current_cycles % Horz_state_counter;
+	int horz_clock = (current_cycles + Horz_hpe_start) % Horz_state_counter;
 	int horz_state = Horz_clock_start + horz_clock;
 
 	// account for the horizontal state being at 0 twice. (for clocks

@@ -65,6 +65,7 @@ const uint32_t FREQ_6502_MS = (uint32_t)((CLOCK_14M * 65.0) / ((65.0 * 14) + 2) 
 // timing related to video refresh.  See Understanding the
 // Apple ][ page 3-11.
 const uint32_t Horz_state_counter = 65;
+const uint32_t Horz_hpe_start = 40;
 const uint32_t Horz_clock_start = 24;        // clock where HBL starts
 const uint32_t Horz_clock_preset = 41;       // clock when reset happens
 const uint32_t Horz_segment_count = 40;

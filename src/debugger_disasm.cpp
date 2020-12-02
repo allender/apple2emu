@@ -52,9 +52,9 @@ const char *debugger_disasm::m_addressing_format_string[] = {
 	"",           // ACCUMULATOR_MODE
 	"#$%02X",     // IMMEDIATE_MODE
 	"",           // IMPLIED_MODE
-	"$%02X",      // RELATIVE_MODE
-	"$%04X  ",    // ABSOLUTE_MODE
-	"$%02X    ",  // ZERO_PAGE_MODE
+	"$%04X",      // RELATIVE_MODE
+	"$%04X",      // ABSOLUTE_MODE
+	"$%02X",      // ZERO_PAGE_MODE
 	"$(%04X)",    // INDIRECT_MODE
 	"$(%02X)",    // INDIRECT_ZP_MODE
 	"$%04X,X",    // X_INDEXED_MODE
@@ -154,7 +154,7 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 		}
 
 		// print opcode
-		sprintf(internal_buffer, "   %c%c%c ", opcode->m_mnemonic >> 24,
+		sprintf(internal_buffer, " %c%c%c ", opcode->m_mnemonic >> 24,
 			opcode->m_mnemonic >> 16,
 			opcode->m_mnemonic >> 8);
 

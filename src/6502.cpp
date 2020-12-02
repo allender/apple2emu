@@ -631,6 +631,7 @@ void cpu_6502::init(cpu_6502::cpu_mode mode)
 	m_yindex = 0xff;
 	m_acc = 0xff;
 	m_status_register = 0xff;
+	set_flag(register_bit::DECIMAL_BIT, 0);
 	set_flag(register_bit::NOT_USED_BIT, 1);
 
 	// set the opcodes based on what cpu we are emulating

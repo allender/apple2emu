@@ -334,7 +334,7 @@ bool debugger_process()
 		continue_execution = true;
 	}
 
-	if (Debugger_trace_fp != nullptr) {
+	if (continue_execution == true && Debugger_trace_fp != nullptr) {
 		debugger_trace_line();
 	}
 

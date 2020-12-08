@@ -45,8 +45,8 @@ class debugger_disasm
 private:
 
 	// definitions for symbol tables
-	typedef std::map<uint16_t, const char *> symtable_map;
-	std::vector<symtable_map> m_symbol_tables;
+	typedef std::map<uint16_t, std::string> symtable_map;
+	symtable_map m_symtable;
 
 	uint16_t          m_break_addr;
 	uint16_t          m_current_addr;
@@ -55,13 +55,15 @@ private:
 
 
 	static const char *m_addressing_format_string[];
+	static const char *m_addressing_format_string_with_symbol[];
 	char m_disassembly_line[m_disassembly_line_length];
-	void add_symtable(const char *filename);
-	const char *find_symbol(uint16_t addr);
 
 public:
 	debugger_disasm();
 	~debugger_disasm();
+	void add_symtable(const std::string &filename);
+	void remove_symtable(const std::string &filename);
+	const char *find_symbol(uint16_t addr);
 	uint8_t get_disassembly(uint16_t addr);
 	void draw(const char* title, uint16_t addr);
 	void set_break_addr(uint16_t addr);

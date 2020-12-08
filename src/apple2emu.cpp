@@ -150,7 +150,6 @@ void reset_machine()
 	memory_init();
 	cpu.init(mode);
 	z80softcard_init();
-	debugger_init();
 	speaker_init();
 	keyboard_init();
 	joystick_init();
@@ -234,6 +233,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	configure_logging();
+	debugger_init();
 	ui_init();
 	reset_machine();
 

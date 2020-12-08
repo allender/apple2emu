@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
+#include <regex>
 
 #include "SDL_scancode.h"
 #include "apple2emu.h"
@@ -43,14 +45,14 @@
 #include "video.h"
 
 
-static const int Max_symtable_line = 256;
+static std::regex Symtable_regex("\\s*[0x$]*([0-9A-Fa-f]{2,4})\\s+(\\w{1,8}).*");
 
 // these string formats need to match the addressing modes
 // defined in 6502.h
 const char *debugger_disasm::m_addressing_format_string[] = {
 	"",           // NO_MODE
 	"",           // ACCUMULATOR_MODE
-	"#$%02X",     // IMMEDIATE_MODE
+	"#%02X",      // IMMEDIATE_MODE
 	"",           // IMPLIED_MODE
 	"$%04X",      // RELATIVE_MODE
 	"$%04X",      // ABSOLUTE_MODE
@@ -66,60 +68,76 @@ const char *debugger_disasm::m_addressing_format_string[] = {
 	"$(%02X),Y",  // INDIRECT_INDEXED_MODE
 };
 
-void debugger_disasm::add_symtable(const char *filename)
+const char *debugger_disasm::m_addressing_format_string_with_symbol[] = {
+	"",                  // NO_MODE
+	"",                  // ACCUMULATOR_MODE
+	"#%02X",             // IMMEDIATE_MODE
+	"",                  // IMPLIED_MODE
+	"%-8s  ($%04X)",     // RELATIVE_MODE
+	"%-8s  ($%04X)",     // ABSOLUTE_MODE
+	"%-8s  ($%02X)",     // ZERO_PAGE_MODE
+	"(%s)  ($%04X)",     // INDIRECT_MODE
+	"(%s)  ($%02X)",     // INDIRECT_ZP_MODE
+	"%-8s,X  ($%04X)",   // X_INDEXED_MODE
+	"%-8s,Y  ($%04X)",   // Y_INDEXED_MODE
+	"%-8s,X  ($%02X)",   // ZERO_PAGES_INDEXED_MODE
+	"%-8s,Y  ($%02X)",   // ZERO_PAGED_INDEXED_MODE_Y
+	"(%s,X)  ($%02X)",   // INDEXED_INDIRECT_MODE'
+	"",                  // ABSOLUTE_INDEXED_INDIRECT_MODE
+	"(%s),Y  ($%02X)",   // INDIRECT_INDEXED_MODE
+};
+
+// loads a symbol table from the given filename.  We expect
+// symbol tables to have a strict format
+// <addr> <symbol>
+// Any other lines will be ignored
+// address is assumed bo be hexidecimal
+// symbols will be truncated to 8 characters (to fit better in disasm window)
+void debugger_disasm::add_symtable(const std::string &filename)
 {
-	symtable_map table;
-	FILE *fp = fopen(filename, "rt");
-	if (fp != nullptr) {
-		int line_num = 0;
-		int prev_val = -1;
-		while (!feof(fp)) {
-			line_num++;
-			char line[Max_symtable_line], *ptr;
-			ptr = fgets(line, Max_symtable_line, fp);
-			if (ptr != nullptr) {
-				while (isspace(*ptr)) {
-					ptr++;
-				}
-				char *addr = strtok(ptr, "\t ");
-				char *label = strtok(nullptr, " \t\n");
-				if (addr == nullptr || label == nullptr) {
-					continue;
-				}
-				uint16_t val = (uint16_t)strtol(addr, nullptr, 16);
-				if (prev_val != -1 && val < prev_val) {
-					printf("invalid valud at line %d - less than previous value\n", line_num);
-					continue;
-				}
-				table[val] = strdup(label);
-				prev_val = val;
-			}
+	std::smatch match;
+	std::ifstream infile(filename);
+	std::string line;
+
+	while (std::getline(infile, line)) {
+		if (std::regex_match(line, match, Symtable_regex) == true) {
+			std::string addr_str = match[1];
+			std::string name = match[2];
+			uint16_t addr = (uint16_t)strtol(addr_str.c_str(), nullptr, 16);
+			m_symtable[addr] = name;
 		}
-		fclose(fp);
 	}
-	m_symbol_tables.push_back(table);
+}
+
+void debugger_disasm::remove_symtable(const std::string &filename)
+{
+	std::smatch match;
+	std::ifstream infile(filename);
+	std::string line;
+
+	while (std::getline(infile, line)) {
+		if (std::regex_match(line, match, Symtable_regex) == true) {
+			std::string addr_str = match[1];
+			std::string name = match[2];
+			uint16_t addr = (uint16_t)strtol(addr_str.c_str(), nullptr, 16);
+			m_symtable.erase(addr);
+		}
+	}
 }
 
 const char *debugger_disasm::find_symbol(uint16_t addr)
 {
-	if (Debugger_use_sym_tables == false) {
-		return nullptr;
+	const char *s = nullptr;
+	auto element = m_symtable.find(addr);
+	if (element != m_symtable.end()) {
+		s = element->second.c_str();
 	}
-
-	for (auto table: m_symbol_tables) {
-		auto element = table.find(addr);
-		if (element != table.end()) {
-			return element->second;
-		}
-	}
-	return nullptr;
+	return s;
 }
 
 debugger_disasm::debugger_disasm() : m_console(nullptr),
 									 m_reset_window(false)
 {
-	// load in symbol tables
-	add_symtable("symtables/apple2e_sym.txt");
 }
 
 
@@ -140,6 +158,17 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 		strcpy(m_disassembly_line, "???");
 	}
 	else {
+		const char *addr_symbol;
+		if (m_symtable.empty() == false) {
+			addr_symbol = find_symbol(addr);
+			if (addr_symbol != nullptr) {
+				sprintf(internal_buffer, "%8s ", addr_symbol);
+			} else {
+				sprintf(internal_buffer, "         ");
+			} 
+			strcat(m_disassembly_line, internal_buffer);
+		}
+
 		sprintf(internal_buffer, "%04X:", addr);
 		strcat(m_disassembly_line, internal_buffer);
 
@@ -177,116 +206,13 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 					addressing_val -= 0x100;
 				}
 			}
-			sprintf(internal_buffer, m_addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
-			strcat(m_disassembly_line, internal_buffer);
-			if (0) {
-				switch (mode) {
-				case cpu_6502::addr_mode::ACCUMULATOR_MODE:
-				case cpu_6502::addr_mode::IMMEDIATE_MODE:
-				case cpu_6502::addr_mode::IMPLIED_MODE:
-				case cpu_6502::addr_mode::NO_MODE:
-				case cpu_6502::addr_mode::NUM_ADDRESSING_MODES:
-				case cpu_6502::addr_mode::ABSOLUTE_INDEXED_INDIRECT_MODE:
-				case cpu_6502::addr_mode::INDIRECT_ZP_MODE:
-					break;
-
-					// relative mode is relative to current PC.  figure out if we need to
-					// move forwards or backwards
-				case cpu_6502::addr_mode::RELATIVE_MODE:
-					//if (addressing_val & 0x80) {
-					//	mem_value = cpu.get_pc() - (addressing_val & 0x80);
-					//} else {
-					//	mem_value = cpu.get_pc() + addressing_val;
-					//}
-					break;
-
-				case cpu_6502::addr_mode::INDIRECT_MODE:
-					addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
-					sprintf(internal_buffer, "\t$%04X", addressing_val);
-					strcat(m_disassembly_line, internal_buffer);
-					break;
-
-				case cpu_6502::addr_mode::ABSOLUTE_MODE:
-				case cpu_6502::addr_mode::ZERO_PAGE_MODE:
-				{
-					const char *mem_str = find_symbol(addressing_val);
-					if (opcode->m_mnemonic != 'JSR ' && opcode->m_mnemonic != 'JMP ') {
-						if (mem_str != nullptr) {
-							sprintf(internal_buffer, "\t%s", mem_str);
-							strcat(m_disassembly_line, internal_buffer);
-						} else {
-							sprintf(internal_buffer, "\t$%04X", addressing_val);
-							strcat(m_disassembly_line, internal_buffer);
-						}
-						if (((addressing_val >> 8) & 0xff) != 0xc0 && mem_str == nullptr) {
-							mem_value = memory_read(addressing_val);
-							sprintf(internal_buffer, ": $%02X", mem_value);
-							strcat(m_disassembly_line, internal_buffer);
-							if (isprint(mem_value)) {
-								sprintf(internal_buffer, " (%c)", mem_value);
-								strcat(m_disassembly_line, internal_buffer);
-							}
-						}
-					} else {
-						if (mem_str != nullptr) {
-							sprintf(internal_buffer, "\t%s", mem_str);
-							strcat(m_disassembly_line, internal_buffer);
-						}
-					}
-					break;
-				}
-
-					// indexed and zero page indexed are the same
-				case cpu_6502::addr_mode::X_INDEXED_MODE:
-				case cpu_6502::addr_mode::ZP_INDEXED_MODE:
-				case cpu_6502::addr_mode::Y_INDEXED_MODE:
-				case cpu_6502::addr_mode::ZP_INDEXED_MODE_Y:
-					if (mode == cpu_6502::addr_mode::X_INDEXED_MODE ||
-							mode == cpu_6502::addr_mode::ZP_INDEXED_MODE) {
-						addressing_val += cpu.get_x();
-					} else {
-						addressing_val += cpu.get_y();
-					}
-
-					// don't print out memory value if this is softswitch area
-					sprintf(internal_buffer, "\t$%04X", addressing_val);
-					strcat(m_disassembly_line, internal_buffer);
-					if (((addressing_val >> 8) & 0xff) != 0xc0) {
-						mem_value = memory_read(addressing_val);
-						sprintf(internal_buffer, ": $%02X", mem_value);
-						strcat(m_disassembly_line, internal_buffer);
-						if (isprint(mem_value)) {
-							sprintf(internal_buffer, " (%c)", mem_value);
-							strcat(m_disassembly_line, internal_buffer);
-						}
-					}
-					break;
-
-				case cpu_6502::addr_mode::INDEXED_INDIRECT_MODE:
-					//addressing_val += cpu.get_x();
-					//addressing_val = (mem[addressing_val + 2] << 8) | mem[addressing_val + 1];
-					//mem_value = mem[addressing_val];
-					//sprintf(internal_buffer, "\t\t%04X: 0x%02X", addressing_val, mem_value);
-					//strcat(Debugger_disassembly_line, internal_buffer);
-					//if (isprint(mem_value)) {
-					//	sprintf(internal_buffer, " (%c)", mem_value);
-					//	strcat(Debugger_disassembly_line, internal_buffer);
-					//}
-					break;
-
-				case cpu_6502::addr_mode::INDIRECT_INDEXED_MODE:
-					addressing_val = (memory_read(addressing_val + 2) << 8) | memory_read(addressing_val + 1);
-					addressing_val += cpu.get_y();
-					mem_value = memory_read(addressing_val);
-					sprintf(internal_buffer, "\t$%04X: $%02X", addressing_val, mem_value);
-					strcat(m_disassembly_line, internal_buffer);
-					if (isprint(mem_value)) {
-						sprintf(internal_buffer, " (%c)", mem_value);
-						strcat(m_disassembly_line, internal_buffer);
-					}
-					break;
-				}
+			addr_symbol = find_symbol(addressing_val);
+			if (addr_symbol == nullptr || mode == cpu_6502::addr_mode::IMMEDIATE_MODE) {
+				sprintf(internal_buffer, m_addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
+			} else {
+				sprintf(internal_buffer, m_addressing_format_string_with_symbol[static_cast<uint8_t>(mode)], addr_symbol, addressing_val);
 			}
+			strcat(m_disassembly_line, internal_buffer);
 		}
 	}
 
@@ -305,8 +231,8 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		m_reset_window = false;
 	}
 
-	ImGui::SetNextWindowSize(ImVec2(546, 578), condition);
-	ImGui::SetNextWindowPos(ImVec2(570, 8), condition);
+	ImGui::SetNextWindowSize(ImVec2(546, 756), condition);
+	ImGui::SetNextWindowPos(ImVec2(570, 2), condition);
 
 	// get the styling so we can get access to color values
 	ImGuiStyle &style = ImGui::GetStyle();
@@ -343,10 +269,10 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 			if (m_console != nullptr) {
 				if (ImGui::IsKeyPressed(SDL_SCANCODE_F5)) {
 					m_console->execute_command(continue_command_name);
-				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F6)) {
+				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F11)) {
 					// step over (or next)
 					m_console->execute_command(step_command_name);
-				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F7)) {
+				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F10)) {
 					// step into (or just step)
 					m_console->execute_command(next_command_name);
 				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F9)) {
@@ -397,40 +323,41 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		// need to reset the row back to the top since new column just
 		// moves to the next column
 		ImGui::NextColumn();
-		ImGui::SetCursorPosY(0.0f);
-		ImGui::Text("A  = $%02X", cpu.get_acc());
-		ImGui::Text("X  = $%02X", cpu.get_x());
-		ImGui::Text("Y  = $%02X", cpu.get_y());
-		ImGui::Text("PC = $%04X", cpu.get_pc());
-		ImGui::Text("SP = $%04X", cpu.get_sp() + 0x100);
+		ImGui::SetCursorPosY(5.0f);
+		ImGui::NewLine();
+		if (ImGui::CollapsingHeader("Registers", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader)) {
+			ImGui::Text("A  = $%02X", cpu.get_acc());
+			ImGui::Text("X  = $%02X", cpu.get_x());
+			ImGui::Text("Y  = $%02X", cpu.get_y());
+			ImGui::Text("PC = $%04X", cpu.get_pc());
+			ImGui::Text("SP = $%04X", cpu.get_sp() + 0x100);
+
+			ImGui::NewLine();
+			uint8_t status = cpu.get_status();
+			ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = $%2x",
+				(status >> 7) & 1 ? 'S' : 's',
+				(status >> 6) & 1 ? 'V' : 'v',
+				(status >> 5) & 1 ? '1' : '0',
+				(status >> 4) & 1 ? 'B' : 'b',
+				(status >> 3) & 1 ? 'D' : 'd',
+				(status >> 2) & 1 ? 'I' : 'i',
+				(status >> 1) & 1 ? 'Z' : 'z',
+				(status >> 0) & 1 ? 'C' : 'c',
+				(status >> 7) & 1,
+				(status >> 6) & 1,
+				(status >> 5) & 1,
+				(status >> 4) & 1,
+				(status >> 3) & 1,
+				(status >> 2) & 1,
+				(status >> 1) & 1,
+				(status & 1),
+				status);
+		}
 
 		ImGui::NewLine();
-		uint8_t status = cpu.get_status();
-		ImGui::Text("%c%c%c%c%c%c%c%c\n%1d%1d%1d%1d%1d%1d%1d%1d = $%2x",
-			(status >> 7) & 1 ? 'S' : 's',
-			(status >> 6) & 1 ? 'V' : 'v',
-			(status >> 5) & 1 ? '1' : '0',
-			(status >> 4) & 1 ? 'B' : 'b',
-			(status >> 3) & 1 ? 'D' : 'd',
-			(status >> 2) & 1 ? 'I' : 'i',
-			(status >> 1) & 1 ? 'Z' : 'z',
-			(status >> 0) & 1 ? 'C' : 'c',
-			(status >> 7) & 1,
-			(status >> 6) & 1,
-			(status >> 5) & 1,
-			(status >> 4) & 1,
-			(status >> 3) & 1,
-			(status >> 2) & 1,
-			(status >> 1) & 1,
-			(status & 1),
-			status);
 
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		if (ImGui::CollapsingHeader("Soft Switches")) {
-			if (Memory_state & RAM_CARD_BANK2) {
-				ImGui::Text("%-15s", "Bank1");
+		if (ImGui::CollapsingHeader("Soft Switches", ImGuiTreeNodeFlags_CollapsingHeader)) {
+			if (Memory_state & RAM_CARD_BANK2) { ImGui::Text("%-15s", "Bank1");
 				ImGui::SameLine(0.0f, 0.0f);
 				ImGui::TextColored(style.Colors[ImGuiCol_TextDisabled], "%-15s", "Bank2");
 			}
@@ -572,9 +499,8 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 		}
 
 		ImGui::NewLine();
-		ImGui::NewLine();
 
-		if (ImGui::CollapsingHeader("Brekpoints")) {
+		if (ImGui::CollapsingHeader("Breakpoints", ImGuiTreeNodeFlags_CollapsingHeader)) {
 			// for now, just disassm from the current pc
 			for (size_t i = 0; i < Debugger_breakpoints.size(); i++) {
 
@@ -609,9 +535,27 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 				ImGui::Text("%s", Debugger_breakpoints[i].m_enabled == true ? "enabled" : "disabled");
 			}
 		}
-	}
 
+		// input for "goto".   use 5 buyes, which limits input
+		// to a max of 4 hexidecimal characters
+		static char goto_addr[5] = "";
+		ImGui::NewLine();
+        ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.20f);
+		ImGui::InputText("", goto_addr, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+		ImGui::SameLine();
+		if (ImGui::Button("Goto") == true) {
+			if (strlen(goto_addr) > 0) {
+				// goto to the address in the input text box
+				m_current_addr = (uint16_t)strtol(goto_addr, nullptr, 16);
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("PC") == true) {
+			m_current_addr = pc; 
+		}
+	}
 	ImGui::End();
+
 }
 
 void debugger_disasm::set_break_addr(uint16_t addr)
@@ -657,4 +601,3 @@ void debugger_disasm::attach_console(debugger_console *console)
 {
 	m_console = console;
 }
-

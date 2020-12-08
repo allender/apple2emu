@@ -44,9 +44,6 @@
 
 debugger_state Debugger_state = debugger_state::IDLE;
 
-// globals for interface code
-bool Debugger_use_sym_tables = true;
-
 std::vector<breakpoint> Debugger_breakpoints;
 
 static const uint32_t Debugger_status_line_length = 256;
@@ -294,8 +291,14 @@ bool debugger_process()
 						continue_execution = false;
 						active_breakpoint = &Debugger_breakpoints[i];
 
-						Debugger_console.add_log("Stopped at breakpoint: %04x\n",
-							active_breakpoint->m_addr);
+						if (Debugger_breakpoints[i].m_type != breakpoint_type::TEMPORARY) {
+							const char *addr_sym = Debugger_disasm.find_symbol(active_breakpoint->m_addr);
+							if (addr_sym != nullptr) {
+								Debugger_console.add_log("Stopped at breakpoint: %04x (%s)\n", active_breakpoint->m_addr, addr_sym);
+							} else {
+								Debugger_console.add_log("Stopped at breakpoint: %04x\n", active_breakpoint->m_addr);
+							}
+						}
 					}
 					break;
 				case breakpoint_type::RWATCHPOINT:
@@ -367,4 +370,14 @@ void debugger_reset_windows()
 	Debugger_disasm.reset();
 	Debugger_console.reset();
 	Reset_windows = true;       // ugh should make the other windows classes probably
+}
+
+void debugger_load_symbol_table(const std::string &filename)
+{
+	Debugger_disasm.add_symtable(filename);
+}
+
+void debugger_unload_symbol_table(const std::string &filename)
+{
+	Debugger_disasm.remove_symtable(filename);
 }

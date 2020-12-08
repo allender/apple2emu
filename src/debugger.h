@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <stdint.h>
 #include <vector>
+#include <string>
 
 enum class debugger_state {
 	IDLE,
@@ -60,7 +61,6 @@ extern const char *break_command_name;
 
 
 extern debugger_state Debugger_state;
-extern bool Debugger_use_sym_tables;
 extern std::vector<breakpoint> Debugger_breakpoints;
 
 void debugger_enter();
@@ -72,4 +72,6 @@ void debugger_render();
 bool debugger_active();
 void debugger_print_char_to_console(uint8_t c);
 void debugger_reset_windows();
+void debugger_load_symbol_table(const std::string& filename);
+void debugger_unload_symbol_table(const std::string& filename);
 

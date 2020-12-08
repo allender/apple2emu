@@ -32,6 +32,7 @@ SOFTWARE.
 #include <string>
 #include <fstream>
 #include <cctype>
+#include <filesystem>
 
 #include "SDL.h"
 #include "SDL_opengl.h"
@@ -77,6 +78,10 @@ static float Framecap_ms;
 // settings to be stored
 static int32_t Video_color_type = static_cast<int>(video_tint_types::MONO_WHITE);
 
+//  information for symbol tables
+typedef std::pair<std::string, bool> symtable_entry;
+std::vector<symtable_entry> Symtables;
+
 // inserts disk image into the given disk drive
 static void ui_insert_disk(const char *disk_filename, int slot)
 {
@@ -91,6 +96,13 @@ static void ui_insert_disk(const char *disk_filename, int slot)
 
 static void ui_load_settings()
 {
+	// find the symbol tables stored in the symtble
+	for (auto &f : std::filesystem::directory_iterator("symtables")) {
+		if (f.is_regular_file() == true) {
+			Symtables.push_back(std::make_pair(f.path().relative_path().string(), false));
+		}
+	}
+	// folder
 	std::ifstream infile(Settings_filename);
 	std::string line;
 
@@ -133,13 +145,25 @@ static void ui_load_settings()
 			else if (setting == "speed") {
 				Speed_multiplier = (int)strtol(value.c_str(), nullptr, 10);
 			}
-			else if (setting == "sym_tables") {
-				Debugger_use_sym_tables = strtol(value.c_str(), nullptr, 10) ? true : false;
-			}
 			else if (setting == "sound_active") {
 				int i_val = strtol(value.c_str(), nullptr, 10);
 				Sound_active = static_cast<bool>(i_val);
 				speaker_set_active(Sound_active);
+			}
+			else if (setting.rfind("Symtable",0) == 0) {
+				// need to get the table name from the setting
+				size_t table_pos = line.find(' ');
+				std::string table_name = setting.substr(table_pos + 1);
+				int i_val = strtol(value.c_str(), nullptr, 10);
+				for (auto &p : Symtables) {
+					if (p.first == table_name) {
+						p.second = static_cast<bool>(i_val);
+						if (p.second == true) {
+							debugger_load_symbol_table(p.first);
+						}
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -160,8 +184,10 @@ static void ui_save_settings()
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
 	fprintf(fp, "speed = %d\n", Speed_multiplier);
-	fprintf(fp, "sym_tables = %d\n", Debugger_use_sym_tables);
 	fprintf(fp, "sound_active = %d\n", Sound_active ? 1 : 0);
+	for (auto &table : Symtables) {
+		fprintf(fp, "Symtable %s = %d\n", table.first.c_str(), table.second?1:0);
+	}
 
 	fclose(fp);
 }
@@ -301,7 +327,22 @@ static void ui_show_video_output_menu()
 static void ui_show_debugger_menu()
 {
 	ImGui::Text("Debugger Options");
-	ImGui::Checkbox("Use Symbol Tables", &Debugger_use_sym_tables);
+
+	// symbol table submenu to add, remove
+    if (ImGui::BeginMenu("Symbol Tables")) {
+		for (auto &table : Symtables) {
+			//ImGui::MenuItem(table.first.c_str(), "", &table.second);
+			bool changed = ImGui::Checkbox(table.first.c_str(), &table.second);
+
+			// load or unload the symbol table
+			if (changed == true && table.second == true) {
+				debugger_load_symbol_table(table.first);
+			} else if (changed == true && table.second == false) {
+				debugger_unload_symbol_table(table.first);
+			}
+		}
+		ImGui::EndMenu();
+	}
 	if (ImGui::Button("Reset Debugger Windows")) {
 		debugger_reset_windows();
 	}
@@ -617,31 +658,6 @@ void ui_do_frame()
 	// will be specific to the window that is current in focus
 	ImGuiIO& io = ImGui::GetIO();
 
-	// process high level keys (regardless of which window has focus)
-	if (ImGui::IsKeyPressed(SDL_SCANCODE_F11, false)) {
-		io.WantCaptureKeyboard = true;
-		if (io.KeyShift == true) {
-			ui_toggle_demo_window();
-		} else {
-			debugger_enter();
-		}
-	}
-	// maybe bring up the main menu
-	if (ImGui::IsKeyPressed(SDL_SCANCODE_F1, false)) {
-		io.WantCaptureKeyboard = true;
-		ui_toggle_main_menu();
-	}
-
-
-	if (ImGui::IsKeyPressed(SDL_SCANCODE_PAUSE, false)) {
-		io.WantCaptureKeyboard = true;
-		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
-			Emulator_state = emulator_state::EMULATOR_PAUSED;
-		} else {
-			Emulator_state = emulator_state::EMULATOR_STARTED;
-		}
-	}
-
 	// show the main window for the emulator.  If the debugger
 	// is active, we'll wind up showing the emulator screen
 	// in imgui window that can be moved/resized.  Otherwise
@@ -662,7 +678,7 @@ void ui_do_frame()
 		initial_size.x = (float)(Video_window_size.w/2);
 		initial_size.y = (float)(Video_window_size.h/2);
 		flags = ImGuiWindowFlags_NoScrollbar;
-		ImGui::SetNextWindowPos(ImVec2(5.0f, 6.0f), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(2, 2), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);
 	} else {
 		title = "Emulator";
@@ -672,7 +688,7 @@ void ui_do_frame()
 			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
 		// also need to set position here
-		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(initial_size, ImGuiCond_Always);
 	}
 
@@ -702,6 +718,32 @@ void ui_do_frame()
 	ImGui::End();
 	if (dbg_active == false) {
 		ImGui::PopStyleVar(4);
+	}
+
+	// process high level keys (regardless of which window has focus)
+	if (dbg_active == false && ImGui::IsKeyPressed(SDL_SCANCODE_F11, false)) {
+		io.WantCaptureKeyboard = true;
+		if (io.KeyShift == true) {
+			ui_toggle_demo_window();
+		} else {
+			debugger_enter();
+		}
+	}
+
+	// maybe bring up the main menu
+	if (ImGui::IsKeyPressed(SDL_SCANCODE_F1, false)) {
+		io.WantCaptureKeyboard = true;
+		ui_toggle_main_menu();
+	}
+
+
+	if (ImGui::IsKeyPressed(SDL_SCANCODE_PAUSE, false)) {
+		io.WantCaptureKeyboard = true;
+		if (Emulator_state == emulator_state::EMULATOR_STARTED) {
+			Emulator_state = emulator_state::EMULATOR_PAUSED;
+		} else {
+			Emulator_state = emulator_state::EMULATOR_STARTED;
+		}
 	}
 
 	// send keys to the emulator (if they haven't been used by any of the other

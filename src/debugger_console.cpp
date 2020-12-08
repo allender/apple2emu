@@ -99,8 +99,8 @@ void debugger_console::draw(const char* title, bool* p_open)
 		m_reset_window = false;
 	}
 
-	ImGui::SetNextWindowSize(ImVec2(546, 165), condition);
-	ImGui::SetNextWindowPos(ImVec2(570, 596), condition);
+	ImGui::SetNextWindowSize(ImVec2(562,180), condition);
+	ImGui::SetNextWindowPos(ImVec2(2, 582), condition);
 	if (!ImGui::Begin(title, p_open, 0)) {
 		ImGui::End();
 		return;

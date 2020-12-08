@@ -63,8 +63,8 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 		m_reset_window = false;
 	}
 
-	ImGui::SetNextWindowSize(ImVec2(550, 332), condition);
-	ImGui::SetNextWindowPos(ImVec2(5, 428), condition);
+	ImGui::SetNextWindowSize(ImVec2(562, 191), condition);
+	ImGui::SetNextWindowPos(ImVec2(2, 390), condition);
 
 	if (ImGui::Begin(title, nullptr, 0)) {
 		ImGui::BeginChild("##scrolling", ImVec2(0, -(ImGui::GetFrameHeightWithSpacing() * 2)));

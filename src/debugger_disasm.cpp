@@ -73,15 +73,15 @@ const char *debugger_disasm::m_addressing_format_string_with_symbol[] = {
 	"",                  // ACCUMULATOR_MODE
 	"#%02X",             // IMMEDIATE_MODE
 	"",                  // IMPLIED_MODE
-	"%-8s  ($%04X)",     // RELATIVE_MODE
-	"%-8s  ($%04X)",     // ABSOLUTE_MODE
-	"%-8s  ($%02X)",     // ZERO_PAGE_MODE
+	"%s  ($%04X)",     // RELATIVE_MODE
+	"%s  ($%04X)",     // ABSOLUTE_MODE
+	"%s  ($%02X)",     // ZERO_PAGE_MODE
 	"(%s)  ($%04X)",     // INDIRECT_MODE
 	"(%s)  ($%02X)",     // INDIRECT_ZP_MODE
-	"%-8s,X  ($%04X)",   // X_INDEXED_MODE
-	"%-8s,Y  ($%04X)",   // Y_INDEXED_MODE
-	"%-8s,X  ($%02X)",   // ZERO_PAGES_INDEXED_MODE
-	"%-8s,Y  ($%02X)",   // ZERO_PAGED_INDEXED_MODE_Y
+	"%s,X  ($%04X)",   // X_INDEXED_MODE
+	"%s,Y  ($%04X)",   // Y_INDEXED_MODE
+	"%s,X  ($%02X)",   // ZERO_PAGES_INDEXED_MODE
+	"%s,Y  ($%02X)",   // ZERO_PAGED_INDEXED_MODE_Y
 	"(%s,X)  ($%02X)",   // INDEXED_INDIRECT_MODE'
 	"",                  // ABSOLUTE_INDEXED_INDIRECT_MODE
 	"(%s),Y  ($%02X)",   // INDIRECT_INDEXED_MODE

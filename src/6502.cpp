@@ -1029,39 +1029,42 @@ uint32_t cpu_6502::process_opcode()
 	}
 	case 'CMP ':
 	{
-		if (m_acc >= memory_read(src)) {
+		uint8_t src_val = memory_read(src);
+		if (m_acc >= src_val) {
 			set_flag(register_bit::CARRY_BIT, 1);
 		}
 		else {
 			set_flag(register_bit::CARRY_BIT, 0);
 		}
-		int8_t val = m_acc - memory_read(src);
+		int8_t val = m_acc - src_val;
 		set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
 		set_flag(register_bit::ZERO_BIT, val == 0);
 		break;
 	}
 	case 'CPX ':
 	{
-		if (m_xindex >= memory_read(src)) {
+		uint8_t src_val = memory_read(src);
+		if (m_xindex >= src_val) {
 			set_flag(register_bit::CARRY_BIT, 1);
 		}
 		else {
 			set_flag(register_bit::CARRY_BIT, 0);
 		}
-		int8_t val = m_xindex - memory_read(src);
+		int8_t val = m_xindex - src_val;
 		set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
 		set_flag(register_bit::ZERO_BIT, val == 0);
 		break;
 	}
 	case 'CPY ':
 	{
-		if (m_yindex >= memory_read(src)) {
+		uint8_t src_val = memory_read(src);
+		if (m_yindex >= src_val) {
 			set_flag(register_bit::CARRY_BIT, 1);
 		}
 		else {
 			set_flag(register_bit::CARRY_BIT, 0);
 		}
-		int8_t val = m_yindex - memory_read(src);
+		int8_t val = m_yindex - src_val;
 		set_flag(register_bit::SIGN_BIT, (val >> 7) & 0x1);
 		set_flag(register_bit::ZERO_BIT, val == 0);
 		break;

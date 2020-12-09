@@ -740,7 +740,10 @@ void video_set_tint(video_tint_types type)
 	Video_tint_color = Video_tint_colors[static_cast<uint8_t>(type)];
 }
 
-GLfloat *video_get_tint()
+GLfloat *video_get_tint(video_tint_types type)
 {
-	return Video_tint_color;
+	if (type == video_tint_types::TINT_TYPE_NONE) {
+		return Video_tint_color;
+	}
+	return Video_tint_colors[static_cast<uint8_t>(type)];
 }

@@ -58,6 +58,7 @@ enum class video_tint_types : uint8_t {
 	MONO_AMBER,
 	MONO_GREEN,
 	COLOR,
+	TINT_TYPE_NONE,
 	NUM_TINT_TYPES,
 };
 
@@ -73,7 +74,7 @@ bool video_init();
 void video_shutdown();
 void video_render_frame();
 void video_set_tint(video_tint_types type);
-GLfloat *video_get_tint();
+GLfloat *video_get_tint(video_tint_types type = video_tint_types::TINT_TYPE_NONE);
 
 // called from soft switch reading/writing code in memory
 uint8_t video_set_state(uint16_t addr, uint8_t val, bool write);

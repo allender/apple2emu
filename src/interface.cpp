@@ -629,6 +629,7 @@ void ui_do_frame()
 	glLoadIdentity();
 	glEnable(GL_TEXTURE_2D);
 
+	GLfloat *tint_colors;
 	if (Emulator_state == emulator_state::SPLASH_SCREEN) {
 		// blit splash screen
 		glBindTexture(GL_TEXTURE_2D, Splash_screen_texture);
@@ -640,10 +641,13 @@ void ui_do_frame()
 		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
 		glEnd();
 		glBindTexture(GL_TEXTURE_2D, 0);
+		tint_colors = video_get_tint(video_tint_types::MONO_WHITE);
 	} else {
 		extern void video_render();
 		video_render();
+		tint_colors = video_get_tint();
 	}
+	ImVec4 tint(tint_colors[0], tint_colors[1], tint_colors[2], 0xff);
 
 	// back to main framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -662,8 +666,6 @@ void ui_do_frame()
 	// is active, we'll wind up showing the emulator screen
 	// in imgui window that can be moved/resized.  Otherwise
 	// we'll show it fullscreen
-	GLfloat *tint_colors = video_get_tint();
-	ImVec4 tint(tint_colors[0], tint_colors[1], tint_colors[2], 0xff);
 	ImVec2 initial_size;
 	const char *title;
 	int flags = 0;

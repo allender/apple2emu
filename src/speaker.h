@@ -33,8 +33,7 @@ void speaker_init();
 void speaker_shutdown();
 uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write);
 void speaker_update(int cycles);
-void speaker_queue_audio();
 void speaker_pause();
 void speaker_unpause();
 
-void speaker_set_active(bool active);
+void speaker_set_volume(int volume);

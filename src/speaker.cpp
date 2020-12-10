@@ -42,20 +42,20 @@ const static int Sound_buffer_size = (Sound_samples * Sound_num_channels) / 60;
 const static int Speaker_sample_cycles = Cycles_per_frame / Sound_buffer_size;
 
 static int8_t Sound_silence;
+static float Sound_volume = 0.5;
 
 // ring bugger
-const static int Sound_ring_buffer_size = Sound_buffer_size * 2;
+const static int Sound_ring_buffer_size = Sound_buffer_size * 4;
 static int8_t Sound_ring_buffer[Sound_ring_buffer_size];
 uint32_t Tail_index, Head_index;
-SDL_sem *Sound_sem;
+SDL_mutex *Sound_mutex;
 
 static bool Speaker_on = false;
 static int Speaker_cycles = 0;
-static bool Speaker_active = true;
 
 static void speaker_callback(void *userdata, uint8_t *stream, int len)
 {
-	SDL_semaphore *sem = (SDL_semaphore *)userdata;
+	SDL_mutex *mutex = (SDL_mutex *)userdata;
 
 	//int total_shorts = len / 2;
 	//int tail_index = Tail_index % Sound_ring_buffer_size;
@@ -71,21 +71,24 @@ static void speaker_callback(void *userdata, uint8_t *stream, int len)
 	//}
 	//Head_index += total_shorts;
 
-	SDL_SemWait(sem);
+	//SDL_LogVerbose(LOG_CATEGORY_SPEAKER, "callback len: %d  %d-%d = %d  %d/%d\n", len, Tail_index, Head_index, Tail_index - Head_index, Total_cycles, Total_cycles_this_frame);
 
-	int index = 0;
-	while (Head_index < Tail_index) {
-		stream[index] = Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size];
-		index++;
-		if (index == len) {
-			break;
+	if (SDL_LockMutex(mutex) == 0) {
+		int index = 0;
+		while (Head_index < Tail_index) {
+			stream[index] = uint8_t(Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size] * Sound_volume);
+			index++;
+			if (index == len) {
+				break;
+			}
 		}
+		uint8_t val = stream[index-1];
+		while (index < len) {
+			// stream[index++] = Sound_silence;
+			stream[index++] = val;
+		}
+		SDL_UnlockMutex(mutex);
 	}
-	while (index < len) {
-		stream[index++] = Sound_silence;
-	}
-	SDL_SemPost(sem);
-	SDL_assert(Tail_index >= Head_index);
 }
 
 uint8_t speaker_soft_switch_handler(uint16_t addr, uint8_t val, bool write)
@@ -107,9 +110,10 @@ void speaker_init()
 		SDL_CloseAudioDevice(Device_id);
 	}
 
-	Sound_sem = SDL_CreateSemaphore(1);
-	if (Sound_sem == nullptr) {
-		// ummm... have to figure out what to do here
+	Sound_mutex = SDL_CreateMutex();
+	if (Sound_mutex == nullptr) {
+		printf("Unable to get SDL Semaphone: %s\n", SDL_GetError());
+		return;
 	}
 
 	// open up sdl audio device to write wave data
@@ -120,9 +124,14 @@ void speaker_init()
 	want.freq = Sound_samples;
 	want.samples = Sound_buffer_size;
 	want.callback = speaker_callback;
-	want.userdata = Sound_sem;
+	want.userdata = Sound_mutex;
 
 	Device_id = SDL_OpenAudioDevice(nullptr, 0, &want, &Audio_spec, 0);
+	if (Device_id == 0) {
+		printf("Unable to get valid SDL Audio device: %s\n", SDL_GetError());
+		return;
+	}
+
 	SDL_PauseAudioDevice(Device_id, 1);
 
 	// set up sound buffer
@@ -142,7 +151,7 @@ void speaker_shutdown()
 	if (Device_id != 0) {
 		SDL_CloseAudioDevice(Device_id);
 	}
-	SDL_DestroySemaphore(Sound_sem);
+	SDL_DestroyMutex(Sound_mutex);
 }
 
 // update internal speaker code, which will first entail
@@ -151,9 +160,6 @@ void speaker_shutdown()
 // the SDL audio queue
 void speaker_update(int cycles)
 {
-	static bool last_value = false;
-	UNREFERENCED(cycles);
-
 	Speaker_cycles += cycles;
 	if (Speaker_cycles < Speaker_sample_cycles) {
 		return;
@@ -163,43 +169,32 @@ void speaker_update(int cycles)
 	// assume speaker on
 	int8_t val = Sound_silence;
 	if (Speaker_on) {
-        last_value = last_value;
 		val = ~val;
 	}
 
 	// ring buffer
-	SDL_SemWait(Sound_sem);
-	Sound_ring_buffer[(Tail_index++) % Sound_ring_buffer_size] = val;
-	SDL_SemPost(Sound_sem);
-
-	SDL_assert(Head_index <= Tail_index);
-	last_value = Speaker_on;
-}
-
-void speaker_queue_audio()
-{
+	if (SDL_LockMutex(Sound_mutex) == 0) {
+		Sound_ring_buffer[(Tail_index++) % Sound_ring_buffer_size] = val;
+		SDL_assert(Tail_index - Head_index < Sound_ring_buffer_size);
+		SDL_UnlockMutex(Sound_mutex);
+	}
 }
 
 void speaker_pause()
 {
-	if (Speaker_active) {
-		SDL_PauseAudioDevice(Device_id, 1);
-	}
+	SDL_PauseAudioDevice(Device_id, 1);
 }
 
 void speaker_unpause()
 {
-	if (Speaker_active) {
-		SDL_PauseAudioDevice(Device_id, 0);
-	}
+	SDL_PauseAudioDevice(Device_id, 0);
 }
 
-void speaker_set_active(bool active)
+void speaker_set_volume(int volume)
 {
-	Speaker_active = active;
-	if (Speaker_active == false) {
-		SDL_PauseAudioDevice(Device_id, 1);
-	} else {
-		SDL_PauseAudioDevice(Device_id, 0);
-	}
+	SDL_assert(volume >= 0 && volume <= 100);
+
+	// to percentage, then 1/4th of that to make
+	// even more quiet (lower max volume)
+	Sound_volume = volume / 100.0f / 4.0f;
 }

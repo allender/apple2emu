@@ -126,6 +126,7 @@ static void log_output(void *userdata, int category, SDL_LogPriority priority, c
 
 static void configure_logging()
 {
+	SDL_LogSetPriority(LOG_CATEGORY_SPEAKER, SDL_LOG_PRIORITY_VERBOSE);
 	SDL_LogSetOutputFunction(log_output, nullptr);
 }
 
@@ -315,7 +316,6 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		speaker_queue_audio();
 		ui_do_frame();
 	}
 

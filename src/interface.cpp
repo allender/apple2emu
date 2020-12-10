@@ -56,7 +56,8 @@ static bool Show_main_menu = true;
 static bool Show_demo_window = false;
 static bool Show_drive_indicators = true;
 static bool Menu_open_at_start = false;
-static bool Sound_active = true;
+
+static int Sound_volume = 50;
 
 static const char *Settings_filename = "settings.txt";
 
@@ -145,10 +146,10 @@ static void ui_load_settings()
 			else if (setting == "speed") {
 				Speed_multiplier = (int)strtol(value.c_str(), nullptr, 10);
 			}
-			else if (setting == "sound_active") {
+			else if (setting == "sound_volume") {
 				int i_val = strtol(value.c_str(), nullptr, 10);
-				Sound_active = static_cast<bool>(i_val);
-				speaker_set_active(Sound_active);
+				Sound_volume = static_cast<bool>(i_val);
+				speaker_set_volume(Sound_volume);
 			}
 			else if (setting.rfind("Symtable",0) == 0) {
 				// need to get the table name from the setting
@@ -184,7 +185,7 @@ static void ui_save_settings()
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
 	fprintf(fp, "speed = %d\n", Speed_multiplier);
-	fprintf(fp, "sound_active = %d\n", Sound_active ? 1 : 0);
+	fprintf(fp, "sound_volume = %d\n", Sound_volume ? 1 : 0);
 	for (auto &table : Symtables) {
 		fprintf(fp, "Symtable %s = %d\n", table.first.c_str(), table.second?1:0);
 	}
@@ -350,8 +351,8 @@ static void ui_show_debugger_menu()
 
 static void ui_show_sound_menu()
 {
-	if (ImGui::Checkbox("Sound On", &Sound_active)) {
-		speaker_set_active(Sound_active);
+	if (ImGui::SliderInt("Volume", &Sound_volume, 0, 100)) {
+		speaker_set_volume(Sound_volume);
 	}
 }
 

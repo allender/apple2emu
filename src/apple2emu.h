@@ -45,9 +45,10 @@ enum class emulator_type: uint8_t {
 	NUM_EMULATOR_TYPES,
 };
 
-// enums for logginf
+// enums for logging
 enum {
-	LOG_CATEGORY_DISK = SDL_LOG_CATEGORY_CUSTOM
+	LOG_CATEGORY_DISK = SDL_LOG_CATEGORY_CUSTOM,
+	LOG_CATEGORY_SPEAKER
 };
 
 extern const char *Emulator_names[static_cast<uint8_t>(emulator_type::NUM_EMULATOR_TYPES)];

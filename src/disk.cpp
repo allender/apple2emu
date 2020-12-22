@@ -47,6 +47,7 @@ class disk_drive {
 private:
 	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
 	uint32_t     m_track_size;       // size of the sector data
+	uint32_t     m_last_read_cycle;  // last cycle count of a read
 
 public:
 	disk_image* m_disk_image;       // holds information about the disk image
@@ -75,6 +76,7 @@ public:
 #define NIBBLES_PER_TRACK 0x1A00
 
 static const int Max_drives = 2;
+static const int Read_nibble_threashold = 6;  // 6 or less cycles on a read returns a nibble
 
 static disk_drive Disk_drives[Max_drives];
 static disk_drive *Current_drive;
@@ -91,6 +93,7 @@ void disk_drive::init(bool warm_init)
 	}
 	m_track_data = nullptr;
 	m_track_size = 0;
+	m_last_read_cycle = 0;
 
 	// for warm initialization, we don't do certain things
 	// like move track and phase motors
@@ -120,6 +123,16 @@ void disk_drive::readwrite()
 
 	if (m_write_mode == false) {
 		// this is read mode
+		// There is a section in the DOS assembly called SAMESLOT which checks
+		// to see if the drive is up and spinning by reading the latch quickly.  We need
+		// to emulate this as without that, we hit massive delays in the assmebly code
+		// as it attemps to "wait" for the disk to be read	
+		if (Total_cycles - m_last_read_cycle <= Read_nibble_threashold) {
+			m_data_register = m_track_data[m_current_byte] >> 4;
+			return;
+		}
+
+		m_last_read_cycle = Total_cycles;
 		m_data_register = m_track_data[m_current_byte];
 		SDL_LogVerbose(LOG_CATEGORY_DISK, "Read: %04x %02x\n", m_current_byte, m_data_register);
 	}

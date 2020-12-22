@@ -62,7 +62,6 @@ enum class video_tint_types : uint8_t {
 	NUM_TINT_TYPES,
 };
 
-extern uint32_t Frames_per_second;
 extern SDL_Renderer *Video_renderer;
 extern uint8_t Video_mode;
 extern GLuint Video_framebuffer_texture;

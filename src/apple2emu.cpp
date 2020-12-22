@@ -79,6 +79,9 @@ static int32_t Program_load_addr = -1;
 static const char *Log_filename = nullptr;
 static FILE *Log_file = nullptr;
 
+static float Framecap_ms;
+uint32_t Frames_per_second = 60;
+
 uint32_t Total_cycles, Total_cycles_this_frame;
 
 cpu_6502 cpu;
@@ -260,8 +263,7 @@ int main(int argc, char* argv[])
 
 	while (!quit) {
 		uint32_t cycles_per_frame = Cycles_per_frame * Speed_multiplier;  // we can speed up machine by multiplier here
-
-
+		
 		// process the next opcode
 		if (Emulator_state == emulator_state::EMULATOR_STARTED ||
 			Emulator_state == emulator_state::EMULATOR_TEST) {
@@ -317,6 +319,24 @@ int main(int argc, char* argv[])
 		}
 
 		ui_do_frame();
+
+
+		// framerate cap in millisconds
+		static uint64_t last_time = 0;
+		uint64_t start;
+		Framecap_ms = (1.0f / Frames_per_second) * 1000;
+
+		//  used for framerate limiting
+		start = SDL_GetPerformanceCounter();
+		if (last_time != 0) {
+			int32_t sleep_ms = (uint32_t)(Framecap_ms - (1000 * (start - last_time) / SDL_GetPerformanceFrequency()));
+			if (sleep_ms > 0) {
+				//SDL_LogVerbose(SDL_LOG_CATEGORY_ERROR, "%d\n", sleep_ms);
+				SDL_Delay(sleep_ms);
+			}
+		}
+		last_time = SDL_GetPerformanceCounter();
+
 	}
 
 	return 0;

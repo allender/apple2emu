@@ -33,7 +33,6 @@ SOFTWARE.
 #include "interface.h"
 #include "debugger.h"
 
-uint32_t Frames_per_second = 60;
 
 static const int Num_vertical_cells = 24;
 static const int Num_vertical_cells_mixed = 20;

@@ -79,6 +79,8 @@ const uint32_t Vert_preset_value = 250;      // preset value (b11111010)
 
 const uint32_t Cycles_per_frame = Vert_state_counter * Horz_state_counter;
 
+extern uint32_t Frames_per_second;
+
 // several externs for cycle counting
 extern uint32_t Total_cycles;
 extern uint32_t Total_cycles_this_frame;

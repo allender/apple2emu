@@ -74,8 +74,6 @@ static GLuint Splash_screen_texture;
 SDL_Rect Video_window_size;
 static int Video_scale_factor = 2;
 
-static float Framecap_ms;
-
 // settings to be stored
 static int32_t Video_color_type = static_cast<int>(video_tint_types::MONO_WHITE);
 
@@ -148,7 +146,7 @@ static void ui_load_settings()
 			}
 			else if (setting == "sound_volume") {
 				int i_val = strtol(value.c_str(), nullptr, 10);
-				Sound_volume = static_cast<bool>(i_val);
+				Sound_volume = i_val;
 				speaker_set_volume(Sound_volume);
 			}
 			else if (setting.rfind("Symtable",0) == 0) {
@@ -185,7 +183,7 @@ static void ui_save_settings()
 	fprintf(fp, "disk2 = %s\n", disk_get_mounted_filename(2));
 	fprintf(fp, "video = %d\n", Video_color_type);
 	fprintf(fp, "speed = %d\n", Speed_multiplier);
-	fprintf(fp, "sound_volume = %d\n", Sound_volume ? 1 : 0);
+	fprintf(fp, "sound_volume = %d\n", Sound_volume);
 	for (auto &table : Symtables) {
 		fprintf(fp, "Symtable %s = %d\n", table.first.c_str(), table.second?1:0);
 	}
@@ -589,22 +587,6 @@ void ui_toggle_demo_window() {
 
 void ui_do_frame()
 {
-	static uint64_t last_time = 0;
-	uint64_t start;
-
-	// framerate cap in millisconds
-	Framecap_ms = (1.0f / Frames_per_second) * 1000;
-
-	//  used for framerate limiting
-	start = SDL_GetPerformanceCounter();
-	if (last_time != 0) {
-		int32_t sleep_ms = (uint32_t)(Framecap_ms - (1000 * (start - last_time) / SDL_GetPerformanceFrequency()));
-		if (sleep_ms > 0) {
-			SDL_Delay(sleep_ms);
-		}
-	}
-	last_time = SDL_GetPerformanceCounter();
-
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplSDL2_NewFrame(Video_window);
 

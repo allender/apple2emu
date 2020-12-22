@@ -36,58 +36,48 @@ SOFTWARE.
 static SDL_AudioDeviceID Device_id = 0;
 static SDL_AudioSpec Audio_spec;
 
-const static int Sound_samples = 44100;
+const static int Sound_samples = 22050;
 const static int Sound_num_channels = 1;
-const static int Sound_buffer_size = (Sound_samples * Sound_num_channels) / 60;
-const static int Speaker_sample_cycles = Cycles_per_frame / Sound_buffer_size;
+
+// buffer size set to 512, which, while hard coded
+// is chosen because SDL requires a power ot 2 for
+// the sound buffer and we can make sure that
+// we still this buffer at the correcct rate
+const static int Sound_buffer_size = 512;
+
+// Speaker_sample_cycle_count tells us how often we need to fill
+// buffer (in ms).  Cycles_per_frame is number of cycles per
+// millisecond (roughly).  Sound_samples / 60 is how often we need to fill
+// the buffer (since we assume the emulator runs at 60fps). 
+// cycles_per_frame / (Sound_samples / 60) will tell us how often
+// we must fill the sound buffer in apple cycle counts
+const int Speaker_sample_cycle_count = Cycles_per_frame / (Sound_samples / Frames_per_second);
 
 static int8_t Sound_silence;
 static float Sound_volume = 0.5;
 
 // ring bugger
-const static int Sound_ring_buffer_size = Sound_buffer_size * 4;
+const static int Sound_ring_buffer_size = Sound_buffer_size * 3;
 static int8_t Sound_ring_buffer[Sound_ring_buffer_size];
 uint32_t Tail_index, Head_index;
-SDL_mutex *Sound_mutex;
 
 static bool Speaker_on = false;
 static int Speaker_cycles = 0;
 
 static void speaker_callback(void *userdata, uint8_t *stream, int len)
 {
-	SDL_mutex *mutex = (SDL_mutex *)userdata;
-
-	//int total_shorts = len / 2;
-	//int tail_index = Tail_index % Sound_ring_buffer_size;
-	//int head_index = Head_index % Sound_ring_buffer_size;
-	// we have to memcpy since we have shorts, and we must be prepared to
-	// wrap the buffer to the beginning
-	//if (head_index + total_shorts > Sound_ring_buffer_size) {
-	//	int num_samples = Sound_ring_buffer_size - head_index;
-	//	memcpy(stream, &Sound_ring_buffer[head_index], num_samples);
-	//	memcpy(&stream[num_samples], Sound_ring_buffer, total_shorts - num_samples);
-	//} else {
-	//	memcpy(stream, &Sound_ring_buffer[head_index], total_shorts);
-	//}
-	//Head_index += total_shorts;
-
-	//SDL_LogVerbose(LOG_CATEGORY_SPEAKER, "callback len: %d  %d-%d = %d  %d/%d\n", len, Tail_index, Head_index, Tail_index - Head_index, Total_cycles, Total_cycles_this_frame);
-
-	if (SDL_LockMutex(mutex) == 0) {
-		int index = 0;
-		while (Head_index < Tail_index) {
-			stream[index] = uint8_t(Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size] * Sound_volume);
-			index++;
-			if (index == len) {
-				break;
-			}
+	int index = 0;
+	while (Head_index < Tail_index) {
+		stream[index] = uint8_t(Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size] * Sound_volume);
+		index++;
+		if (index == len) {
+			break;
 		}
-		uint8_t val = stream[index-1];
-		while (index < len) {
-			// stream[index++] = Sound_silence;
-			stream[index++] = val;
-		}
-		SDL_UnlockMutex(mutex);
+	}
+	uint8_t val = stream[index-1];
+	while (index < len) {
+		// stream[index++] = Sound_silence;
+		stream[index++] = val;
 	}
 }
 
@@ -110,12 +100,6 @@ void speaker_init()
 		SDL_CloseAudioDevice(Device_id);
 	}
 
-	Sound_mutex = SDL_CreateMutex();
-	if (Sound_mutex == nullptr) {
-		printf("Unable to get SDL Semaphone: %s\n", SDL_GetError());
-		return;
-	}
-
 	// open up sdl audio device to write wave data
 	SDL_AudioSpec want;
 
@@ -124,7 +108,7 @@ void speaker_init()
 	want.freq = Sound_samples;
 	want.samples = Sound_buffer_size;
 	want.callback = speaker_callback;
-	want.userdata = Sound_mutex;
+	// want.callback = nullptr;
 
 	Device_id = SDL_OpenAudioDevice(nullptr, 0, &want, &Audio_spec, 0);
 	if (Device_id == 0) {
@@ -151,7 +135,6 @@ void speaker_shutdown()
 	if (Device_id != 0) {
 		SDL_CloseAudioDevice(Device_id);
 	}
-	SDL_DestroyMutex(Sound_mutex);
 }
 
 // update internal speaker code, which will first entail
@@ -161,10 +144,10 @@ void speaker_shutdown()
 void speaker_update(int cycles)
 {
 	Speaker_cycles += cycles;
-	if (Speaker_cycles < Speaker_sample_cycles) {
+	if (Speaker_cycles < Speaker_sample_cycle_count) {
 		return;
 	}
-	Speaker_cycles -= Speaker_sample_cycles;
+	Speaker_cycles -= Speaker_sample_cycle_count;
 
 	// assume speaker on
 	int8_t val = Sound_silence;
@@ -173,11 +156,22 @@ void speaker_update(int cycles)
 	}
 
 	// ring buffer
-	if (SDL_LockMutex(Sound_mutex) == 0) {
-		Sound_ring_buffer[(Tail_index++) % Sound_ring_buffer_size] = val;
-		SDL_assert(Tail_index - Head_index < Sound_ring_buffer_size);
-		SDL_UnlockMutex(Sound_mutex);
-	}
+	SDL_LockAudioDevice(Device_id);
+	Sound_ring_buffer[(Tail_index++) % Sound_ring_buffer_size] = val;
+	SDL_assert(Tail_index - Head_index < Sound_ring_buffer_size);
+	SDL_UnlockAudioDevice(Device_id);
+
+	// fill the buffer if we have reached that point
+	// if (Tail_index - Head_index >= Sound_buffer_size) {
+	// 	uint8_t buffer[Sound_buffer_size];
+
+	// 	auto index = 0;
+	// 	while (Head_index < Tail_index && index < Sound_buffer_size) {
+	// 		SDL_assert(index< Sound_buffer_size);
+	// 		buffer[index++] = uint8_t(Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size] * Sound_volume);
+	// 	}
+	// 	SDL_QueueAudio(Device_id, buffer, Sound_buffer_size);
+	// }
 }
 
 void speaker_pause()

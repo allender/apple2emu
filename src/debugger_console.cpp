@@ -259,7 +259,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 	case ImGuiInputTextFlags_CallbackHistory:
 	{
 		// Example of HISTORY
-		const size_t prev_history_pos = m_history_pos;
+		const int32_t prev_history_pos = m_history_pos;
 		if (data->EventKey == ImGuiKey_UpArrow) {
 			if (m_history_pos == -1) {
 				m_history_pos = m_history.size() - 1;

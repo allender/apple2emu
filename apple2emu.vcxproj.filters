@@ -16,9 +16,6 @@
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <Filter>nativefiledialog</Filter>
     </ClCompile>
-    <ClCompile Include="nativefiledialog\src\nfd_common.cpp">
-      <Filter>nativefiledialog</Filter>
-    </ClCompile>
     <ClCompile Include="src\disk.cpp">
       <Filter>machine</Filter>
     </ClCompile>
@@ -79,6 +76,15 @@
     </ClCompile>
     <ClCompile Include="src\z80softcard.cpp">
       <Filter>machine</Filter>
+    </ClCompile>
+    <ClCompile Include="nativefiledialog\src\nfd_common.c">
+      <Filter>nativefiledialog</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_impl_opengl2.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

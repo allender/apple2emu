@@ -197,8 +197,6 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			addressing_val = (memory_read(addr + 2) << 8) | memory_read(addr + 1);
 		}
 		if (opcode->m_size > 1) {
-			uint32_t mem_value = 0xffffffff;
-
 			cpu_6502::addr_mode mode = opcode->m_addr_mode;
 			if (mode == cpu_6502::addr_mode::RELATIVE_MODE) {
 				addressing_val = addr + memory_read(addr + 1) + 2;

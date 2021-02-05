@@ -709,7 +709,6 @@ inline int16_t cpu_6502::absolute_y_mode()
 
 inline int16_t cpu_6502::absolute_x_check_boundary_mode()
 {
-	uint16_t save_pc = m_pc;
 	// get the new address
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
@@ -725,8 +724,6 @@ inline int16_t cpu_6502::absolute_x_check_boundary_mode()
 
 inline int16_t cpu_6502::absolute_y_check_boundary_mode()
 {
-	int16_t save_pc = m_pc;
-
 	// get the new address
 	uint8_t lo = memory_read(m_pc++);
 	uint8_t hi = memory_read(m_pc++);
@@ -788,8 +785,6 @@ inline int16_t cpu_6502::indirect_indexed_mode()
 
 inline int16_t cpu_6502::indirect_indexed_check_boundary_mode()
 {
-	uint16_t save_pc = m_pc;
-
 	uint16_t addr = memory_read(m_pc++);
 	uint8_t lo = memory_read(addr);
 	uint8_t hi = memory_read(addr+ 1);

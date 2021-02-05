@@ -66,6 +66,7 @@ static int Speaker_cycles = 0;
 
 static void speaker_callback(void *userdata, uint8_t *stream, int len)
 {
+	UNREFERENCED(userdata);
 	int index = 0;
 	while (Head_index < Tail_index) {
 		stream[index] = uint8_t(Sound_ring_buffer[(Head_index++) % Sound_ring_buffer_size] * Sound_volume);

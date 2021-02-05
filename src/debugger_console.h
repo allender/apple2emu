@@ -47,7 +47,7 @@ class debugger_console
 	std::vector<char*>                     m_items;
 	bool                                   m_scroll_to_bottom;
 	std::vector<char*>                     m_history;
-	size_t                                 m_history_pos;    // -1: new line, 0..History.Size-1 browsing history.
+	int32_t                                m_history_pos;    // -1: new line, 0..History.Size-1 browsing history.
 	std::map<std::string, console_command> m_commands;
 	bool                                   m_reset_window;
 

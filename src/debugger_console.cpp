@@ -262,7 +262,7 @@ int debugger_console::text_edit_callback(ImGuiTextEditCallbackData* data) {
 		const int32_t prev_history_pos = m_history_pos;
 		if (data->EventKey == ImGuiKey_UpArrow) {
 			if (m_history_pos == -1) {
-				m_history_pos = m_history.size() - 1;
+				m_history_pos = (int32_t)(m_history.size() - 1);
 			}
 			else if (m_history_pos > 0) {
 				m_history_pos--;

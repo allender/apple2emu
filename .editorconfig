@@ -1,0 +1,8 @@
+# ediforconfig for apple2emu
+
+root = true
+
+[**.{cpp, c, hpp, h}]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true

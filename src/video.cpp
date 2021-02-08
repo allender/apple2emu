@@ -563,12 +563,11 @@ void video_render()
 	};
 
 	std::function<void(uint16_t, uint16_t)> main_func;
-	std::function<void(uint16_t, uint16_t)> mixed_func;
 	if (Video_mode & VIDEO_MODE_TEXT) {
 		if (Video_mode & VIDEO_MODE_80COL) {
-			mixed_func = main_func = render_text80_cell;
+			main_func = render_text80_cell;
 		} else {
-			mixed_func = main_func = render_text_cell;
+			main_func = render_text_cell;
 		}
 	}
 	else if (!(Video_mode & VIDEO_MODE_HIRES)) {
@@ -583,7 +582,7 @@ void video_render()
 			main_func = render_color_hires_cell;
 		}
 	}
-	video_render_screen(main_func, mixed_func);
+	video_render_screen(main_func, render_text_cell);
 
 }
 

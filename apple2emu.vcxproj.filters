@@ -68,12 +68,6 @@
     <ClCompile Include="z80emu\z80emu.cpp">
       <Filter>z80emu</Filter>
     </ClCompile>
-    <ClCompile Include="z80emu\maketables.cpp">
-      <Filter>z80emu</Filter>
-    </ClCompile>
-    <ClCompile Include="z80emu\zextest.cpp">
-      <Filter>z80emu</Filter>
-    </ClCompile>
     <ClCompile Include="src\z80softcard.cpp">
       <Filter>machine</Filter>
     </ClCompile>
@@ -189,9 +183,6 @@
       <Filter>z80emu</Filter>
     </ClInclude>
     <ClInclude Include="z80emu\z80user.h">
-      <Filter>z80emu</Filter>
-    </ClInclude>
-    <ClInclude Include="z80emu\zextest.h">
       <Filter>z80emu</Filter>
     </ClInclude>
     <ClInclude Include="src\apple2emu_defs.h" />

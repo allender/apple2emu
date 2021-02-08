@@ -57,7 +57,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;CONSOLE_ONLY;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)pdcurses;$(ProjectDir)imgui;$(ProjectDir)..\glew-2.1.0\include;$(ProjectDir)..\SDL2-2.0.12\include;$(ProjectDir)..\SDL2_image-2.0.5\include;$(ProjectDir)nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)pdcurses;$(ProjectDir)imgui;$(ProjectDir)..\glew-2.1.0\include;$(ProjectDir)..\SDL2-2.0.12\include;$(ProjectDir)..\SDL2_image-2.0.5\include;$(ProjectDir)nativefiledialog\src\include;$(ProjectDir)libclipboard/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>
       <PrecompiledHeaderFile>precompiled.h</PrecompiledHeaderFile>
@@ -112,6 +112,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="libclipboard\src\clipboard_common.c" />
+    <ClCompile Include="libclipboard\src\clipboard_win32.c" />
     <ClCompile Include="nativefiledialog\src\nfd_common.c" />
     <ClCompile Include="nativefiledialog\src\nfd_win.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -184,6 +186,8 @@
     <ClInclude Include="imgui\stb_rect_pack.h" />
     <ClInclude Include="imgui\stb_textedit.h" />
     <ClInclude Include="imgui\stb_truetype.h" />
+    <ClInclude Include="libclipboard\include\libclipboard-config.h" />
+    <ClInclude Include="libclipboard\include\libclipboard.h" />
     <ClInclude Include="nativefiledialog\src\common.h" />
     <ClInclude Include="nativefiledialog\src\include\nfd.h" />
     <ClInclude Include="nativefiledialog\src\nfd_common.h" />

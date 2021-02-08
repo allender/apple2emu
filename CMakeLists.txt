@@ -32,14 +32,18 @@ else()
 endif(MSVC)
 
 # subdirectories to build
-subdirs(imgui nativefiledialog)
+add_subdirectory(imgui)
+add_subdirectory(nativefiledialog)
+add_subdirectory(libclipboard)
 
-#this is needed for imgui and the emulator
+# add in other folders that are needed for ncludes
 include_directories(
    ${SDL2_INCLUDE_DIR}
    ${SDL2_IMAGE_INCLUDE_DIR}
    imgui
    nativefiledialog/src/include
+   ${CMAKE_CURRENT_SOURCE_DIR}/libclipboard/include
+   ${CMAKE_CURRENT_BINARY_DIR}/libclipboard/include
    z80emu)
 
 include_directories(SYSTEM
@@ -72,6 +76,7 @@ target_link_libraries(apple2emu
    ${CURSES_LIBRARIES}
    imgui
    nfd
+   clipboard
    ${SDL2_IMAGE_LIBRARY}
    ${SDL2_LIBRARY}
    ${GLEW_LIBRARIES}

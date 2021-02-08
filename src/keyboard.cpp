@@ -27,6 +27,8 @@ SOFTWARE.
 
 #include "SDL.h"
 
+#include "libclipboard.h"
+
 #include "apple2emu_defs.h"
 #include "apple2emu.h"
 #include "keyboard.h"
@@ -43,6 +45,9 @@ static const int Keybuffer_size = 32;
 
 static int key_buffer_front, key_buffer_end;
 static int key_buffer[Keybuffer_size];
+
+static clipboard_c* Clipboard;
+static const char *Clipboard_ptr;
 
 // inserts a key into the keyboard buffer
 static void keyboard_insert_key(uint32_t code)
@@ -73,6 +78,7 @@ static uint8_t keyboard_get_key()
 	} while (key_buffer[key_buffer_front] == 0 && key_buffer_front != key_buffer_end);
 
 	SDL_assert(key <= UINT8_MAX);
+
 	return static_cast<uint8_t>(key);
 }
 
@@ -88,6 +94,9 @@ void keyboard_init()
 	} else {
 		Keyboard_caps_lock_on = false;
 	}
+
+    Clipboard = clipboard_new(nullptr);
+    Clipboard_ptr = nullptr;
 }
 
 void keyboard_shutdown()
@@ -162,18 +171,43 @@ void keyboard_handle_event(uint32_t key, bool shift, bool ctrl, bool alt, bool s
 }
 
 static uint8_t last_key = 0;
+
 uint8_t keyboard_read()
 {
-	uint8_t temp_key = keyboard_get_key();
-	if (temp_key > 0) {
-		last_key = temp_key | 0x80;
-	}
+    if (Clipboard_ptr != nullptr) {
+        last_key = 0x80 | *Clipboard_ptr;
+    } else {
+        uint8_t temp_key = keyboard_get_key();
+        if (temp_key > 0) {
+            last_key = temp_key | 0x80;
+        }
+    }
 
-	return(last_key);
+	return last_key;
 }
 
 uint8_t keyboard_clear()
 {
-	last_key &= 0x7F;
+    if (Clipboard_ptr != nullptr) {
+        last_key = 0x80 | *Clipboard_ptr;
+        Clipboard_ptr++;
+        if (*Clipboard_ptr == 0xa) {
+            Clipboard_ptr++;
+        }
+        if (*Clipboard_ptr == '\0') {
+            last_key = 0;
+            Clipboard_ptr = nullptr;
+        }
+    } else {
+        last_key &= 0x7F;
+    }
+
 	return last_key;
+}
+
+// get the clipboard and set the keyboard code to
+// process the clipboard instead of keys
+void keyboard_paste_clipboard()
+{
+    Clipboard_ptr = clipboard_text(Clipboard);
 }

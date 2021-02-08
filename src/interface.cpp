@@ -360,6 +360,14 @@ static void ui_show_speed_menu()
 	}
 }
 
+static void ui_show_edit_menu()
+{
+    if (ImGui::MenuItem("Paste"))
+    {
+        keyboard_paste_clipboard();
+    }
+}
+
 static void ui_show_main_menu()
 {
 	if (ImGui::BeginMainMenuBar()) {
@@ -368,6 +376,10 @@ static void ui_show_main_menu()
 			ui_show_speed_menu();
 			ImGui::EndMenu();
 		}
+        if (ImGui::BeginMenu("Edit")) {
+			ui_show_edit_menu();
+			ImGui::EndMenu();
+        }
 		if (ImGui::BeginMenu("Disk")) {
 			ui_show_disk_menu();
 			ImGui::EndMenu();

@@ -51,8 +51,6 @@ static char Debugger_status_line[Debugger_status_line_length];
 
 static FILE *Debugger_trace_fp = nullptr;
 
-static ImGuiWindowFlags default_window_flags = 0;
-
 // definitions for windows
 static debugger_console Debugger_console;
 static debugger_memory_editor Debugger_memory_editor;

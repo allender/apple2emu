@@ -31,6 +31,9 @@ else()
    set (CMAKE_CXX_FLAGS "-Wall -Werror -Wno-multichar ${CMAKE_CXX_FLAGS}")
 endif(MSVC)
 
+# with SDL, we are supplying our own main
+add_definitions(-DSDL_MAIN_HANDLED)
+
 # subdirectories to build
 add_subdirectory(imgui)
 add_subdirectory(nativefiledialog)
@@ -93,6 +96,8 @@ if (WIN32)
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2.dll" "${CMAKE_CURRENT_BINARY_DIR}")
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/SDL2_image.dll" "${CMAKE_CURRENT_BINARY_DIR}")
    add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/libjpeg-9.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/libpng16-16.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/zlib1.dll" "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" "${CMAKE_CURRENT_BINARY_DIR}")
 add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/interface" "${CMAKE_CURRENT_BINARY_DIR}/interface")

@@ -65,7 +65,7 @@ There is an integrated 6502 debugger in apple2emu.  Press F11 from within the em
 
 ![Debugger](screencaps/debugger.jpg)
 
-The upper left corner shows the apple ][ screen.  The lower left corner is a memory viewer.  On the upper right is the disassembly of the machine broken on the assembly line when you entered the debugger.  And the lower right contains the console window where you can type commands.  There are two other "windows" which are rolled up.  The are sandwiched between the screen view and the memory view.  These are the soft switch status and breakpoint windows.  Double clicking on these windows will unroll those windows to their full size.
+The upper left corner shows the apple \]\[ screen.  Below the apple \]\[ screen is a memory viewer, and below that is the console. On the upper right is the disassembly of the machine broken on the assembly line when you entered the debugger.  The disassembly view will show the soft switches, breakpoints, and register values of the 6502 CPU.  
 
 Apple2emu uses imgui for all of the debugger interface.  This fact means that these windows can be moved, collapsed and resized.  Those changes should be saved and restored everytime you close and reopen Apple2emu.  Find a window layout that you like and it will stay that way.  Window layouts can be reset off the debugger menu, or by deleting the settings.ini file in the root project folder.
 

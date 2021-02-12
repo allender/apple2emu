@@ -43,6 +43,8 @@ Debug builds can be made by defining the build type when running make:
 
 The executable will be named apple2emu_debug (note the \_debug extension on the executable)
 
+Additionally for Windows, cmake will copy the needed SDL2 dll's from the SDL location to the emulator folder.
+
 #### Visual Studio Code
 Visual Studio Code can be used to build and run the emulator.  Start code in the top level apple2emu folder (i.e. run code . at the command prompt).  With the proper cmake tools installed, cmake will configure and build the project.  Note that on windows, you will have to start Visual Studio code from a command prompt that has the compiler and related executables in the path.  This action can generally be done by choosing the x86 Native Command prompt item in the Visual Studio menu items off your start menu.
 

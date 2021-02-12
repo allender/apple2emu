@@ -34,8 +34,8 @@ Cmake will attempt to find the required libraries: SDL2, SDL2_Image, and Glew.  
 * To help cmake find your SDL2 installation, you can set the variable **SDL2_PATH** to point to the top level folder where SDL2 is located
 * To help cmake find your SDL2_image installation, you can set the variable **SDL2_IMAGE_PATH** to point to the top level folder where SDL2_image is located
 * If GLEW cannot be found, then you can set the variable **GLEW_PATH** to the top level fodler where Glew is installed.
-  * ```cmake .. -DGLEW_ROOT=/path/to/glew-2.1.2 -DSDL2_PATH=/path/to/sdl2 -DSDL2_IMAGE_PATH=/path/to/sdl2_image```
-  * For example:  ```cmake .. -DGLEW_ROOT=f:\projects\glew-1.13.0 -DSDL2_PATH=f:\projects\sdl2-2.0.12 -DSDL2_IMAGE_PATH=f:\projects\sdl2_image-2.0.5```
+  * ```cmake .. -DGLEW_PATH=/path/to/glew-2.1.2 -DSDL2_PATH=/path/to/sdl2 -DSDL2_IMAGE_PATH=/path/to/sdl2_image```
+  * For example:  ```cmake .. -DGLEW_PATH=f:\projects\glew-1.13.0 -DSDL2_PATH=f:\projects\sdl2-2.0.12 -DSDL2_IMAGE_PATH=f:\projects\sdl2_image-2.0.5```
   
 Debug builds can be made by defining the build type when running make:
 
@@ -69,7 +69,7 @@ There is an integrated 6502 debugger in apple2emu.  Press F11 from within the em
 
 The upper left corner shows the apple \]\[ screen.  Below the apple \]\[ screen is a memory viewer, and below that is the console. On the upper right is the disassembly of the machine broken on the assembly line when you entered the debugger.  The disassembly view will show the soft switches, breakpoints, and register values of the 6502 CPU.  
 
-Apple2emu uses imgui for all of the debugger interface.  This fact means that these windows can be moved, collapsed and resized.  Those changes should be saved and restored everytime you close and reopen Apple2emu.  Find a window layout that you like and it will stay that way.  Window layouts can be reset off the debugger menu, or by deleting the settings.ini file in the root project folder.
+Apple2emu uses imgui for all of the debugger interface.  This fact means that these windows can be moved, collapsed and resized.  Those changes should be saved and restored everytime you close and reopen Apple2emu.  Find a window layout that you like and it will stay that way.  Window layouts can be reset off the debugger menu, or by deleting the imgui.ini file in the root project folder.
 
 When focus is in the disassembly view, the following keys can be used:
 

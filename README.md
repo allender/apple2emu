@@ -34,8 +34,8 @@ Cmake will attempt to find the required libraries: SDL2, SDL2_Image, and Glew.  
 * To help cmake find your SDL2 installation, you can set the variable **SDL2_PATH** to point to the top level folder where SDL2 is located
 * To help cmake find your SDL2_image installation, you can set the variable **SDL2_IMAGE_PATH** to point to the top level folder where SDL2_image is located
 * If GLEW cannot be found, then you can set the variable **GLEW_PATH** to the top level fodler where Glew is installed.
-  * ```cmake .. -DGLEW_ROOT=/path/to/glew-2.1.2 -DSDL2_PATH=/path/to/sdl2 -DSDL2_IMAGE_PATH=/path/to/sdl2_image```
-  * For example:  ```cmake .. -DGLEW_ROOT=f:\projects\glew-1.13.0 -DSDL2_PATH=f:\projects\sdl2-2.0.12 -DSDL2_IMAGE_PATH=f:\projects\sdl2_image-2.0.5```
+  * ```cmake .. -DGLEW_PATH=/path/to/glew-2.1.2 -DSDL2_PATH=/path/to/sdl2 -DSDL2_IMAGE_PATH=/path/to/sdl2_image```
+  * For example:  ```cmake .. -DGLEW_PATH=f:\projects\glew-1.13.0 -DSDL2_PATH=f:\projects\sdl2-2.0.12 -DSDL2_IMAGE_PATH=f:\projects\sdl2_image-2.0.5```
   
 Debug builds can be made by defining the build type when running make:
 

@@ -2,7 +2,7 @@
 #  CMake file for Apple2emu
 #
 cmake_minimum_required(VERSION 3.5.1)
-project(apple2emu CXX)
+project(apple2emu CXX C)
 
 # Directory for output files
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -39,19 +39,13 @@ add_subdirectory(imgui)
 add_subdirectory(nativefiledialog)
 add_subdirectory(libclipboard)
 
-# add in other folders that are needed for ncludes
-include_directories(
-   ${SDL2_INCLUDE_DIR}
-   ${SDL2_IMAGE_INCLUDE_DIR}
-   imgui
-   nativefiledialog/src/include
-   ${CMAKE_CURRENT_SOURCE_DIR}/libclipboard/include
-   ${CMAKE_CURRENT_BINARY_DIR}/libclipboard/include
-   z80emu)
+macro(add_clean_target dir)
+add_custom_target(clean-${dir} COMMAND ${CMAKE_MAKE_PROGRAM} clean WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${dir})
+endmacro(add_clean_target)
 
-include_directories(SYSTEM
-   ${GLEW_INCLUDE_DIR}
-   ${OPENGL_INCLUDE_DIR})
+add_clean_target (imgui)
+add_clean_target (nativefiledialog)
+add_clean_target (libclipboard)
 
 set (EMU_SOURCES
    src/apple2emu.cpp
@@ -74,6 +68,17 @@ set (EMU_SOURCES
    z80emu/z80emu.cpp)
 
 add_executable(apple2emu ${EMU_SOURCES})
+
+target_include_directories(apple2emu PUBLIC ${SDL2_INCLUDE_DIR})
+target_include_directories(apple2emu PUBLIC ${SDL2_IMAGE_INCLUDE_DIR})
+target_include_directories(apple2emu PUBLIC imgui)
+target_include_directories(apple2emu PUBLIC nativefiledialog/src/include)
+target_include_directories(apple2emu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libclipboard/include)
+target_include_directories(apple2emu PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/libclipboard/include)
+
+target_include_directories(apple2emu SYSTEM PUBLIC ${GLEW_INCLUDE_DIR})
+target_include_directories(apple2emu SYSTEM PUBLIC ${OPENGL_INCLUDE_DIR})
+
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")
 target_link_libraries(apple2emu
    ${CURSES_LIBRARIES}

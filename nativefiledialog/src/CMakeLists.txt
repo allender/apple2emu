@@ -1,8 +1,6 @@
 #
 # Cmake for building nativefiledialog
 #
-set_source_files_properties(nfd_common.c PROPERTIES LANGUAGE CXX )
-set_source_files_properties(nfd_gtk.c PROPERTIES LANGUAGE CXX )
 
 if (WIN32)
    set(PLATFORM_CPP nfd_win.cpp)

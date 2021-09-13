@@ -1,7 +1,7 @@
 #
 #  CMake file for Apple2emu
 #
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.17.1)
 project(apple2emu CXX C)
 
 # Directory for output files
@@ -17,7 +17,7 @@ endforeach()
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # here are the packages needed to build apple2emu
-find_package(SDL2 REQUIRED sdl2)
+find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED SDL2_image>=2.0.0)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -80,6 +80,7 @@ target_include_directories(apple2emu SYSTEM PUBLIC ${GLEW_INCLUDE_DIR})
 target_include_directories(apple2emu SYSTEM PUBLIC ${OPENGL_INCLUDE_DIR})
 
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")
+
 target_link_libraries(apple2emu
    ${CURSES_LIBRARIES}
    imgui
@@ -87,31 +88,32 @@ target_link_libraries(apple2emu
    clipboard
    ${SDL2_IMAGE_LIBRARY}
    ${SDL2_LIBRARY}
-   ${GLEW_LIBRARIES}
-   ${OPENGL_LIBRARIES})
+   ${OPENGL_LIBRARIES}
+   GLEW::GLEW)
 
 get_filename_component(SDL2_DLL_PATH ${SDL2_LIBRARY} DIRECTORY)
 get_filename_component(SDL2_IMAGE_DLL_PATH ${SDL2_IMAGE_LIBRARY} DIRECTORY)
 
 # add post build step to copy extra files into
 # the build folder
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/interface")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/disks")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/roms")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/fonts")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/symtables")
+set (DIRS_TO_CREATE "interface" "roms" "fonts" "symtables")
+set (SOURCE_DIRS ${DIRS_TO_CREATE})
+list(TRANSFORM DIRS_TO_CREATE PREPEND "${CMAKE_CURRENT_BINARY_DIR}/")
+list(TRANSFORM SOURCE_DIRS PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+foreach(DIR SRC IN ZIP_LISTS DIRS_TO_CREATE SOURCE_DIRS)
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory ${DIR})
+   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC} ${DIR})
+endforeach()
+
+add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" "${CMAKE_CURRENT_BINARY_DIR}")
+
 if (WIN32)
 	add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_DLL_PATH}/SDL2.dll" "${CMAKE_CURRENT_BINARY_DIR}")
 	if (SDL2_IMAGE_DLL_PATH)
-		add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_IMAGE_DLL_PATH}/SDL2_image.dll" "${CMAKE_CURRENT_BINARY_DIR}")
-		add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_IMAGE_DLL_PATH}/libjpeg-9.dll" "${CMAKE_CURRENT_BINARY_DIR}")
-		add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_IMAGE_DLL_PATH}/libpng16-16.dll" "${CMAKE_CURRENT_BINARY_DIR}")
-		add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_IMAGE_DLL_PATH}/zlib1.dll" "${CMAKE_CURRENT_BINARY_DIR}")
+      set (FILES_TO_COPY "SDL2_image.dll" "libjpeg-9.dll" "libpng16-16.dll" "zlib1.dll")
+      list(TRANSFORM FILES_TO_COPY PREPEND "${SDL2_IMAGE_DLL_PATH}/")
+      foreach(FILE ${FILES_TO_COPY})
+		   add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FILE} ${CMAKE_CURRENT_BINARY_DIR})
+      endforeach()
 	endif()
 endif()
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" "${CMAKE_CURRENT_BINARY_DIR}")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/interface" "${CMAKE_CURRENT_BINARY_DIR}/interface")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/roms" "${CMAKE_CURRENT_BINARY_DIR}/roms")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/fonts" "${CMAKE_CURRENT_BINARY_DIR}/fonts")
-add_custom_command(TARGET apple2emu POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/symtables" "${CMAKE_CURRENT_BINARY_DIR}/symtables")
-

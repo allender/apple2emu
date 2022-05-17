@@ -16,6 +16,9 @@ endforeach()
 # need to pull in find scripts for SDL and SDL image
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# set the following to avoid warnings about SDL2main
+set(FPHSA_NAME_MISMATCHED TRUE)
+
 # here are the packages needed to build apple2emu
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED SDL2_image>=2.0.0)
@@ -69,15 +72,10 @@ set (EMU_SOURCES
 
 add_executable(apple2emu ${EMU_SOURCES})
 
-target_include_directories(apple2emu PUBLIC ${SDL2_INCLUDE_DIR})
-target_include_directories(apple2emu PUBLIC ${SDL2_IMAGE_INCLUDE_DIR})
 target_include_directories(apple2emu PUBLIC imgui)
 target_include_directories(apple2emu PUBLIC nativefiledialog/src/include)
 target_include_directories(apple2emu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libclipboard/include)
 target_include_directories(apple2emu PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/libclipboard/include)
-
-target_include_directories(apple2emu SYSTEM PUBLIC ${GLEW_INCLUDE_DIR})
-target_include_directories(apple2emu SYSTEM PUBLIC ${OPENGL_INCLUDE_DIR})
 
 set_target_properties(apple2emu PROPERTIES DEBUG_POSTFIX "_debug")
 
@@ -86,9 +84,9 @@ target_link_libraries(apple2emu
    imgui
    nfd
    clipboard
-   ${SDL2_IMAGE_LIBRARY}
-   ${SDL2_LIBRARY}
-   ${OPENGL_LIBRARIES}
+   SDL2::Core
+   SDL2::Image
+   OpenGL::GL
    GLEW::GLEW)
 
 get_filename_component(SDL2_DLL_PATH ${SDL2_LIBRARY} DIRECTORY)

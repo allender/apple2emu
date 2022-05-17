@@ -1,6 +1,5 @@
 # libclipboard cmake configuration file
 
-cmake_minimum_required(VERSION 2.8)
 project(libclipboard)
 
 # Defines and options

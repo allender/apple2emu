@@ -133,7 +133,7 @@ disk_image *disk_image::load_image(const char *filename)
 	fread(raw_buffer, 1, buffer_size, fp);
 	fclose(fp);
 
-	// determien read-only access for the file
+	// determine read-only access for the file
 	bool read_only = false;
 	if (access(filename, 2)) {
 		read_only = true;
@@ -197,24 +197,6 @@ bool disk_image::unload_image()
 	}
 	m_filename.clear();
 
-	return true;
-}
-
-// read the track data into the supplied buffer
-uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer)
-{
-	UNREFERENCED(track);
-	UNREFERENCED(buffer);
-	SDL_assert(0);
-	return 0;
-}
-
-bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
-{
-	UNREFERENCED(track);
-	UNREFERENCED(buffer);
-	SDL_assert(0);
-	m_image_dirty = true;
 	return true;
 }
 
@@ -495,7 +477,7 @@ bool dsk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	// denybbilze track data stored in buffer to the work buffer
 	// and then store that work buffer into the loaded disk image
-	disk_image::write_track(track, buffer);
+	m_image_dirty = true;
 	return denibbilize_track(track, buffer);
 }
 

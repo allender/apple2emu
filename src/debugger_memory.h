@@ -34,6 +34,8 @@
 
 class debugger_memory_editor
 {
+   static const int input_len = 32;
+
 	bool    m_open;
 	bool    m_allow_edits;
 	bool    m_reset_window;
@@ -42,8 +44,8 @@ class debugger_memory_editor
 	int     m_columns;
 	int     m_data_editing_address;
 	bool    m_data_editing_take_focus;
-	char    m_data_input[32];
-	char    m_addr_input[32];
+	char    m_data_input[input_len];
+	char    m_addr_input[input_len];
 
 public:
 	debugger_memory_editor();

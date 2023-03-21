@@ -752,16 +752,26 @@ void ui_do_frame()
 	// also use keydown events for ctrl characters, esc, and a few other
 	// characters that the emulator will need
 	if (io.WantCaptureKeyboard == false) {
-		// send keys that are down (which we need for control keys  backspace
-		// etc.  The underlying code will figure out what it needs to keep
+        // get the text input keys from IMGUI and send whatever has been typed as normal
+        // keys.  special handling of ctrl keys, etc is done next
+        if (io.KeyCtrl == false && io.KeyAlt == false && io.KeySuper == false) {
+            for (auto n = 0; n < io.InputQueueCharacters.Size; n++)
+            {
+                unsigned int c = (unsigned int)io.InputQueueCharacters[n];
+                keyboard_handle_event(c, false, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+            }
+        }
+
+        // now handle non-printable characters
 		for (auto i = 0; i < 512; i++) {
 			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
-			if (ImGui::IsKeyPressed(i)) {
-				if ((key & SDLK_SCANCODE_MASK) || key < 256) {
-					keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
-				}
-			}
+            if (io.KeyCtrl == true  || (key <= SDLK_a || key > SDLK_z)) {
+                if (ImGui::IsKeyPressed(i)) {
+                    keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
+                }
+            }
 		}
+
 	}
 
 	if (Show_main_menu) {

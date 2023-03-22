@@ -150,8 +150,8 @@ void debugger_memory_editor::draw(const char* title, int mem_size, size_t base_d
 						bool data_write = false;
 						if (m_data_editing_take_focus) {
 							ImGui::SetKeyboardFocusHere();
-							sprintf(m_addr_input, "%0*X", addr_digits_count, static_cast<int>(base_display_addr + addr));
-							sprintf(m_data_input, "%02X", memory_read(addr));
+							snprintf(m_addr_input, input_len, "%0*X", addr_digits_count, static_cast<int>(base_display_addr + addr));
+							snprintf(m_data_input, input_len, "%02X", memory_read(addr));
 						}
 						ImGui::PushItemWidth(ImGui::CalcTextSize("FF").x);
 						ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoHorizontalScroll | ImGuiInputTextFlags_AlwaysInsertMode | ImGuiInputTextFlags_CallbackAlways;

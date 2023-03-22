@@ -162,28 +162,33 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 		if (m_symtable.empty() == false) {
 			addr_symbol = find_symbol(addr);
 			if (addr_symbol != nullptr) {
-				sprintf(internal_buffer, "%8s ", addr_symbol);
+				snprintf(internal_buffer, m_disassembly_line_length,
+					"%8s ", addr_symbol);
 			} else {
-				sprintf(internal_buffer, "         ");
+				snprintf(internal_buffer, m_disassembly_line_length,
+				"         ");
 			} 
 			strcat(m_disassembly_line, internal_buffer);
 		}
 
-		sprintf(internal_buffer, "%04X:", addr);
+		snprintf(internal_buffer, m_disassembly_line_length, "%04X:", addr);
 		strcat(m_disassembly_line, internal_buffer);
 
 		for (uint8_t j = 0; j < 3; j++) {
 			if (j < opcode->m_size) {
-				sprintf(internal_buffer, "%02X ", memory_read(addr + j));
+				snprintf(internal_buffer, m_disassembly_line_length,
+					"%02X ", memory_read(addr + j));
 			}
 			else {
-				sprintf(internal_buffer, "   ");
+				snprintf(internal_buffer, m_disassembly_line_length,
+					"   ");
 			}
 			strcat(m_disassembly_line, internal_buffer);
 		}
 
 		// print opcode
-		sprintf(internal_buffer, " %c%c%c ", opcode->m_mnemonic >> 24,
+		snprintf(internal_buffer, m_disassembly_line_length,
+			" %c%c%c ", opcode->m_mnemonic >> 24,
 			opcode->m_mnemonic >> 16,
 			opcode->m_mnemonic >> 8);
 
@@ -206,9 +211,11 @@ uint8_t debugger_disasm::get_disassembly(uint16_t addr)
 			}
 			addr_symbol = find_symbol(addressing_val);
 			if (addr_symbol == nullptr || mode == cpu_6502::addr_mode::IMMEDIATE_MODE) {
-				sprintf(internal_buffer, m_addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
+				snprintf(internal_buffer, m_disassembly_line_length,
+					m_addressing_format_string[static_cast<uint8_t>(mode)], addressing_val);
 			} else {
-				sprintf(internal_buffer, m_addressing_format_string_with_symbol[static_cast<uint8_t>(mode)], addr_symbol, addressing_val);
+				snprintf(internal_buffer, m_disassembly_line_length,
+				m_addressing_format_string_with_symbol[static_cast<uint8_t>(mode)], addr_symbol, addressing_val);
 			}
 			strcat(m_disassembly_line, internal_buffer);
 		}
@@ -275,7 +282,7 @@ void debugger_disasm::draw(const char *title, uint16_t pc)
 					m_console->execute_command(next_command_name);
 				} else if (ImGui::IsKeyPressed(SDL_SCANCODE_F9)) {
 					char command[256];
-					sprintf(command, "%s %x", break_command_name, m_current_addr);
+					snprintf(command, 256, "%s %x", break_command_name, m_current_addr);
 					m_console->execute_command(command);
 				}
 			}

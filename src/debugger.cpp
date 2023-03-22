@@ -190,7 +190,8 @@ auto trace_command = [](char *) {
 static void debugger_get_short_status()
 {
 	uint8_t status = cpu.get_status();
-	sprintf(Debugger_status_line, "%02X %02X %02X %04X %c%c%c%c%c%c%c%c",
+	snprintf(Debugger_status_line, Debugger_status_line_length,
+		"%02X %02X %02X %04X %c%c%c%c%c%c%c%c",
 		cpu.get_acc(), cpu.get_x(), cpu.get_y(), cpu.get_sp() + 0x100,
 		(status >> 7) & 1 ? 'N' : '.',
 		(status >> 6) & 1 ? 'V' : '.',

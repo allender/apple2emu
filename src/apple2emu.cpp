@@ -310,6 +310,9 @@ int main(int argc, char* argv[])
 				if (evt.window.event == SDL_WINDOWEVENT_CLOSE) {
 					quit = true;
 				}
+                if (evt.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    ui_resize(evt.window.data1, evt.window.data2);
+                }
 				break;
 
 			case SDL_QUIT:

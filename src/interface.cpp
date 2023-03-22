@@ -672,11 +672,11 @@ void ui_do_frame()
 
 		// set flags for rendering main window
 		title = "Emulator Debugger";
-		initial_size.x = (float)(Video_window_size.w/2);
-		initial_size.y = (float)(Video_window_size.h/2);
+		initial_size.x = (float)Video_window_size.w/2;
+		initial_size.y = (float)Video_window_size.h/2;
 		flags = ImGuiWindowFlags_NoScrollbar;
-		ImGui::SetNextWindowPos(ImVec2(2, 2), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(2, 2), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(initial_size, ImGuiCond_Always);
 	} else {
 		title = "Emulator";
 		initial_size.x = (float)Video_window_size.w;
@@ -787,4 +787,10 @@ void ui_do_frame()
 
 	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(Video_window);
+}
+
+void ui_resize(int width, int height)
+{
+    Video_window_size.w = width;
+    Video_window_size.h = height;
 }

@@ -32,3 +32,4 @@ void ui_shutdown();
 void ui_do_frame();
 void ui_toggle_main_menu();
 void ui_toggle_demo_window();
+void ui_resize(int width, int height);

@@ -205,7 +205,6 @@ uint32_t disk_image::read_track(const uint32_t track, uint8_t *buffer)
 {
 	UNREFERENCED(track);
 	UNREFERENCED(buffer);
-	SDL_assert(0);
 	return 0;
 }
 
@@ -213,7 +212,6 @@ bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
 {
 	UNREFERENCED(track);
 	UNREFERENCED(buffer);
-	SDL_assert(0);
 	m_image_dirty = true;
 	return true;
 }
@@ -513,13 +511,13 @@ uint32_t nib_image::read_track(const uint32_t track, uint8_t *buffer) {
 	return num_bytes;
 }
 
+// NIB images can just get written straight out
 bool nib_image::write_track(const uint32_t track, uint8_t *buffer)
 {
-	UNREFERENCED(track);
-	UNREFERENCED(buffer);
+	disk_image::write_track(track, buffer);
+
+	uint32_t num_bytes = m_total_sectors * m_sector_bytes;
+	uint8_t *track_ptr = &m_raw_buffer[track * num_bytes];
+    memcpy(track_ptr, buffer, num_bytes);
 	return true;
-	// denybbilze track data stored in buffer to the work buffer
-	// and then store that work buffer into the loaded disk image
-//	disk_image::write_track(track, buffer);
-//	return denibbilize_track(track, buffer);
 }

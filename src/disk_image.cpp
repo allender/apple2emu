@@ -76,33 +76,6 @@ const char *disk_image::get_filename()
 	return m_filename.c_str();
 }
 
-void disk_image::initialize_image()
-{
-//	// check the size of the image to see if we have dsk image
-//	if (m_buffer_size == 143360) {
-//		m_image_type = image_type::DSK_IMAGE;
-//		m_num_tracks = (uint8_t)(m_buffer_size / (m_total_sectors * m_sector_bytes));
-//
-//		// see if we can determine DOS or prodos format.  Let's assume dos and check
-//		// for prodos.  See Beneath Apple ProDOS page 4-6.  Scan volume directory
-//		// and see if we can find the volume blocks.  Starts at block 2 of the
-//		// disk and contains backwards/forward pointers from there
-//		disk_image::format_type format = format_type::DOS_FORMAT;
-//		//for (auto i = 2; i < 6; i++) {
-//		//	// get the starting physical sector for the block, then get the DOS sector
-//		//	uint8_t sector = m_sector_map[static_cast<uint8_t>(format_type::DOS_FORMAT)][m_prodos_block_map[i][0]];
-//		//	uint16_t *track_ptr = (uint16_t *)(&m_raw_buffer[sector * 256]);  // 512 byte block buffers for prodos.
-//		//	if (*track_ptr != (i == 2 ? 0 : i - 1) && *(track_ptr + 1) != (i == 5 ? 0 : i + 1)) {
-//		//		format = format_type::DOS_FORMAT;
-//		//		break;
-//		//	}
-//		//}
-//
-		m_format = format_type::DOS_FORMAT;
-		m_num_tracks = m_total_tracks;
-//	}
-}
-
 
 void disk_image::init()
 {
@@ -143,13 +116,17 @@ disk_image *disk_image::load_image(const char *filename)
 	const char *ext = strrchr(filename, '.');
 	disk_image *new_image = nullptr;
 	if (ext != nullptr) {
-		if (!stricmp(ext, ".dsk") && buffer_size == m_dsk_image_size) {
+		if ((!stricmp(ext, ".dsk") || !stricmp(ext, ".do")) && buffer_size == m_dsk_image_size) {
 			// disk image format
 			new_image = new dsk_image();
 		}
 
 		else if  (!stricmp(ext, ".nib") && buffer_size == m_nib_image_size) {
 			new_image = new nib_image();
+		}
+
+		else if  (!stricmp(ext, ".po") && buffer_size == m_dsk_image_size) {
+			new_image = new po_image();
 		}
 	}
 
@@ -222,6 +199,12 @@ bool disk_image::write_track(const uint32_t track, uint8_t *buffer)
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
 
+void dsk_image::initialize_image()
+{
+    m_format = format_type::DOS_FORMAT;
+    m_num_tracks = m_total_tracks;
+}
+
 #define CODE44(buf, val) { *buf++ = ((((val)>>1) & 0x55) | 0xaa); *buf++ = (((val) & 0x55) | 0xaa); }
 
 // translate table used during nibbilize process to go
@@ -293,7 +276,7 @@ const uint8_t dsk_image::m_read_translate_table[128] =
 // The following two routines take care of nibbilizing and denibbilizing.
 // The code works on a track at a time (i.e. 16 sectors for dos 3.3 format)
 // to make things speedier.
-uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
+uint32_t disk_image::nibbilize_track(const int track, uint8_t *buffer)
 {
 	// get a pointer to the beginning of the track information
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
@@ -398,7 +381,7 @@ uint32_t dsk_image::nibbilize_track(const int track, uint8_t *buffer)
 
 // denibbilize a track.  See the comments above the previous
 // function for an explanation.
-bool dsk_image::denibbilize_track(const int track, uint8_t *buffer)
+bool disk_image::denibbilize_track(const int track, uint8_t *buffer)
 {
 	uint8_t *track_ptr = &m_raw_buffer[track * (m_total_sectors * m_sector_bytes)];
 	uint8_t *work_ptr = buffer;  // working pointer into the final data
@@ -503,6 +486,12 @@ bool dsk_image::write_track(const uint32_t track, uint8_t *buffer)
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
 
+void nib_image::initialize_image()
+{
+    m_format = format_type::DOS_FORMAT;
+    m_num_tracks = m_total_tracks;
+}
+
 // read the track data into the supplied buffer
 uint32_t nib_image::read_track(const uint32_t track, uint8_t *buffer) {
 	// nib images have their data already in the format that we need
@@ -521,3 +510,30 @@ bool nib_image::write_track(const uint32_t track, uint8_t *buffer)
     memcpy(track_ptr, buffer, num_bytes);
 	return true;
 }
+
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+//  Code for PO Images
+//-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+
+void po_image::initialize_image()
+{
+    m_format = format_type::PRODOS_FORMAT;
+    m_num_tracks = m_total_tracks;
+}
+
+// read the track data into the supplied buffer
+uint32_t po_image::read_track(const uint32_t track, uint8_t *buffer) {
+	// with the data in the work buffer, we need to nibbilize the data
+	return nibbilize_track(track, buffer);
+}
+
+bool po_image::write_track(const uint32_t track, uint8_t *buffer)
+{
+	// denybbilze track data stored in buffer to the work buffer
+	// and then store that work buffer into the loaded disk image
+	disk_image::write_track(track, buffer);
+	return denibbilize_track(track, buffer);
+}
+

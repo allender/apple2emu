@@ -35,20 +35,20 @@ SOFTWARE.
 
 class disk_image
 {
+private:
+	std::string      m_filename;
+	bool             m_image_dirty;
+	bool             m_read_only;
+
+	virtual void initialize_image() = 0;
+
+protected:
 	enum class format_type : uint8_t {
 		DOS_FORMAT,
 		PRODOS_FORMAT,
 		NUM_FORMATS
 	};
 
-private:
-	std::string      m_filename;
-	bool             m_image_dirty;
-	bool             m_read_only;
-
-	void initialize_image();
-
-protected:
 	// constants that will be useful
 	static const uint32_t m_total_tracks = 35;
 	static const uint32_t m_total_sectors = 16;
@@ -63,6 +63,17 @@ protected:
 	size_t           m_buffer_size;
 	uint8_t          m_volume_num;
 	format_type      m_format;
+
+	// used for some formats that need to get nibbilized and denibbilized
+	static const uint8_t m_write_translate_table[64];
+	static const uint8_t m_read_translate_table[128];
+
+	static const uint32_t m_gap1_num_bytes = 48;
+	static const uint32_t m_gap2_num_bytes = 6;
+	static const uint32_t m_gap3_num_bytes = 27;
+
+	uint32_t nibbilize_track(const int track, uint8_t *buffer);
+	bool denibbilize_track(const int track, uint8_t *buffer);
 
 public:
 
@@ -90,20 +101,18 @@ public:
 // class for DSK image formats
 class dsk_image : public disk_image
 {
-private:
-	// tables for nibbilzing and denibbilizing
-	static const uint8_t m_write_translate_table[64];
-	static const uint8_t m_read_translate_table[128];
-
-	static const uint32_t m_gap1_num_bytes = 48;
-	static const uint32_t m_gap2_num_bytes = 6;
-	static const uint32_t m_gap3_num_bytes = 27;
-
-	uint32_t nibbilize_track(const int track, uint8_t *buffer);
-	bool denibbilize_track(const int track, uint8_t *buffer);
-
 public:
 	dsk_image() {};
+	virtual void initialize_image();
+	virtual uint32_t read_track(const uint32_t track, uint8_t* buffer);
+	virtual bool write_track(const uint32_t track, uint8_t *buffer);
+};
+
+class po_image : public disk_image
+{
+public:
+	po_image() {};
+	virtual void initialize_image();
 	virtual uint32_t read_track(const uint32_t track, uint8_t* buffer);
 	virtual bool write_track(const uint32_t track, uint8_t *buffer);
 };
@@ -117,6 +126,7 @@ private:
 	static const uint32_t m_sector_bytes = 416;
 
 public:
+	virtual void initialize_image();
 	virtual uint32_t read_track(const uint32_t track, uint8_t* buffer);
 	virtual bool write_track(const uint32_t track, uint8_t *buffer);
 };

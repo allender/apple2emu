@@ -169,7 +169,6 @@ bool disk_drive::insert_disk(const char *filename)
 	eject_disk();
 
 	m_disk_image = disk_image::load_image(filename);
-	//m_disk_image->init();
 	return true;
 }
 

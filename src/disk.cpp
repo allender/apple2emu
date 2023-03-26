@@ -48,10 +48,10 @@ private:
 	uint8_t*     m_track_data;       // data read off of the disk put into this buffer
 	uint32_t     m_track_size;       // size of the sector data
 	uint32_t     m_last_read_cycle;  // last cycle count of a read
+	bool         m_motor_on;
 
 public:
 	disk_image* m_disk_image;       // holds information about the disk image
-	bool        m_motor_on;
 	bool        m_write_mode;
 	bool        m_track_dirty;
 	uint8_t     m_phase_status;
@@ -67,6 +67,8 @@ public:
 	void set_new_track(uint8_t new_track);
 	bool insert_disk(const char *filename);
 	void eject_disk();
+    void motor_on(bool is_on);
+    bool is_motor_on() { return m_motor_on; }
 	uint8_t get_num_tracks();
 	const char *get_mounted_filename();
 };
@@ -126,7 +128,7 @@ void disk_drive::readwrite()
 		// There is a section in the DOS assembly called SAMESLOT which checks
 		// to see if the drive is up and spinning by reading the latch quickly.  We need
 		// to emulate this as without that, we hit massive delays in the assmebly code
-		// as it attemps to "wait" for the disk to be read	
+		// as it attemps to "wait" for the disk to be read
 		if (Total_cycles - m_last_read_cycle <= Read_nibble_threashold) {
 			m_data_register = m_track_data[m_current_byte] >> 4;
 			return;
@@ -196,6 +198,15 @@ uint8_t disk_drive::get_num_tracks()
 		return m_disk_image->m_num_tracks;
 	}
 	return 0;
+}
+
+void disk_drive::motor_on(bool is_on)
+{
+    m_motor_on = is_on;
+    if (is_on == false && m_track_dirty && m_track_data != nullptr) {
+        m_disk_image->write_track(m_current_track, m_track_data);
+        m_disk_image->save_image();
+    }
 }
 
 // inserts a disk image into the given slot
@@ -272,7 +283,7 @@ uint8_t drive_handler(uint16_t addr, uint8_t val, bool write)
 	case 0x8:
 	case 0x9:
 		// turn the motor on or off
-		Current_drive->m_motor_on = (addr & 1);
+		Current_drive->motor_on(addr & 1);
 		break;
 
 	case 0xa:
@@ -352,7 +363,7 @@ const char *disk_get_mounted_filename(const uint32_t slot)
 
 bool disk_is_on(const uint32_t slot)
 {
-	return Disk_drives[slot - 1].m_motor_on;
+	return Disk_drives[slot - 1].is_motor_on();
 }
 
 bool disk_get_track_and_sector(uint32_t slot, uint32_t &track, uint32_t &sector)

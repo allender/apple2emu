@@ -71,6 +71,7 @@ static uint8_t keyboard_get_key()
 	}
 
 	key = key_buffer[key_buffer_front];
+    key_buffer[key_buffer_front] = 0;
 
 	do {
 		key_buffer_front = (key_buffer_front + 1) % Keybuffer_size;

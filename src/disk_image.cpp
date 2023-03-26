@@ -209,7 +209,7 @@ void dsk_image::initialize_image()
 
 // translate table used during nibbilize process to go
 // from 6-bit bytes to 8 bit disk bytes
-const uint8_t dsk_image::m_write_translate_table[64] =
+const uint8_t disk_image::m_write_translate_table[64] =
 {
 	0x96,0x97,0x9A,0x9B,0x9D,0x9E,0x9F,0xA6,
 	0xA7,0xAB,0xAC,0xAD,0xAE,0xAF,0xB2,0xB3,
@@ -235,7 +235,7 @@ const uint8_t dsk_image::m_write_translate_table[64] =
 // table.  All disk bytes have high bit set so there
 // are 128 _potential_ entries, although only 64 are
 // used
-const uint8_t dsk_image::m_read_translate_table[128] =
+const uint8_t disk_image::m_read_translate_table[128] =
 {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,

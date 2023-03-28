@@ -16,6 +16,8 @@
 #include <libkern/OSAtomic.h>
 #include <Cocoa/Cocoa.h>
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"        // warning: 'xx' is deprecated: The POSIX name for this..   // for strdup used in demo code (so user can copy & paste the code)
+
 /** Cocoa Implementation of the clipboard context **/
 struct clipboard_c {
     /** Handle to the global pasteboard. Really this doesn't need to be here... */

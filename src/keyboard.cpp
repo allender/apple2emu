@@ -71,6 +71,7 @@ static uint8_t keyboard_get_key()
 	}
 
 	key = key_buffer[key_buffer_front];
+    key_buffer[key_buffer_front] = 0;
 
 	do {
 		key_buffer_front = (key_buffer_front + 1) % Keybuffer_size;
@@ -175,7 +176,16 @@ static uint8_t last_key = 0;
 uint8_t keyboard_read()
 {
     if (Clipboard_ptr != nullptr) {
-        last_key = 0x80 | *Clipboard_ptr;
+        uint8_t key = *Clipboard_ptr;
+        if (key == '\0') {
+            key = 0;
+            Clipboard_ptr = nullptr;
+        } else {
+            if (key == '\n') {
+                key = '\r';
+            }
+            last_key = 0x80 | key;
+        }
     } else {
         uint8_t temp_key = keyboard_get_key();
         if (temp_key > 0) {
@@ -189,15 +199,16 @@ uint8_t keyboard_read()
 uint8_t keyboard_clear()
 {
     if (Clipboard_ptr != nullptr) {
-        last_key = 0x80 | *Clipboard_ptr;
+        uint8_t key = *Clipboard_ptr;
         Clipboard_ptr++;
-        if (*Clipboard_ptr == 0xa) {
-            Clipboard_ptr++;
+        if (key == '\n') {
+            key = '\r';
         }
-        if (*Clipboard_ptr == '\0') {
-            last_key = 0;
+        else if (key == '\0') {
+            key = 0;
             Clipboard_ptr = nullptr;
         }
+        last_key = key;
     } else {
         last_key &= 0x7F;
     }

@@ -8,6 +8,8 @@
 #include "nfd.h"
 #include "nfd_common.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"        // warning: 'xx' is deprecated: The POSIX name for this..   // for strdup used in demo code (so user can copy & paste the code)
+
 static NSArray *BuildAllowedFileTypes( const char *filterList )
 {
     // Commas and semicolons are the same thing on this platform

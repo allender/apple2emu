@@ -765,7 +765,7 @@ void ui_do_frame()
         // now handle non-printable characters
 		for (auto i = 0; i < 512; i++) {
 			int key = SDL_GetKeyFromScancode((SDL_Scancode)i);
-            if (io.KeyCtrl == true  || (key < SDLK_a || key > SDLK_z)) {
+            if (io.KeyCtrl == true || key == SDLK_RETURN || key == SDLK_ESCAPE || key == SDLK_LEFT || key == SDLK_RIGHT || key == SDLK_BACKSPACE) {
                 if (ImGui::IsKeyPressed(i)) {
                     keyboard_handle_event(key, io.KeyShift, io.KeyCtrl, io.KeyAlt, io.KeySuper);
                 }

@@ -36,10 +36,6 @@ SOFTWARE.
 class disk_image
 {
 private:
-	std::string      m_filename;
-	bool             m_image_dirty;
-	bool             m_read_only;
-
 	virtual void initialize_image() = 0;
 
 protected:
@@ -53,6 +49,10 @@ protected:
 	static const uint32_t m_total_tracks = 35;
 	static const uint32_t m_total_sectors = 16;
 	static const uint32_t m_sector_bytes = 256;
+
+	std::string      m_filename;
+	bool             m_image_dirty;
+	bool             m_read_only;
 
 	disk_image() {};
 
